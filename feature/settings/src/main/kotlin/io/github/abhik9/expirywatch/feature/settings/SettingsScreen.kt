@@ -410,8 +410,10 @@ private fun SettingsRow(
     val alpha = if (enabled) 1f else DISABLED_ALPHA
     ListItem(
         headlineContent = { Text(title, color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)) },
-        supportingContent = subtitle?.let {
-            { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha)) }
+        supportingContent = if (subtitle != null) {
+            { Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha)) }
+        } else {
+            null
         },
         leadingContent = { Icon(icon, contentDescription = null) },
         modifier = if (onClick != null && enabled) {

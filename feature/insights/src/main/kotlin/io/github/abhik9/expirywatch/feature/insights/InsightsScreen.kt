@@ -151,7 +151,7 @@ private fun InsightsContent(insights: Insights) {
         val percent = NumberFormat.getPercentInstance()
         StatTile(
             label = stringResource(R.string.feature_insights_waste_rate),
-            value = insights.wasteRate?.let(percent::format) ?: "–",
+            value = insights.wasteRate?.let { percent.format(it) } ?: "–",
             modifier = Modifier.weight(1f),
         )
         StatTile(

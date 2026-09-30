@@ -129,7 +129,7 @@ internal fun EditorScreen(
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
     val barcodeFocusRequester = remember { FocusRequester() }
 
-    val requestClose = { if (hasUnsavedChanges) showDiscardDialog = true else onClose() }
+    val requestClose: () -> Unit = { if (hasUnsavedChanges) showDiscardDialog = true else onClose() }
     BackHandler(enabled = hasUnsavedChanges) { showDiscardDialog = true }
 
     Scaffold(
