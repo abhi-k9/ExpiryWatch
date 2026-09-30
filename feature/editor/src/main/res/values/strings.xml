@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_editor_title_add">Add item</string>
+    <string name="feature_editor_title_edit">Edit item</string>
+    <string name="feature_editor_close">Close</string>
+    <string name="feature_editor_save">Save</string>
+    <string name="feature_editor_ok">OK</string>
+    <string name="feature_editor_cancel">Cancel</string>
+
+    <string name="feature_editor_barcode">Barcode</string>
+    <string name="feature_editor_scan">Scan</string>
+    <string name="feature_editor_look_up">Look up product</string>
+    <string name="feature_editor_lookup_loading">Looking up the product…</string>
+    <string name="feature_editor_lookup_found_history">Filled in from an item you saved before</string>
+    <string name="feature_editor_lookup_found_off">Filled in from Open Food Facts</string>
+    <string name="feature_editor_lookup_not_found">Product not found. Enter the details below and they\'ll be remembered for next time.</string>
+    <string name="feature_editor_lookup_unavailable">Couldn\'t reach Open Food Facts. Check your connection or enter the details below.</string>
+
+    <string name="feature_editor_name">Name</string>
+    <string name="feature_editor_brand">Brand (optional)</string>
+    <string name="feature_editor_section_expiry">Expiry</string>
+    <string name="feature_editor_expiry_date">Expiry date</string>
+    <string name="feature_editor_quick_one_year">1 year</string>
+    <plurals name="feature_editor_quick_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="feature_editor_quick_weeks">
+        <item quantity="one">%d week</item>
+        <item quantity="other">%d weeks</item>
+    </plurals>
+    <plurals name="feature_editor_quick_months">
+        <item quantity="one">%d month</item>
+        <item quantity="other">%d months</item>
+    </plurals>
+    <string name="feature_editor_opened">Opened</string>
+    <string name="feature_editor_opened_description">Once opened, many products keep for less time</string>
+    <string name="feature_editor_opened_date">Opened on</string>
+    <string name="feature_editor_use_within_days">Use within (days after opening)</string>
+    <string name="feature_editor_use_within_days_help">Optional, e.g. 3 for milk. Remembered for this barcode.</string>
+
+    <string name="feature_editor_section_details">Details</string>
+    <string name="feature_editor_category">Category</string>
+    <string name="feature_editor_location">Stored in</string>
+    <string name="feature_editor_none">None</string>
+    <string name="feature_editor_quantity">Quantity</string>
+    <string name="feature_editor_unit">Unit</string>
+    <string name="feature_editor_notes">Notes (optional)</string>
+
+    <string name="feature_editor_error_name">Enter a name</string>
+    <string name="feature_editor_error_expiry">Choose the expiry date</string>
+    <string name="feature_editor_error_quantity">Enter a number greater than 0</string>
+    <string name="feature_editor_error_use_within">Enter a number of days greater than 0</string>
+
+    <string name="feature_editor_mark_consumed">Used up</string>
+    <string name="feature_editor_mark_wasted">Thrown away</string>
+    <string name="feature_editor_delete">Delete</string>
+    <string name="feature_editor_delete_title">Delete this item?</string>
+    <string name="feature_editor_delete_message">It will be removed completely and won\'t count in your insights. To keep it in your statistics, mark it as used up or thrown away instead.</string>
+    <string name="feature_editor_discard_title">Discard changes?</string>
+    <string name="feature_editor_discard_message">Your changes to this item haven\'t been saved.</string>
+    <string name="feature_editor_discard">Discard</string>
+</resources>

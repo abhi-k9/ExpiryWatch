@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_ui_expired_yesterday">Expired yesterday</string>
+    <string name="core_ui_expires_today">Expires today</string>
+    <string name="core_ui_expires_tomorrow">Expires tomorrow</string>
+    <plurals name="core_ui_expired_days_ago">
+        <item quantity="one">Expired %d day ago</item>
+        <item quantity="other">Expired %d days ago</item>
+    </plurals>
+    <plurals name="core_ui_expires_in_days">
+        <item quantity="one">Expires in %d day</item>
+        <item quantity="other">Expires in %d days</item>
+    </plurals>
+
+    <string name="core_ui_yesterday">Yesterday</string>
+    <string name="core_ui_today">Today</string>
+    <string name="core_ui_tomorrow">Tomorrow</string>
+    <plurals name="core_ui_days_ago_short">
+        <item quantity="one">%d day ago</item>
+        <item quantity="other">%d days ago</item>
+    </plurals>
+    <plurals name="core_ui_in_days_short">
+        <item quantity="one">In %d day</item>
+        <item quantity="other">In %d days</item>
+    </plurals>
+</resources>

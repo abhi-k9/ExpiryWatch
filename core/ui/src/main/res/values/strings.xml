@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_ui_status_expired">Expired</string>
+    <string name="core_ui_status_expiring_soon">Expiring soon</string>
+    <string name="core_ui_status_fresh">Fresh</string>
+
+    <string name="core_ui_unit_pieces">Pieces</string>
+    <string name="core_ui_unit_packs">Packs</string>
+    <string name="core_ui_unit_grams">Grams</string>
+    <string name="core_ui_unit_kilograms">Kilograms</string>
+    <string name="core_ui_unit_milliliters">Milliliters</string>
+    <string name="core_ui_unit_liters">Liters</string>
+
+    <string name="core_ui_quantity_pieces">%s pcs</string>
+    <string name="core_ui_quantity_packs">%s packs</string>
+    <string name="core_ui_quantity_grams">%s g</string>
+    <string name="core_ui_quantity_kilograms">%s kg</string>
+    <string name="core_ui_quantity_milliliters">%s ml</string>
+    <string name="core_ui_quantity_liters">%s L</string>
+</resources>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_insights_title">Insights</string>
+    <string name="feature_insights_period_month">This month</string>
+    <string name="feature_insights_period_three_months">3 months</string>
+    <string name="feature_insights_period_year">12 months</string>
+
+    <string name="feature_insights_used_up">Used up</string>
+    <string name="feature_insights_thrown_away">Thrown away</string>
+    <string name="feature_insights_waste_rate">Waste rate</string>
+    <string name="feature_insights_used_in_time">Used before expiry</string>
+
+    <string name="feature_insights_headline_period_month">this month</string>
+    <string name="feature_insights_headline_period_three_months">in the last 3 months</string>
+    <string name="feature_insights_headline_period_year">in the last 12 months</string>
+    <string name="feature_insights_headline_none">Nothing was used up or thrown away %s.</string>
+    <plurals name="feature_insights_items">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <!-- E.g. "You used up 18 items and threw away 3 items in the last 3 months." -->
+    <string name="feature_insights_headline">You used up %1$s and threw away %2$s %3$s.</string>
+    <plurals name="feature_insights_headline_no_waste">
+        <item quantity="one">You used up %1$d item and wasted nothing %2$s. 🎉</item>
+        <item quantity="other">You used up %1$d items and wasted nothing %2$s. 🎉</item>
+    </plurals>
+
+    <string name="feature_insights_trend_title">Monthly trend</string>
+    <string name="feature_insights_chart_description">Chart of items used up and thrown away over the last %d months. Tap a month to see its numbers, or show the data table.</string>
+    <!-- E.g. "March 2026: 12 used up, 3 thrown away". -->
+    <string name="feature_insights_month_details">%1$s: %2$d used up, %3$d thrown away</string>
+    <string name="feature_insights_show_table">Show data table</string>
+    <string name="feature_insights_hide_table">Hide data table</string>
+    <string name="feature_insights_table_month">Month</string>
+
+    <string name="feature_insights_categories_title">Most wasted categories</string>
+    <string name="feature_insights_nothing_wasted">Nothing thrown away in this period. Well done!</string>
+    <string name="feature_insights_uncategorized">📦 Uncategorized</string>
+
+    <string name="feature_insights_empty_title">No insights yet</string>
+    <string name="feature_insights_empty_message">When you mark items as used up or thrown away, you\'ll see here how much you use in time and how much goes to waste.</string>
+</resources>

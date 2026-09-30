@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_settings_title">Settings</string>
+    <string name="feature_settings_back">Back</string>
+    <string name="feature_settings_ok">OK</string>
+    <string name="feature_settings_cancel">Cancel</string>
+    <string name="feature_settings_save">Save</string>
+    <string name="feature_settings_delete">Delete</string>
+    <string name="feature_settings_edit">Edit</string>
+
+    <string name="feature_settings_section_appearance">Appearance</string>
+    <string name="feature_settings_theme">Theme</string>
+    <string name="feature_settings_theme_system">System</string>
+    <string name="feature_settings_theme_light">Light</string>
+    <string name="feature_settings_theme_dark">Dark</string>
+    <string name="feature_settings_dynamic_color">Dynamic color</string>
+    <string name="feature_settings_dynamic_color_summary">Match the colors of your wallpaper</string>
+
+    <string name="feature_settings_section_reminders">Reminders</string>
+    <string name="feature_settings_reminders">Daily reminder</string>
+    <string name="feature_settings_reminders_summary">Get a notification when items have expired or are about to</string>
+    <string name="feature_settings_reminder_time">Reminder time</string>
+    <string name="feature_settings_expiring_soon">Expiring soon</string>
+    <plurals name="feature_settings_expiring_soon_summary">
+        <item quantity="one">Flag items %d day before they expire</item>
+        <item quantity="other">Flag items %d days before they expire</item>
+    </plurals>
+
+    <string name="feature_settings_section_organize">Organize</string>
+    <string name="feature_settings_categories">Categories</string>
+    <string name="feature_settings_categories_summary">Dairy, medicine, snacks…</string>
+    <string name="feature_settings_locations">Storage locations</string>
+    <string name="feature_settings_locations_summary">Fridge, freezer, pantry…</string>
+    <string name="feature_settings_add_category">Add category</string>
+    <string name="feature_settings_add_location">Add location</string>
+    <string name="feature_settings_new_label">New</string>
+    <string name="feature_settings_edit_label">Edit</string>
+    <string name="feature_settings_label_name">Name</string>
+    <string name="feature_settings_label_emoji">Emoji</string>
+    <string name="feature_settings_delete_label">Delete %s</string>
+    <string name="feature_settings_delete_label_title">Delete \"%s\"?</string>
+    <string name="feature_settings_delete_category_message">Items in this category are kept, but will no longer have a category.</string>
+    <string name="feature_settings_delete_location_message">Items stored here are kept, but will no longer have a location.</string>
+    <string name="feature_settings_labels_empty_title">Nothing here yet</string>
+    <string name="feature_settings_labels_empty_message">Add your own to organize and filter your items.</string>
+
+    <string name="feature_settings_section_backup">Backup &amp; restore</string>
+    <string name="feature_settings_export">Export backup</string>
+    <string name="feature_settings_export_summary">Save all your items, categories and locations to a file</string>
+    <string name="feature_settings_import">Import backup</string>
+    <string name="feature_settings_import_summary">Restore from a file exported by ExpiryWatch</string>
+    <string name="feature_settings_import_confirm_title">Replace your data?</string>
+    <string name="feature_settings_import_confirm_message">Importing replaces all items, categories and locations on this device with the ones in the backup. The file is checked first, so an invalid file changes nothing.</string>
+    <string name="feature_settings_import_confirm">Choose file</string>
+    <plurals name="feature_settings_export_done">
+        <item quantity="one">Backup saved with %d item</item>
+        <item quantity="other">Backup saved with %d items</item>
+    </plurals>
+    <plurals name="feature_settings_import_done">
+        <item quantity="one">Backup restored: %d item</item>
+        <item quantity="other">Backup restored: %d items</item>
+    </plurals>
+    <string name="feature_settings_backup_io_error">Couldn\'t read or write the file. Please try again.</string>
+    <string name="feature_settings_backup_invalid_file">That file isn\'t an ExpiryWatch backup, or it\'s from a newer version of the app. Nothing was changed.</string>
+
+    <string name="feature_settings_section_about">About</string>
+    <string name="feature_settings_version">Version</string>
+    <string name="feature_settings_barcode_engine">Barcode scanning</string>
+    <string name="feature_settings_open_food_facts">Product data from Open Food Facts</string>
+    <string name="feature_settings_open_food_facts_summary">Free, open database of food products, available under the Open Database License</string>
+    <string name="feature_settings_source_code">Source code</string>
+</resources>

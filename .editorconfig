@@ -1,0 +1,31 @@
+# https://editorconfig.org/
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{yml,yaml,toml,json}]
+indent_size = 2
+
+[*.{kt,kts}]
+max_line_length = 120
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true
+ktlint_code_style = android_studio
+ktlint_function_naming_ignore_when_annotated_with = Composable, Test
+ktlint_standard_backing-property-naming = disabled
+ktlint_standard_binary-expression-wrapping = disabled
+ktlint_standard_chain-method-continuation = disabled
+ktlint_standard_class-signature = disabled
+ktlint_standard_condition-wrapping = disabled
+ktlint_standard_function-expression-body = disabled
+ktlint_standard_function-literal = disabled
+ktlint_standard_function-signature = disabled
+ktlint_standard_multiline-expression-wrapping = disabled
+ktlint_standard_multiline-loop = disabled
+ktlint_standard_string-template-indent = disabled

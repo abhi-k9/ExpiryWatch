@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The window theme; Compose draws everything else. -->
+    <style name="Theme.ExpiryWatch" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Shown while the app starts, then replaced by Theme.ExpiryWatch. -->
+    <style name="Theme.ExpiryWatch.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <item name="postSplashScreenTheme">@style/Theme.ExpiryWatch</item>
+    </style>
+</resources>

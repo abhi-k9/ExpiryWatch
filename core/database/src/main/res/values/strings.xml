@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Default categories created on first launch. -->
+    <string name="core_database_category_dairy">Dairy &amp; eggs</string>
+    <string name="core_database_category_meat_fish">Meat &amp; fish</string>
+    <string name="core_database_category_produce">Fruit &amp; vegetables</string>
+    <string name="core_database_category_bakery">Bakery</string>
+    <string name="core_database_category_dry_goods">Dry goods &amp; cans</string>
+    <string name="core_database_category_frozen">Frozen food</string>
+    <string name="core_database_category_drinks">Drinks</string>
+    <string name="core_database_category_snacks">Snacks &amp; sweets</string>
+    <string name="core_database_category_condiments">Sauces &amp; condiments</string>
+    <string name="core_database_category_medicine">Medicine</string>
+    <string name="core_database_category_personal_care">Personal care</string>
+    <string name="core_database_category_other">Other</string>
+
+    <!-- Default storage locations created on first launch. -->
+    <string name="core_database_location_fridge">Fridge</string>
+    <string name="core_database_location_freezer">Freezer</string>
+    <string name="core_database_location_pantry">Pantry</string>
+    <string name="core_database_location_cupboard">Kitchen cupboard</string>
+    <string name="core_database_location_bathroom">Bathroom cabinet</string>
+</resources>

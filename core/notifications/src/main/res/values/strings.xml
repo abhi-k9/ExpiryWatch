@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_notifications_channel_name">Expiry reminders</string>
+    <string name="core_notifications_channel_description">A daily summary of items that have expired or expire soon</string>
+    <plurals name="core_notifications_title">
+        <item quantity="one">%d item needs your attention</item>
+        <item quantity="other">%d items need your attention</item>
+    </plurals>
+    <plurals name="core_notifications_expired_count">
+        <item quantity="one">%d expired</item>
+        <item quantity="other">%d expired</item>
+    </plurals>
+    <plurals name="core_notifications_expiring_soon_count">
+        <item quantity="one">%d expiring soon</item>
+        <item quantity="other">%d expiring soon</item>
+    </plurals>
+    <plurals name="core_notifications_more">
+        <item quantity="one">+%d more</item>
+        <item quantity="other">+%d more</item>
+    </plurals>
+    <!-- A line in the reminder notification, e.g. "Milk · Expires tomorrow". -->
+    <string name="core_notifications_item_line">%1$s · %2$s</string>
+</resources>

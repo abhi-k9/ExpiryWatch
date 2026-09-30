@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_widget_name">Expiring soon</string>
+    <string name="feature_widget_description">Shows the items that expire next</string>
+    <string name="feature_widget_title">ExpiryWatch</string>
+    <string name="feature_widget_add_item">Add item</string>
+    <string name="feature_widget_all_fresh">Nothing expiring soon</string>
+    <string name="feature_widget_empty">No items yet. Tap + to add one.</string>
+    <plurals name="feature_widget_needs_attention">
+        <item quantity="one">%d needs attention</item>
+        <item quantity="other">%d need attention</item>
+    </plurals>
+</resources>

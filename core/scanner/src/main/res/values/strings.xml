@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_scanner_hint">Point the camera at a barcode</string>
+    <string name="core_scanner_close">Close scanner</string>
+    <string name="core_scanner_torch_on">Turn on flashlight</string>
+    <string name="core_scanner_torch_off">Turn off flashlight</string>
+    <string name="core_scanner_enter_manually">Type the barcode instead</string>
+    <string name="core_scanner_permission_rationale">ExpiryWatch needs the camera to scan barcodes. You can allow it in the app settings, or type the barcode instead.</string>
+    <string name="core_scanner_open_settings">Open settings</string>
+</resources>

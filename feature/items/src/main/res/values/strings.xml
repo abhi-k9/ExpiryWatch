@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_items_title">My items</string>
+    <string name="feature_items_search">Search</string>
+    <string name="feature_items_search_hint">Search items</string>
+    <string name="feature_items_close_search">Close search</string>
+    <string name="feature_items_clear_search">Clear search</string>
+    <string name="feature_items_sort">Sort</string>
+    <string name="feature_items_sort_expiry_soonest">Expires soonest</string>
+    <string name="feature_items_sort_expiry_latest">Expires latest</string>
+    <string name="feature_items_sort_name">Name</string>
+    <string name="feature_items_sort_recently_added">Recently added</string>
+    <string name="feature_items_add_item">Add item</string>
+    <string name="feature_items_add_first_item">Add your first item</string>
+    <string name="feature_items_scan">Scan a barcode</string>
+    <string name="feature_items_filter_all_categories">All categories</string>
+    <string name="feature_items_filter_all_locations">All locations</string>
+    <string name="feature_items_clear_filters">Clear filters</string>
+    <!-- Section header, e.g. "Expiring soon · 3". -->
+    <string name="feature_items_section_header">%1$s · %2$d</string>
+    <string name="feature_items_opened">Opened</string>
+    <string name="feature_items_action_consumed">Used up</string>
+    <string name="feature_items_action_wasted">Thrown away</string>
+    <string name="feature_items_marked_consumed">%s marked as used up</string>
+    <string name="feature_items_marked_wasted">%s marked as thrown away</string>
+    <string name="feature_items_undo">Undo</string>
+    <string name="feature_items_empty_title">Nothing tracked yet</string>
+    <string name="feature_items_empty_message">Add the groceries, medicine or anything else that expires, and ExpiryWatch will remind you before it goes off. Scanning a barcode fills in the details for you.</string>
+    <string name="feature_items_no_results_title">No matching items</string>
+    <string name="feature_items_nothing_expired">Nothing has expired</string>
+    <string name="feature_items_no_results_message">Try another search or filter.</string>
+</resources>
