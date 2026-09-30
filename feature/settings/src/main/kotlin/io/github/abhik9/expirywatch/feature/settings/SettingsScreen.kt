@@ -71,9 +71,8 @@ import io.github.abhik9.expirywatch.core.domain.usecase.BackupResult
 import io.github.abhik9.expirywatch.core.model.ThemeMode
 import io.github.abhik9.expirywatch.core.model.UserSettings
 import io.github.abhik9.expirywatch.core.navigation.LabelKind
+import io.github.abhik9.expirywatch.core.ui.formatShort
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import kotlin.math.roundToInt
 
 @Composable
@@ -264,7 +263,7 @@ private fun RemindersSection(
     SettingsRow(
         icon = Icons.Outlined.Schedule,
         title = stringResource(R.string.feature_settings_reminder_time),
-        subtitle = settings.reminderTime.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)),
+        subtitle = settings.reminderTime.formatShort(),
         enabled = settings.remindersEnabled,
         onClick = { showTimePicker = true },
     )

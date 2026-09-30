@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Check formatting
         run: ./gradlew spotlessCheck
@@ -30,7 +30,7 @@ jobs:
           testDebugUnitTest testPlayDebugUnitTest testFossDebugUnitTest
       - name: Upload test reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-reports
           path: "**/build/reports/tests"
@@ -40,12 +40,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Build debug and release APKs of both flavors
         run: ./gradlew --continue assemblePlayDebug assembleFossDebug assemblePlayRelease assembleFossRelease
       - name: Upload APKs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: apks
           path: app/build/outputs/apk/**/*.apk
@@ -55,13 +55,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Lint both flavors
         run: ./gradlew --continue :app:lintPlayDebug :app:lintFossDebug
       - name: Upload lint reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lint-reports
           path: app/build/reports/lint-results-*
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Generate the database schema
         run: ./gradlew :core:database:kspDebugKotlin

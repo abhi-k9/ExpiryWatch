@@ -27,8 +27,10 @@ import io.github.abhik9.expirywatch.core.model.QuantityUnit
 import io.github.abhik9.expirywatch.core.model.StorageLocation
 import io.github.abhik9.expirywatch.core.navigation.EditorNavKey
 import io.github.abhik9.expirywatch.core.ui.formatNumber
+import java.text.DecimalFormatSymbols
 import java.time.Clock
 import java.time.LocalDate
+import java.util.Locale
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -83,8 +85,8 @@ sealed interface EditorEvent {
 @HiltViewModel(assistedFactory = EditorViewModel.Factory::class)
 class EditorViewModel @AssistedInject constructor(
     @Assisted private val key: EditorNavKey,
-    categoryRepository: CategoryRepository,
-    locationRepository: StorageLocationRepository,
+    private val categoryRepository: CategoryRepository,
+    private val locationRepository: StorageLocationRepository,
     private val itemRepository: ItemRepository,
     private val saveItem: SaveItemUseCase,
     private val finishItem: FinishItemUseCase,
@@ -174,8 +176,9 @@ class EditorViewModel @AssistedInject constructor(
         val expiryDate = form.expiryDate ?: return
 
         isSaving = true
+        val submitted = form
         viewModelScope.launch {
-            val item = buildItem(expiryDate)
+            val item = buildItem(submitted, expiryDate)
             when (val result = saveItem(item)) {
                 is SaveItemResult.Saved -> _events.send(EditorEvent.Done)
                 is SaveItemResult.Invalid -> errors = result.errors.map(::toEditorError).toSet()
@@ -200,14 +203,18 @@ class EditorViewModel @AssistedInject constructor(
         }
     }
 
-    private fun buildItem(expiryDate: LocalDate): Item {
+    // Looks the labels up in the repositories rather than in [categories] and [locations], which are
+    // only kept up to date while the UI collects them.
+    private suspend fun buildItem(form: EditorForm, expiryDate: LocalDate): Item {
         val base = existingItem ?: Item(name = "", expiryDate = expiryDate)
+        val category = categoryRepository.observeCategories().first().find { it.id == form.categoryId }
+        val location = locationRepository.observeLocations().first().find { it.id == form.locationId }
         return base.copy(
             name = form.name,
             brand = form.brand,
             barcode = form.barcode,
-            category = categories.value.firstOrNull { it.id == form.categoryId },
-            location = locations.value.firstOrNull { it.id == form.locationId },
+            category = category,
+            location = location,
             quantity = form.quantityText.parseQuantity() ?: base.quantity,
             unit = form.unit,
             expiryDate = expiryDate,
@@ -246,13 +253,23 @@ class EditorViewModel @AssistedInject constructor(
 /** Accepts both "1.5" and "1,5", since many locales use a decimal comma. */
 internal fun String.parseQuantity(): Double? = trim().replace(',', '.').toDoubleOrNull()?.takeIf { it.isFinite() }
 
+/**
+ * Formats a quantity for editing in the user's locale, falling back to "1.5" style for locales whose
+ * digits or decimal separator [parseQuantity] can't read back.
+ */
+internal fun Double.toQuantityText(locale: Locale = Locale.getDefault()): String {
+    val symbols = DecimalFormatSymbols.getInstance(locale)
+    val isParseable = symbols.zeroDigit == '0' && symbols.decimalSeparator in ".,"
+    return formatNumber(this, if (isParseable) locale else Locale.ROOT)
+}
+
 private fun Item.toForm() = EditorForm(
     name = name,
     brand = brand.orEmpty(),
     barcode = barcode.orEmpty(),
     categoryId = category?.id,
     locationId = location?.id,
-    quantityText = formatNumber(quantity),
+    quantityText = quantity.toQuantityText(),
     unit = unit,
     expiryDate = expiryDate,
     isOpened = openedDate != null,
@@ -273,7 +290,7 @@ private fun EditorForm.withProduct(product: ProductInfo): EditorForm {
         brand = brand.ifBlank { product.brand.orEmpty() },
         categoryId = categoryId ?: product.categoryId,
         locationId = locationId ?: product.locationId,
-        quantityText = product.quantity?.takeIf { quantityIsDefault }?.let(::formatNumber) ?: quantityText,
+        quantityText = product.quantity?.takeIf { quantityIsDefault }?.toQuantityText() ?: quantityText,
         unit = product.unit?.takeIf { quantityIsDefault } ?: unit,
         useWithinDaysText = useWithinDaysText.ifBlank { product.useWithinDaysAfterOpening?.toString().orEmpty() },
         imageUrl = imageUrl ?: product.imageUrl,

@@ -36,13 +36,16 @@ class SettingsViewModelTest {
     private val backups = FakeBackupRepository()
     private val documents = FakeDocumentStore()
 
-    private val viewModel = SettingsViewModel(
-        settingsRepository = settings,
-        exportBackup = ExportBackupUseCase(backups, documents, TestTime.clock),
-        importBackup = ImportBackupUseCase(backups, documents),
-        clock = TestTime.clock,
-        appInfo = AppInfo(versionName = "1.0", barcodeEngine = "ZXing", sourceCodeUrl = "https://example.com"),
-    )
+    // Lazy, so the ViewModel is created after MainDispatcherRule has replaced the main dispatcher.
+    private val viewModel by lazy {
+        SettingsViewModel(
+            settingsRepository = settings,
+            exportBackup = ExportBackupUseCase(backups, documents, TestTime.clock),
+            importBackup = ImportBackupUseCase(backups, documents),
+            clock = TestTime.clock,
+            appInfo = AppInfo(versionName = "1.0", barcodeEngine = "ZXing", sourceCodeUrl = "https://example.com"),
+        )
+    }
 
     @Test
     fun changesAreSaved() = runTest {

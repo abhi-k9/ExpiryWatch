@@ -17,11 +17,11 @@ import io.github.abhik9.expirywatch.core.testing.repository.FakeItemRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeProductCatalog
 import io.github.abhik9.expirywatch.core.testing.repository.FakeProductHistoryRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeStorageLocationRepository
+import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
@@ -58,7 +58,6 @@ class EditorViewModelTest {
     @Test
     fun savesANewItemAndCloses() = runTest {
         val viewModel = viewModel()
-        backgroundScope.launch { viewModel.categories.collect {} }
         viewModel.updateForm {
             it.copy(
                 name = "Milk",
@@ -145,5 +144,16 @@ class EditorViewModelTest {
         assertEquals(1.5, "1,5".parseQuantity())
         assertEquals(2.0, " 2 ".parseQuantity())
         assertNull("two".parseQuantity())
+    }
+
+    @Test
+    fun formattedQuantitiesCanBeParsedBackInEveryLocale() {
+        val locales = listOf("en-US", "de-DE", "fr-CH", "ar-EG-u-nu-arab", "fa-IR", "hi-IN-u-nu-deva")
+        locales.map(Locale::forLanguageTag).forEach { locale ->
+            listOf(1.0, 1.5, 0.25, 1234.5).forEach { quantity ->
+                assertEquals(quantity, quantity.toQuantityText(locale).parseQuantity(), "$quantity in $locale")
+            }
+        }
+        assertEquals("1,5", 1.5.toQuantityText(Locale.GERMANY))
     }
 }

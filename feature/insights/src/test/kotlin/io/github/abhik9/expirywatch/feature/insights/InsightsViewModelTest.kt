@@ -28,7 +28,10 @@ class InsightsViewModelTest {
         ),
     )
 
-    private val viewModel = InsightsViewModel(ObserveInsightsUseCase(items, ObserveTodayUseCase(TestTime.clock)))
+    // Lazy, so the ViewModel is created after MainDispatcherRule has replaced the main dispatcher.
+    private val viewModel by lazy {
+        InsightsViewModel(ObserveInsightsUseCase(items, ObserveTodayUseCase(TestTime.clock)))
+    }
 
     private suspend fun awaitCounts(consumed: Int, wasted: Int) = withTimeout(5.seconds) {
         viewModel.uiState.first { state ->

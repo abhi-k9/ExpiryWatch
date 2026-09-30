@@ -53,6 +53,7 @@ import io.github.abhik9.expirywatch.core.model.CategoryWaste
 import io.github.abhik9.expirywatch.core.model.Insights
 import io.github.abhik9.expirywatch.core.model.InsightsPeriod
 import io.github.abhik9.expirywatch.core.model.MonthlyUsage
+import io.github.abhik9.expirywatch.core.ui.currentLocale
 import java.text.NumberFormat
 import java.time.YearMonth
 import java.time.format.TextStyle
@@ -148,7 +149,7 @@ private fun InsightsContent(insights: Insights) {
         )
     }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        val percent = NumberFormat.getPercentInstance()
+        val percent = NumberFormat.getPercentInstance(currentLocale())
         StatTile(
             label = stringResource(R.string.feature_insights_waste_rate),
             value = insights.wasteRate?.let { percent.format(it) } ?: "–",
@@ -276,6 +277,7 @@ private fun InsightsCard(title: String, content: @Composable ColumnScope.() -> U
 
 @Composable
 private fun MonthlyTable(monthly: List<MonthlyUsage>) {
+    val locale = currentLocale()
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TableRow(
             stringResource(R.string.feature_insights_table_month),
@@ -284,7 +286,7 @@ private fun MonthlyTable(monthly: List<MonthlyUsage>) {
             header = true,
         )
         monthly.asReversed().forEach { usage ->
-            TableRow(usage.month.displayName(), usage.consumed.toString(), usage.wasted.toString())
+            TableRow(usage.month.displayName(locale), usage.consumed.toString(), usage.wasted.toString())
         }
     }
 }
@@ -300,7 +302,7 @@ private fun TableRow(month: String, consumed: String, wasted: String, header: Bo
     }
 }
 
-private fun YearMonth.displayName(): String = "${month.getDisplayName(TextStyle.SHORT, Locale.getDefault())} $year"
+private fun YearMonth.displayName(locale: Locale): String = "${month.getDisplayName(TextStyle.SHORT, locale)} $year"
 
 /** One horizontal bar per category, longest for the most wasted, with the count at its tip. */
 @Composable

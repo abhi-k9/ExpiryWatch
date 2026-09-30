@@ -38,8 +38,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.abhik9.expirywatch.core.designsystem.theme.ExpiryWatchTheme
 import io.github.abhik9.expirywatch.core.model.MonthlyUsage
+import io.github.abhik9.expirywatch.core.ui.currentLocale
 import java.time.format.TextStyle
-import java.util.Locale
 
 /**
  * Stacked columns of items used up (bottom) and thrown away (top) per month. Tapping a column
@@ -202,10 +202,11 @@ internal fun LegendEntry(color: Color, label: String) {
 
 @Composable
 private fun MonthLabels(monthly: List<MonthlyUsage>) {
+    val locale = currentLocale()
     Row(modifier = Modifier.padding(start = AXIS_LABEL_WIDTH)) {
         monthly.forEach { usage ->
             Text(
-                text = usage.month.month.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
+                text = usage.month.month.getDisplayName(TextStyle.SHORT, locale),
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -218,7 +219,7 @@ private fun MonthLabels(monthly: List<MonthlyUsage>) {
 
 @Composable
 private fun SelectedMonthDetails(usage: MonthlyUsage) {
-    val monthName = usage.month.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale.getDefault())
+    val monthName = usage.month.month.getDisplayName(TextStyle.FULL_STANDALONE, currentLocale())
     Text(
         text = stringResource(
             R.string.feature_insights_month_details,
