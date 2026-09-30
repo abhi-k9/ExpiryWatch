@@ -1,5 +1,6 @@
 import io.github.abhik9.expirywatch.buildlogic.configureKotlinJvm
 import io.github.abhik9.expirywatch.buildlogic.configureSpotless
+import io.github.abhik9.expirywatch.buildlogic.configureTests
 import io.github.abhik9.expirywatch.buildlogic.libs
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -14,6 +15,7 @@ abstract class JvmLibraryConventionPlugin : Plugin<Project> {
 
             configureKotlinJvm()
             configureSpotless()
+            configureTests()
 
             dependencies {
                 "testImplementation"(libs.findLibrary("kotlin.test").get())

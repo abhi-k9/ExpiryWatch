@@ -4,6 +4,7 @@ import io.github.abhik9.expirywatch.buildlogic.AndroidSdk
 import io.github.abhik9.expirywatch.buildlogic.configureKotlinAndroid
 import io.github.abhik9.expirywatch.buildlogic.configureLint
 import io.github.abhik9.expirywatch.buildlogic.configureSpotless
+import io.github.abhik9.expirywatch.buildlogic.configureTests
 import io.github.abhik9.expirywatch.buildlogic.libs
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -33,6 +34,7 @@ abstract class AndroidLibraryConventionPlugin : Plugin<Project> {
                 }
             }
             configureSpotless()
+            configureTests()
 
             dependencies {
                 "testImplementation"(libs.findLibrary("kotlin.test").get())

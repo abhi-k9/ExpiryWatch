@@ -40,11 +40,12 @@ jobs:
 
       - name: Unit tests
         run: >-
-          ./gradlew
+          ./gradlew --continue
           :core:model:test :core:common:test :core:domain:test :core:network:test
           testDebugUnitTest testPlayDebugUnitTest testFossDebugUnitTest
 
       - name: Verify Room schemas are committed
+        if: ${{ !cancelled() }}
         run: |
           if [ -n "$(git status --porcelain core/database/schemas)" ]; then
             echo "::error::The Room schema changed. Commit these files:"
@@ -54,10 +55,12 @@ jobs:
           fi
 
       - name: Build APKs
-        run: ./gradlew assemblePlayDebug assembleFossDebug assemblePlayRelease assembleFossRelease
+        if: ${{ !cancelled() }}
+        run: ./gradlew --continue assemblePlayDebug assembleFossDebug assemblePlayRelease assembleFossRelease
 
       - name: Lint
-        run: ./gradlew :app:lintPlayDebug :app:lintFossDebug
+        if: ${{ !cancelled() }}
+        run: ./gradlew --continue :app:lintPlayDebug :app:lintFossDebug
 
       - name: Upload reports
         if: always()
