@@ -2,7 +2,6 @@ package io.github.abhik9.expirywatch.feature.settings
 
 import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
 import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -61,7 +60,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.abhik9.expirywatch.core.common.AppInfo
 import io.github.abhik9.expirywatch.core.designsystem.component.SectionHeader
@@ -440,8 +439,8 @@ private fun SwitchRow(
     )
 }
 
-private fun Context.canPostNotifications(): Boolean =
-    ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+// Covers both the Android 13+ permission and notifications turned off in system settings.
+private fun Context.canPostNotifications(): Boolean = NotificationManagerCompat.from(this).areNotificationsEnabled()
 
 private const val DISABLED_ALPHA = 0.38f
 private const val OPEN_FOOD_FACTS_URL = "https://world.openfoodfacts.org"

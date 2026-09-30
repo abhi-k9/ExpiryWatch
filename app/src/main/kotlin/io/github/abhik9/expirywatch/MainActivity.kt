@@ -34,7 +34,10 @@ class MainActivity : ComponentActivity() {
         // Keep the splash screen until settings are loaded, so the first frame has the right theme.
         splashScreen.setKeepOnScreenCondition { viewModel.uiState.value is MainActivityUiState.Loading }
 
-        if (savedInstanceState == null) pendingDeepLink = intent.deepLink()
+        if (savedInstanceState == null) {
+            pendingDeepLink = intent.deepLink()
+            AppShortcuts.reportUsage(this, intent)
+        }
 
         setContent {
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -66,6 +69,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         intent.deepLink()?.let { pendingDeepLink = it }
+        AppShortcuts.reportUsage(this, intent)
     }
 
     private fun Intent?.deepLink(): DeepLink? = this?.dataString?.let(DeepLink::parse)

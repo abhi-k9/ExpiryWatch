@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -59,7 +60,7 @@ internal fun MonthlyUsageChart(
 
     val maxTotal = monthly.maxOf { it.consumed + it.wasted }
     val axisMax = niceAxisMax(maxTotal)
-    val summary = stringResource(R.string.feature_insights_chart_description, monthly.size)
+    val summary = pluralStringResource(R.plurals.feature_insights_chart_description, monthly.size, monthly.size)
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         ChartLegend()

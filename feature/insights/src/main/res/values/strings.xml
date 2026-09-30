@@ -26,9 +26,12 @@
     </plurals>
 
     <string name="feature_insights_trend_title">Monthly trend</string>
-    <string name="feature_insights_chart_description">Chart of items used up and thrown away over the last %d months. Tap a month to see its numbers, or show the data table.</string>
+    <plurals name="feature_insights_chart_description">
+        <item quantity="one">Chart of items used up and thrown away over the last month. Tap a month to see its numbers, or show the data table.</item>
+        <item quantity="other">Chart of items used up and thrown away over the last %d months. Tap a month to see its numbers, or show the data table.</item>
+    </plurals>
     <!-- E.g. "March 2026: 12 used up, 3 thrown away". -->
-    <string name="feature_insights_month_details">%1$s: %2$d used up, %3$d thrown away</string>
+    <string name="feature_insights_month_details">%1$s. Used up: %2$d. Thrown away: %3$d.</string>
     <string name="feature_insights_show_table">Show data table</string>
     <string name="feature_insights_hide_table">Hide data table</string>
     <string name="feature_insights_table_month">Month</string>

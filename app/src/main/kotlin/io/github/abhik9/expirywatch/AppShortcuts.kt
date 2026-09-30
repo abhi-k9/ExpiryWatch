@@ -10,6 +10,8 @@ import io.github.abhik9.expirywatch.core.common.navigation.DeepLink
 
 /** Launcher shortcuts shown on a long press of the app icon. */
 internal object AppShortcuts {
+    private const val EXTRA_SHORTCUT_ID = "io.github.abhik9.expirywatch.extra.SHORTCUT_ID"
+
     fun publish(context: Context) {
         val shortcuts = listOf(
             shortcut(
@@ -24,6 +26,11 @@ internal object AppShortcuts {
         ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts)
     }
 
+    /** Tells the launcher when [intent] came from one of the shortcuts, so it can rank them by use. */
+    fun reportUsage(context: Context, intent: Intent) {
+        intent.getStringExtra(EXTRA_SHORTCUT_ID)?.let { id -> ShortcutManagerCompat.reportShortcutUsed(context, id) }
+    }
+
     private fun shortcut(
         context: Context,
         id: String,
@@ -33,6 +40,10 @@ internal object AppShortcuts {
     ): ShortcutInfoCompat = ShortcutInfoCompat.Builder(context, id)
         .setShortLabel(context.getString(labelRes))
         .setIcon(IconCompat.createWithResource(context, iconRes))
-        .setIntent(Intent(Intent.ACTION_VIEW, deepLink.toUri().toUri()).setPackage(context.packageName))
+        .setIntent(
+            Intent(Intent.ACTION_VIEW, deepLink.toUri().toUri())
+                .setPackage(context.packageName)
+                .putExtra(EXTRA_SHORTCUT_ID, id),
+        )
         .build()
 }

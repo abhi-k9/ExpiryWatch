@@ -1,6 +1,7 @@
 package io.github.abhik9.expirywatch.core.designsystem.theme
 
 import android.os.Build
+import androidx.annotation.ChecksSdkIntAtLeast
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -61,6 +62,7 @@ object ExpiryWatchTheme {
         get() = LocalChartColors.current
 }
 
+@ChecksSdkIntAtLeast(api = Build.VERSION_CODES.S)
 fun supportsDynamicTheming(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
 private val ExpiryWatchShapes = Shapes(

@@ -31,10 +31,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,7 +58,8 @@ internal fun ItemsRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = LocalContext.current
+    // Updated on configuration changes without restarting the effect, which would drop a shown snackbar.
+    val resources by rememberUpdatedState(LocalResources.current)
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
@@ -67,10 +69,10 @@ internal fun ItemsRoute(
                         ItemStatus.WASTED -> R.string.feature_items_marked_wasted
                         else -> R.string.feature_items_marked_consumed
                     }
-                    val message = context.getString(messageRes, event.item.name)
+                    val message = resources.getString(messageRes, event.item.name)
                     val result = snackbarHostState.showSnackbar(
                         message = message,
-                        actionLabel = context.getString(R.string.feature_items_undo),
+                        actionLabel = resources.getString(R.string.feature_items_undo),
                         withDismissAction = true,
                     )
                     if (result == SnackbarResult.ActionPerformed) viewModel.undoFinish(event.item)
