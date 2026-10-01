@@ -1,10 +1,16 @@
 name: Release
 
-# Publishes a GitHub release with signed APKs of both flavors when a version tag such as v1.2.3 is
-# pushed. The app's version name and code come from the tag.
+# Publishes a GitHub release with signed APKs of both flavors, either when a version tag such as
+# v1.2.3 is pushed, or when run from the Actions tab with a version, which tags the selected
+# branch's latest commit. The app's version name and code come from the version.
 on:
   push:
     tags: [ "v*" ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release, such as 1.2.3
+        required: true
 
 permissions:
   contents: write
@@ -16,11 +22,22 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
-      - name: Read the version from the tag
+      - name: Read the version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            version="${INPUT_VERSION#v}"
+          else
+            version="${GITHUB_REF_NAME#v}"
+          fi
           if ! [[ "$version" =~ ^[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
-            echo "::error::Release tags must look like v1.2.3 (each part 0-99), but this one is $GITHUB_REF_NAME."
+            echo "::error::Versions must look like 1.2.3 (each part 0-99), but got \"$version\"."
+            exit 1
+          fi
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] &&
+            git ls-remote --exit-code --tags origin "refs/tags/v$version" > /dev/null; then
+            echo "::error::The tag v$version already exists."
             exit 1
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
@@ -53,8 +70,9 @@ jobs:
           - **ExpiryWatch-$VERSION-foss.apk** uses ZXing and contains no proprietary Google libraries.
 
           Both have the same app ID and signing key, so either one updates an existing installation."
-          gh release create "$GITHUB_REF_NAME" dist/* \
-            --verify-tag \
+          # On a manual run, this creates the tag on the commit that was built.
+          gh release create "v$VERSION" dist/* \
+            --target "$GITHUB_SHA" \
             --title "ExpiryWatch $VERSION" \
             --notes "$notes" \
             --generate-notes

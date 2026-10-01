@@ -130,18 +130,16 @@ To sign the release APKs built by CI and the release workflow, add these reposit
 
 ### Releases
 
-Pushing a version tag publishes a [GitHub release](https://github.com/abhi-k9/ExpiryWatch/releases) with signed APKs of both
-flavors and their SHA-256 checksums:
+The release workflow publishes a [GitHub release](https://github.com/abhi-k9/ExpiryWatch/releases)
+with signed APKs of both flavors and their SHA-256 checksums. Start it either way:
 
-```bash
-git tag v1.2.0
-git push origin v1.2.0
-```
+- In the Actions tab, open **Release**, choose **Run workflow** and enter the version, such as
+  `1.2.0`. The workflow tags the branch's latest commit as `v1.2.0`.
+- Or push a tag: `git tag v1.2.0 && git push origin v1.2.0`.
 
-The tag sets the app's version: `v1.2.0` becomes version name `1.2.0` and version code `10200`, so
-each part must be between 0 and 99. Local builds are version `1.0.0` unless you pass
-`-Pexpirywatch.versionName=1.2.0`. The release workflow refuses to publish without the signing
-secrets.
+The version sets the app's version name (`1.2.0`) and version code (`10200`), so each part must be
+between 0 and 99. Local builds are version `1.0.0` unless you pass
+`-Pexpirywatch.versionName=1.2.0`. The workflow refuses to publish without the signing secrets.
 
 ## Testing and checks
 
