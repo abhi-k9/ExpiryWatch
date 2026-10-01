@@ -11,13 +11,26 @@ val keystoreProperties = rootProject.file("keystore.properties").takeIf { it.exi
     Properties().apply { file.inputStream().use(::load) }
 }
 
+// The release workflow passes the version from the git tag, e.g. -Pexpirywatch.versionName=1.2.3.
+val appVersionName: String = providers.gradleProperty("expirywatch.versionName").getOrElse("1.0.0")
+
+/** Turns "1.2.3" into 10203, so every release has a higher version code than the one before. */
+fun versionCodeOf(versionName: String): Int {
+    val parts = versionName.split('.').map { it.toIntOrNull() }
+    require(parts.size == 3 && parts.all { it != null && it in 0..99 }) {
+        "The version must look like 1.2.3, with each part from 0 to 99, but was \"$versionName\"."
+    }
+    val (major, minor, patch) = parts.requireNoNulls()
+    return major * 10_000 + minor * 100 + patch
+}
+
 android {
     namespace = "io.github.abhik9.expirywatch"
 
     defaultConfig {
         applicationId = "io.github.abhik9.expirywatch"
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = versionCodeOf(appVersionName)
+        versionName = appVersionName
         buildConfigField("String", "SOURCE_CODE_URL", "\"https://github.com/abhi-k9/expirywatch\"")
     }
 

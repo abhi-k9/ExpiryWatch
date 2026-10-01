@@ -118,8 +118,8 @@ keyPassword=…
 
 Without it, release builds are signed with the debug key.
 
-To sign the release APKs that CI builds, add these repository secrets (Settings → Secrets and
-variables → Actions):
+To sign the release APKs built by CI and the release workflow, add these repository secrets
+(Settings → Secrets and variables → Actions):
 
 | Secret | Value |
 |--------|-------|
@@ -127,6 +127,21 @@ variables → Actions):
 | `RELEASE_KEYSTORE_PASSWORD` | The keystore password |
 | `RELEASE_KEY_ALIAS` | The key's alias |
 | `RELEASE_KEY_PASSWORD` | Optional: the key's password, if it differs from the keystore's |
+
+### Releases
+
+Pushing a version tag publishes a [GitHub release](https://github.com/abhi-k9/ExpiryWatch/releases) with signed APKs of both
+flavors and their SHA-256 checksums:
+
+```bash
+git tag v1.2.0
+git push origin v1.2.0
+```
+
+The tag sets the app's version: `v1.2.0` becomes version name `1.2.0` and version code `10200`, so
+each part must be between 0 and 99. Local builds are version `1.0.0` unless you pass
+`-Pexpirywatch.versionName=1.2.0`. The release workflow refuses to publish without the signing
+secrets.
 
 ## Testing and checks
 

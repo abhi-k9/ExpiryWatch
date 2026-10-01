@@ -1,0 +1,53 @@
+name: Set up release signing
+description: >-
+  Writes keystore.properties from the release keystore secrets, so release builds are signed
+  with the release key. Without the keystore, release builds use the debug key unless
+  `required` is true.
+inputs:
+  keystore-base64:
+    description: The keystore file, base64-encoded.
+    required: false
+  keystore-password:
+    description: The keystore password.
+    required: false
+  key-alias:
+    description: The key's alias.
+    required: false
+  key-password:
+    description: The key's password, if it differs from the keystore's (not possible in PKCS12).
+    required: false
+  required:
+    description: Fail when the keystore is missing, instead of falling back to the debug key.
+    required: false
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Write keystore.properties
+      shell: bash
+      env:
+        KEYSTORE_BASE64: ${{ inputs.keystore-base64 }}
+        KEYSTORE_PASSWORD: ${{ inputs.keystore-password }}
+        KEY_ALIAS: ${{ inputs.key-alias }}
+        KEY_PASSWORD: ${{ inputs.key-password }}
+        REQUIRED: ${{ inputs.required }}
+      run: |
+        if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ]; then
+          if [ "$REQUIRED" = "true" ]; then
+            echo "::error::Set the RELEASE_KEYSTORE_BASE64, RELEASE_KEYSTORE_PASSWORD and RELEASE_KEY_ALIAS secrets."
+            exit 1
+          fi
+          # Secrets are unavailable to pull requests from forks; those builds keep the debug key.
+          echo "::notice::No release keystore secrets, so release APKs are signed with the debug key."
+          exit 0
+        fi
+        keystore="$RUNNER_TEMP/release.jks"
+        printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
+        # keystore.properties is a Java properties file, where backslashes are escapes.
+        escape() { printf '%s' "$1" | sed 's/\\/\\\\/g'; }
+        {
+          echo "storeFile=$keystore"
+          echo "storePassword=$(escape "$KEYSTORE_PASSWORD")"
+          echo "keyAlias=$(escape "$KEY_ALIAS")"
+          echo "keyPassword=$(escape "${KEY_PASSWORD:-$KEYSTORE_PASSWORD}")"
+        } > keystore.properties
