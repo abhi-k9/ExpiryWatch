@@ -2,8 +2,10 @@ package io.github.abhik9.expirywatch.feature.settings
 
 import android.Manifest
 import android.content.Context
+import android.content.res.Resources
 import android.os.Build
 import android.text.format.DateFormat
+import android.text.format.Formatter
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
@@ -13,9 +15,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.Info
@@ -51,11 +56,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -80,15 +87,25 @@ internal fun SettingsRoute(
     viewModel: SettingsViewModel,
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val diagnostics by viewModel.diagnostics.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = LocalContext.current
+    // Updated on configuration changes without restarting the effect, which would drop a shown snackbar.
+    val resources by rememberUpdatedState(LocalResources.current)
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
-            when (event) {
-                is SettingsEvent.BackupFinished ->
-                    snackbarHostState.showSnackbar(context.backupMessage(event.operation, event.result))
+            val message = when (event) {
+                is SettingsEvent.BackupFinished -> resources.backupMessage(event.operation, event.result)
+
+                is SettingsEvent.DiagnosticsExported -> resources.getString(
+                    if (event.success) {
+                        R.string.feature_settings_diagnostics_exported
+                    } else {
+                        R.string.feature_settings_diagnostics_export_failed
+                    },
+                )
             }
+            snackbarHostState.showSnackbar(message)
         }
     }
 
@@ -98,6 +115,9 @@ internal fun SettingsRoute(
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.importFrom(it.toString()) }
     }
+    val diagnosticsExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(DIAGNOSTICS_MIME_TYPE),
+    ) { uri -> uri?.let { viewModel.exportDiagnosticsTo(it.toString()) } }
 
     SettingsScreen(
         settings = settings,
@@ -113,11 +133,15 @@ internal fun SettingsRoute(
         onExport = { exportLauncher.launch(viewModel.suggestedBackupFileName) },
         // Some file managers label JSON files as plain text or a generic binary.
         onImport = { importLauncher.launch(arrayOf(BackupCodec.MIME_TYPE, "text/plain", "application/octet-stream")) },
+        diagnostics = diagnostics,
+        onDiagnosticsRecordingChange = viewModel::setDiagnosticsRecording,
+        onExportDiagnostics = { diagnosticsExportLauncher.launch(viewModel.suggestedDiagnosticsFileName) },
+        onClearDiagnostics = viewModel::clearDiagnostics,
     )
 }
 
-private fun Context.backupMessage(operation: BackupOperation, result: BackupResult): String = when (result) {
-    is BackupResult.Success -> resources.getQuantityString(
+private fun Resources.backupMessage(operation: BackupOperation, result: BackupResult): String = when (result) {
+    is BackupResult.Success -> getQuantityString(
         when (operation) {
             BackupOperation.EXPORT -> R.plurals.feature_settings_export_done
             BackupOperation.IMPORT -> R.plurals.feature_settings_import_done
@@ -146,6 +170,10 @@ internal fun SettingsScreen(
     onManageLabels: (LabelKind) -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
+    diagnostics: DiagnosticsState,
+    onDiagnosticsRecordingChange: (Boolean) -> Unit,
+    onExportDiagnostics: () -> Unit,
+    onClearDiagnostics: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -179,6 +207,7 @@ internal fun SettingsScreen(
             )
 
             BackupSection(isBackupInProgress = isBackupInProgress, onExport = onExport, onImport = onImport)
+            DiagnosticsSection(diagnostics, onDiagnosticsRecordingChange, onExportDiagnostics, onClearDiagnostics)
             AboutSection(appInfo)
         }
     }
@@ -370,6 +399,38 @@ private fun BackupSection(isBackupInProgress: Boolean, onExport: () -> Unit, onI
 }
 
 @Composable
+private fun DiagnosticsSection(
+    diagnostics: DiagnosticsState,
+    onRecordingChange: (Boolean) -> Unit,
+    onExport: () -> Unit,
+    onClear: () -> Unit,
+) {
+    SectionHeader(stringResource(R.string.feature_settings_section_diagnostics))
+    SwitchRow(
+        icon = Icons.Outlined.BugReport,
+        title = stringResource(R.string.feature_settings_diagnostics),
+        subtitle = stringResource(R.string.feature_settings_diagnostics_summary),
+        checked = diagnostics.isRecording,
+        onCheckedChange = onRecordingChange,
+    )
+    // Only once something has been recorded.
+    if (diagnostics.logBytes > 0) {
+        val size = Formatter.formatShortFileSize(LocalContext.current, diagnostics.logBytes)
+        SettingsRow(
+            icon = Icons.Outlined.Description,
+            title = stringResource(R.string.feature_settings_diagnostics_export),
+            subtitle = stringResource(R.string.feature_settings_diagnostics_export_summary, size),
+            onClick = onExport,
+        )
+        SettingsRow(
+            icon = Icons.Outlined.DeleteSweep,
+            title = stringResource(R.string.feature_settings_diagnostics_clear),
+            onClick = onClear,
+        )
+    }
+}
+
+@Composable
 private fun AboutSection(appInfo: AppInfo) {
     val uriHandler = LocalUriHandler.current
     SectionHeader(stringResource(R.string.feature_settings_section_about))
@@ -443,4 +504,5 @@ private fun SwitchRow(
 private fun Context.canPostNotifications(): Boolean = NotificationManagerCompat.from(this).areNotificationsEnabled()
 
 private const val DISABLED_ALPHA = 0.38f
+private const val DIAGNOSTICS_MIME_TYPE = "text/plain"
 private const val OPEN_FOOD_FACTS_URL = "https://world.openfoodfacts.org"

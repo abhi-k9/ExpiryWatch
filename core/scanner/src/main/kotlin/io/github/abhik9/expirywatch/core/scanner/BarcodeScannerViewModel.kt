@@ -14,8 +14,10 @@ import androidx.camera.lifecycle.awaitInstance
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.abhik9.expirywatch.core.common.diagnostics.EventLog
 import java.util.concurrent.Executors
 import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,12 +36,18 @@ data class TorchState(
 @HiltViewModel
 class BarcodeScannerViewModel @Inject constructor(
     analyzerFactory: BarcodeAnalyzerFactory,
+    private val log: EventLog,
 ) : ViewModel() {
     private val _surfaceRequest = MutableStateFlow<SurfaceRequest?>(null)
     val surfaceRequest: StateFlow<SurfaceRequest?> = _surfaceRequest.asStateFlow()
 
     private val _torch = MutableStateFlow(TorchState())
     val torch: StateFlow<TorchState> = _torch.asStateFlow()
+
+    private val _isCameraUnavailable = MutableStateFlow(false)
+
+    /** The camera couldn't be started, e.g. because there is none or it failed to initialize. */
+    val isCameraUnavailable: StateFlow<Boolean> = _isCameraUnavailable.asStateFlow()
 
     private val _detectedBarcode = MutableStateFlow<String?>(null)
 
@@ -48,7 +56,7 @@ class BarcodeScannerViewModel @Inject constructor(
 
     private val analysisExecutor = Executors.newSingleThreadExecutor()
     private val analyzer = analyzerFactory.create { barcode ->
-        _detectedBarcode.compareAndSet(expect = null, update = barcode)
+        if (_detectedBarcode.compareAndSet(expect = null, update = barcode)) log.record { "scanner: barcode detected" }
     }
 
     private val preview = Preview.Builder().build().apply {
@@ -74,15 +82,24 @@ class BarcodeScannerViewModel @Inject constructor(
 
     /** Binds the camera to [lifecycleOwner] until the calling coroutine is cancelled. */
     suspend fun bindToCamera(appContext: Context, lifecycleOwner: LifecycleOwner) {
-        val cameraProvider = ProcessCameraProvider.awaitInstance(appContext)
-        val boundCamera = cameraProvider.bindToLifecycle(
-            lifecycleOwner,
-            CameraSelector.DEFAULT_BACK_CAMERA,
-            preview,
-            imageAnalysis,
-        )
+        val (cameraProvider, boundCamera) = try {
+            val provider = ProcessCameraProvider.awaitInstance(appContext)
+            provider to provider.bindToLifecycle(
+                lifecycleOwner,
+                CameraSelector.DEFAULT_BACK_CAMERA,
+                preview,
+                imageAnalysis,
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.record { "scanner: camera unavailable: $e" }
+            _isCameraUnavailable.value = true
+            return
+        }
         camera = boundCamera
         _torch.value = TorchState(isAvailable = boundCamera.cameraInfo.hasFlashUnit())
+        log.record { "scanner: camera started, flashlight available: ${_torch.value.isAvailable}" }
         try {
             awaitCancellation()
         } finally {

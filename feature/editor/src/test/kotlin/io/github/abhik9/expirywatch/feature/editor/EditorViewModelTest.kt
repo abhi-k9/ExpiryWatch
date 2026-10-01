@@ -1,6 +1,7 @@
 package io.github.abhik9.expirywatch.feature.editor
 
 import app.cash.turbine.test
+import io.github.abhik9.expirywatch.core.common.diagnostics.EventLog
 import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.LookupProductUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.SaveItemUseCase
@@ -41,7 +42,7 @@ class EditorViewModelTest {
         itemRepository = items,
         saveItem = SaveItemUseCase(items, history, TestTime.clock),
         finishItem = FinishItemUseCase(items, TestTime.clock),
-        lookupProduct = LookupProductUseCase(history, catalog),
+        lookupProduct = LookupProductUseCase(history, catalog, EventLog.NONE),
         clock = TestTime.clock,
     )
 

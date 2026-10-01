@@ -20,6 +20,7 @@ Built with Kotlin, Jetpack Compose and Material 3, following Google's recommende
   categories.
 - **Home-screen widget** listing what expires next.
 - **Backup and restore** to a JSON file through the system file picker.
+- **Diagnostics**: an opt-in log of what the app does, to export when reporting an issue.
 - Customizable **categories and storage locations**, light/dark theme, dynamic color, launcher
   shortcuts and an adaptive layout (navigation rail on tablets and foldables).
 
@@ -72,6 +73,7 @@ The app follows a layered, multi-module architecture with unidirectional data fl
 | `core:database` | Room database |
 | `core:datastore` | User settings |
 | `core:notifications` | Daily reminder worker and notifications |
+| `core:diagnostics` | Diagnostics log and report |
 | `core:scanner`, `core:scanner-mlkit`, `core:scanner-zxing` | CameraX scanner UI and the two analyzers |
 | `core:designsystem` | Theme, colors and basic components |
 | `core:ui` | Shared composables and formatting |
@@ -160,6 +162,20 @@ Backups are versioned JSON (`"format": "expirywatch-backup"`, `"version": 1`) wi
 locations, items and remembered products. The format has its own DTOs, separate from the domain
 models, so internal refactors can't silently change it. Importing validates the whole file before
 replacing any data.
+
+## Diagnostics
+
+To investigate an issue, turn on **Record diagnostics** in Settings, reproduce the issue, then
+**Export log** to a file and attach it to the report. Debug builds record by default.
+
+The log records what the app does and why: reminder scheduling and checks, notifications shown or
+blocked, barcode lookups, backups, item changes, the camera, process starts and crashes. The export
+starts with a snapshot of the app and device: versions, notification and battery settings,
+scheduled reminders, recent process exits and how much data is stored.
+
+It only contains technical details. Items are identified by number, never by name, and scanned
+codes other than product barcodes (such as QR codes) are recorded by length only. The log is capped
+at about 512 KB, isn't included in backups, and never leaves the device unless you export it.
 
 ## Credits
 

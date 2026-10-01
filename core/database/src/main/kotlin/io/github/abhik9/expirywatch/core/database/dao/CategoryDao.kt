@@ -30,6 +30,9 @@ interface CategoryDao {
 
     @Query("DELETE FROM categories")
     suspend fun deleteAll()
+
+    @Query("SELECT COUNT(*) FROM categories")
+    suspend fun count(): Int
 }
 
 @Dao
@@ -54,4 +57,7 @@ interface LocationDao {
 
     @Query("DELETE FROM locations")
     suspend fun deleteAll()
+
+    @Query("SELECT COUNT(*) FROM locations")
+    suspend fun count(): Int
 }

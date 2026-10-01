@@ -9,6 +9,7 @@ android {
 
 dependencies {
     api(libs.androidx.camera.core)
+    implementation(projects.core.common)
     implementation(projects.core.designsystem)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.camera.camera2)

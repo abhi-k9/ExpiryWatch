@@ -1,5 +1,6 @@
 package io.github.abhik9.expirywatch.core.domain.usecase
 
+import io.github.abhik9.expirywatch.core.common.diagnostics.EventLog
 import io.github.abhik9.expirywatch.core.domain.repository.ProductCatalog
 import io.github.abhik9.expirywatch.core.domain.repository.ProductHistoryRepository
 import io.github.abhik9.expirywatch.core.model.ProductInfo
@@ -22,23 +23,33 @@ sealed interface ProductLookupResult {
 class LookupProductUseCase @Inject constructor(
     private val history: ProductHistoryRepository,
     private val catalog: ProductCatalog,
+    private val log: EventLog,
 ) {
     suspend operator fun invoke(rawBarcode: String): ProductLookupResult {
         val barcode = rawBarcode.trim()
         if (barcode.isEmpty()) return ProductLookupResult.NotFound
 
-        history.find(barcode)?.let { return ProductLookupResult.Found(it) }
+        history.find(barcode)?.let { product ->
+            log.record { "lookup ${barcode.forLog()}: found in history" }
+            return ProductLookupResult.Found(product)
+        }
 
         // Online catalogs only know retail product codes (EAN/UPC), not e.g. QR codes.
-        if (!barcode.isRetailProductCode()) return ProductLookupResult.NotFound
+        if (!barcode.isRetailProductCode()) {
+            log.record { "lookup ${barcode.forLog()}: not a retail product code" }
+            return ProductLookupResult.NotFound
+        }
 
-        return try {
-            catalog.find(barcode)?.let(ProductLookupResult::Found) ?: ProductLookupResult.NotFound
+        val product = try {
+            catalog.find(barcode)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            ProductLookupResult.CatalogUnavailable
+            log.record { "lookup $barcode: catalog unavailable: $e" }
+            return ProductLookupResult.CatalogUnavailable
         }
+        log.record { "lookup $barcode: ${if (product == null) "not in" else "found in"} the catalog" }
+        return product?.let(ProductLookupResult::Found) ?: ProductLookupResult.NotFound
     }
 }
 
@@ -46,3 +57,6 @@ private val retailCodeLengths = setOf(8, 12, 13, 14)
 
 /** EAN-8, UPC-A, EAN-13 or GTIN-14. */
 internal fun String.isRetailProductCode(): Boolean = length in retailCodeLengths && all(Char::isDigit)
+
+/** Other codes, such as QR codes, can contain personal data, so only their length is recorded. */
+private fun String.forLog(): String = if (isRetailProductCode()) this else "of $length characters"

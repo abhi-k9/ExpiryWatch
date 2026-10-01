@@ -113,12 +113,23 @@ fun BarcodeScanner(
         onBarcodeScanned(barcode)
     }
 
+    val isCameraUnavailable by viewModel.isCameraUnavailable.collectAsStateWithLifecycle()
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black),
     ) {
-        if (hasCameraPermission) {
+        if (hasCameraPermission && isCameraUnavailable) {
+            Text(
+                text = stringResource(R.string.core_scanner_camera_unavailable),
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(32.dp),
+                color = Color.White,
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+            )
+        } else if (hasCameraPermission) {
             CameraViewfinder(viewModel)
             ScanWindowOverlay(Modifier.fillMaxSize())
             Text(

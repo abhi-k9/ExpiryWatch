@@ -53,4 +53,7 @@ interface ItemDao {
 
     @Query("DELETE FROM items")
     suspend fun deleteAll()
+
+    @Query("SELECT COUNT(*) FROM items WHERE status = :status")
+    suspend fun count(status: ItemStatus): Int
 }

@@ -3,6 +3,7 @@ package io.github.abhik9.expirywatch.core.data
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import io.github.abhik9.expirywatch.core.common.diagnostics.EventLog
 import io.github.abhik9.expirywatch.core.data.repository.RoomBackupRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomCategoryRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomItemRepository
@@ -16,7 +17,10 @@ import io.github.abhik9.expirywatch.core.model.ProductSource
 import io.github.abhik9.expirywatch.core.model.StorageLocation
 import io.github.abhik9.expirywatch.core.testing.TestData
 import io.github.abhik9.expirywatch.core.testing.TestTime
+import io.github.abhik9.expirywatch.core.testing.diagnostics.RecordingEventLog
+import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepository
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -39,12 +43,49 @@ class RoomRepositoriesTest {
     @Test
     fun itemsAreInsertedThenUpdated() = runTest {
         val database = newDatabase()
-        val items = RoomItemRepository(database.itemDao())
+        val items = RoomItemRepository(database.itemDao(), EventLog.NONE)
 
         val id = items.upsert(TestData.item(name = "Milk", category = null, location = null))
         items.upsert(items.observeItem(id).first()!!.copy(name = "Oat milk"))
 
         assertEquals(listOf("Oat milk"), items.getActiveItems().map { it.name })
+    }
+
+    @Test
+    fun itemChangesAreRecordedByIdOnly() = runTest {
+        val log = RecordingEventLog()
+        val items = RoomItemRepository(newDatabase().itemDao(), log)
+
+        val id = items.upsert(TestData.item(name = "Milk", category = null, location = null))
+        items.updateStatus(id, ItemStatus.CONSUMED, TestTime.today)
+        items.delete(id)
+
+        assertEquals(
+            listOf("items: added #$id, expires 2026-03-15", "items: #$id is now CONSUMED", "items: deleted #$id"),
+            log.messages,
+        )
+    }
+
+    @Test
+    fun diagnosticsCountWhatIsStored() = runTest {
+        val database = newDatabase()
+        val items = RoomItemRepository(database.itemDao(), EventLog.NONE)
+        items.upsert(TestData.item(name = "Milk", category = null, location = null))
+        val finished = items.upsert(TestData.item(name = "Bread", category = null, location = null))
+        items.updateStatus(finished, ItemStatus.WASTED, TestTime.today)
+        val section = DataDiagnosticsSection(
+            database.itemDao(),
+            database.categoryDao(),
+            database.locationDao(),
+            database.productDao(),
+            FakeUserSettingsRepository(),
+        )
+
+        val lines = section.describe()
+
+        assertEquals("Items: 1 active, 0 used up, 1 thrown away", lines[0])
+        assertEquals("Categories: 0, locations: 0, remembered products: 0", lines[1])
+        assertFalse(lines.any { "Milk" in it || "Bread" in it })
     }
 
     @Test
@@ -65,7 +106,7 @@ class RoomRepositoriesTest {
             .upsert(StorageLocation(name = "Fridge", emoji = "🧊"))
         val dairy = Category(categoryId, "Dairy", "🧀")
         val fridge = StorageLocation(locationId, "Fridge", "🧊")
-        val sourceItems = RoomItemRepository(source.itemDao())
+        val sourceItems = RoomItemRepository(source.itemDao(), EventLog.NONE)
         sourceItems.upsert(TestData.item(name = "Milk", category = dairy, location = fridge).copy(barcode = "123"))
         val finishedId = sourceItems.upsert(TestData.item(name = "Spinach", category = null, location = null))
         sourceItems.updateStatus(finishedId, ItemStatus.WASTED, TestTime.today)
@@ -84,7 +125,7 @@ class RoomRepositoriesTest {
             listOf("Dairy"),
             RoomCategoryRepository(target.categoryDao()).observeCategories().first().map { it.name },
         )
-        val restoredMilk = RoomItemRepository(target.itemDao()).getActiveItems().single()
+        val restoredMilk = RoomItemRepository(target.itemDao(), EventLog.NONE).getActiveItems().single()
         assertEquals(dairy, restoredMilk.category)
         assertEquals(fridge, restoredMilk.location)
         assertEquals("Milk", RoomProductHistoryRepository(target.productDao()).find("123")?.name)

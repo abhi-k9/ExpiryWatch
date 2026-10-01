@@ -7,4 +7,5 @@
     <string name="core_scanner_enter_manually">Type the barcode instead</string>
     <string name="core_scanner_permission_rationale">ExpiryWatch needs the camera to scan barcodes. You can allow it in the app settings, or type the barcode instead.</string>
     <string name="core_scanner_open_settings">Open settings</string>
+    <string name="core_scanner_camera_unavailable">The camera couldn\'t be started. You can type the barcode instead.</string>
 </resources>

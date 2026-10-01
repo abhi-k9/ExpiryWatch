@@ -2,7 +2,9 @@ package io.github.abhik9.expirywatch
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.github.abhik9.expirywatch.core.common.AppInfo
 import io.github.abhik9.expirywatch.core.common.di.ApplicationScope
+import io.github.abhik9.expirywatch.core.diagnostics.DiagnosticsLog
 import io.github.abhik9.expirywatch.core.domain.repository.ItemRepository
 import io.github.abhik9.expirywatch.core.domain.usecase.SyncReminderScheduleUseCase
 import io.github.abhik9.expirywatch.feature.widget.ExpiryWidgetUpdater
@@ -20,9 +22,14 @@ class AppStartup @Inject constructor(
     private val syncReminderSchedule: SyncReminderScheduleUseCase,
     private val itemRepository: ItemRepository,
     private val widgetUpdater: ExpiryWidgetUpdater,
+    private val diagnosticsLog: DiagnosticsLog,
+    private val appInfo: AppInfo,
 ) {
     @OptIn(FlowPreview::class)
     fun start() {
+        diagnosticsLog.recordCrashes()
+        diagnosticsLog.record { "app: process started, version ${appInfo.versionName}" }
+
         AppShortcuts.publish(context)
 
         // Keep the daily reminder in line with the settings for as long as the process lives.

@@ -11,6 +11,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.github.abhik9.expirywatch.core.common.diagnostics.EventLog
 import io.github.abhik9.expirywatch.core.common.navigation.DeepLink
 import io.github.abhik9.expirywatch.core.domain.usecase.ExpirySummary
 import io.github.abhik9.expirywatch.core.model.ExpiryStatus
@@ -22,6 +23,7 @@ import javax.inject.Singleton
 @Singleton
 class ExpiryNotifier @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val log: EventLog,
 ) {
     /** Posts a summary of expired and soon-to-expire items, or removes it when there are none. */
     fun showExpiryReminder(summary: ExpirySummary): Unit = with(context) {
@@ -29,6 +31,7 @@ class ExpiryNotifier @Inject constructor(
         val needingAttention = summary.expired + summary.expiringSoon
         if (needingAttention.isEmpty()) {
             notificationManager.cancel(REMINDER_NOTIFICATION_ID)
+            log.record { "reminder notification: removed, nothing needs attention" }
             return@with
         }
         // ContextCompat treats POST_NOTIFICATIONS as granted before Android 13 when notifications
@@ -36,6 +39,7 @@ class ExpiryNotifier @Inject constructor(
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
         ) {
+            log.record { "reminder notification: not shown, notifications are off" }
             return@with
         }
         ensureChannel(notificationManager)
@@ -89,6 +93,7 @@ class ExpiryNotifier @Inject constructor(
             .build()
 
         notificationManager.notify(REMINDER_NOTIFICATION_ID, notification)
+        log.record { "reminder notification: shown for ${needingAttention.size} items" }
     }
 
     private fun Context.ensureChannel(notificationManager: NotificationManagerCompat) {
@@ -110,9 +115,9 @@ class ExpiryNotifier @Inject constructor(
         )
     }
 
-    private companion object {
-        const val CHANNEL_ID = "expiry_reminders"
-        const val REMINDER_NOTIFICATION_ID = 1
-        const val MAX_LINES = 5
+    companion object {
+        internal const val CHANNEL_ID = "expiry_reminders"
+        private const val REMINDER_NOTIFICATION_ID = 1
+        private const val MAX_LINES = 5
     }
 }

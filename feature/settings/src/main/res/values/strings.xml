@@ -63,6 +63,15 @@
     <string name="feature_settings_backup_io_error">Couldn\'t read or write the file. Please try again.</string>
     <string name="feature_settings_backup_invalid_file">That file isn\'t an ExpiryWatch backup, or it\'s from a newer version of the app. Nothing was changed.</string>
 
+    <string name="feature_settings_section_diagnostics">Diagnostics</string>
+    <string name="feature_settings_diagnostics">Record diagnostics</string>
+    <string name="feature_settings_diagnostics_summary">Keep a log of what the app does, to help investigate issues. It stays on this device unless you export it.</string>
+    <string name="feature_settings_diagnostics_export">Export log</string>
+    <string name="feature_settings_diagnostics_export_summary">Save it with app and device details to a file (%1$s)</string>
+    <string name="feature_settings_diagnostics_clear">Clear log</string>
+    <string name="feature_settings_diagnostics_exported">Diagnostics exported</string>
+    <string name="feature_settings_diagnostics_export_failed">Couldn\'t export the diagnostics. Please try again.</string>
+
     <string name="feature_settings_section_about">About</string>
     <string name="feature_settings_version">Version</string>
     <string name="feature_settings_barcode_engine">Barcode scanning</string>

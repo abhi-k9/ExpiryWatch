@@ -1,5 +1,6 @@
 package io.github.abhik9.expirywatch.core.domain.usecase
 
+import io.github.abhik9.expirywatch.core.common.diagnostics.EventLog
 import io.github.abhik9.expirywatch.core.domain.backup.BackupSnapshot
 import io.github.abhik9.expirywatch.core.testing.TestData
 import io.github.abhik9.expirywatch.core.testing.TestTime
@@ -24,11 +25,11 @@ class BackupUseCasesTest {
     @Test
     fun exportThenImportRestoresTheSameData() = runTest {
         val source = FakeBackupRepository(snapshot)
-        val exported = ExportBackupUseCase(source, documents, TestTime.clock)("content://backup")
+        val exported = ExportBackupUseCase(source, documents, TestTime.clock, EventLog.NONE)("content://backup")
         assertEquals(BackupResult.Success(BackupStats(itemCount = 2, categoryCount = 1, locationCount = 1)), exported)
 
         val target = FakeBackupRepository()
-        val imported = ImportBackupUseCase(target, documents)("content://backup")
+        val imported = ImportBackupUseCase(target, documents, EventLog.NONE)("content://backup")
 
         assertIs<BackupResult.Success>(imported)
         assertEquals(snapshot, target.restoredSnapshot)
@@ -39,7 +40,7 @@ class BackupUseCasesTest {
         documents.documents["content://bad"] = "{ nope"
         val target = FakeBackupRepository(snapshot)
 
-        val result = ImportBackupUseCase(target, documents)("content://bad")
+        val result = ImportBackupUseCase(target, documents, EventLog.NONE)("content://bad")
 
         assertIs<BackupResult.InvalidFile>(result)
         assertNull(target.restoredSnapshot)
@@ -49,7 +50,10 @@ class BackupUseCasesTest {
     fun reportsIoErrors() = runTest {
         documents.failWith = IOException("Disk full")
 
-        assertEquals(BackupResult.IoError, ExportBackupUseCase(FakeBackupRepository(), documents, TestTime.clock)("x"))
-        assertEquals(BackupResult.IoError, ImportBackupUseCase(FakeBackupRepository(), documents)("x"))
+        val exportBackup = ExportBackupUseCase(FakeBackupRepository(), documents, TestTime.clock, EventLog.NONE)
+        val importBackup = ImportBackupUseCase(FakeBackupRepository(), documents, EventLog.NONE)
+
+        assertEquals(BackupResult.IoError, exportBackup("x"))
+        assertEquals(BackupResult.IoError, importBackup("x"))
     }
 }

@@ -4,6 +4,9 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.IntoSet
+import io.github.abhik9.expirywatch.core.common.diagnostics.DiagnosticsSection
+import io.github.abhik9.expirywatch.core.data.DataDiagnosticsSection
 import io.github.abhik9.expirywatch.core.data.repository.ContentResolverDocumentStore
 import io.github.abhik9.expirywatch.core.data.repository.DataStoreUserSettingsRepository
 import io.github.abhik9.expirywatch.core.data.repository.OpenFoodFactsProductCatalog
@@ -47,4 +50,8 @@ internal abstract class DataModule {
 
     @Binds
     abstract fun bindsUserSettingsRepository(repository: DataStoreUserSettingsRepository): UserSettingsRepository
+
+    @Binds
+    @IntoSet
+    abstract fun bindsDataDiagnosticsSection(section: DataDiagnosticsSection): DiagnosticsSection
 }

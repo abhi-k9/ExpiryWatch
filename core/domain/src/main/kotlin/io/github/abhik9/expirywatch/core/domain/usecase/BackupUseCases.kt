@@ -1,5 +1,6 @@
 package io.github.abhik9.expirywatch.core.domain.usecase
 
+import io.github.abhik9.expirywatch.core.common.diagnostics.EventLog
 import io.github.abhik9.expirywatch.core.domain.backup.BackupCodec
 import io.github.abhik9.expirywatch.core.domain.backup.BackupFormatException
 import io.github.abhik9.expirywatch.core.domain.backup.BackupSnapshot
@@ -31,13 +32,15 @@ class ExportBackupUseCase @Inject constructor(
     private val backupRepository: BackupRepository,
     private val documentStore: DocumentStore,
     private val clock: Clock,
+    private val log: EventLog,
 ) {
     suspend operator fun invoke(uri: String): BackupResult {
         val snapshot = backupRepository.createSnapshot()
         return try {
             documentStore.writeText(uri, BackupCodec.encode(snapshot, exportedAt = Instant.now(clock)))
-            BackupResult.Success(snapshot.stats())
+            BackupResult.Success(snapshot.stats()).also { log.record { "backup: exported ${it.stats}" } }
         } catch (e: IOException) {
+            log.record { "backup: export failed: $e" }
             BackupResult.IoError
         }
     }
@@ -50,17 +53,20 @@ class ExportBackupUseCase @Inject constructor(
 class ImportBackupUseCase @Inject constructor(
     private val backupRepository: BackupRepository,
     private val documentStore: DocumentStore,
+    private val log: EventLog,
 ) {
     suspend operator fun invoke(uri: String): BackupResult {
         val snapshot = try {
             BackupCodec.decode(documentStore.readText(uri))
         } catch (e: IOException) {
+            log.record { "backup: import failed: $e" }
             return BackupResult.IoError
         } catch (e: BackupFormatException) {
+            log.record { "backup: import rejected: ${e.message}" }
             return BackupResult.InvalidFile(e.message.orEmpty())
         }
         backupRepository.restore(snapshot)
-        return BackupResult.Success(snapshot.stats())
+        return BackupResult.Success(snapshot.stats()).also { log.record { "backup: imported ${it.stats}" } }
     }
 }
 
