@@ -42,6 +42,29 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+      - name: Set up release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          # Only needed for a key whose password differs from the keystore's (not possible in PKCS12).
+          KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          # Secrets are unavailable to pull requests from forks; those builds keep the debug key.
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::notice::No release keystore secret, so release APKs are signed with the debug key."
+            exit 0
+          fi
+          keystore="$RUNNER_TEMP/release.jks"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          # keystore.properties is a Java properties file, where backslashes are escapes.
+          escape() { printf '%s' "$1" | sed 's/\\/\\\\/g'; }
+          {
+            echo "storeFile=$keystore"
+            echo "storePassword=$(escape "$KEYSTORE_PASSWORD")"
+            echo "keyAlias=$(escape "$KEY_ALIAS")"
+            echo "keyPassword=$(escape "${KEY_PASSWORD:-$KEYSTORE_PASSWORD}")"
+          } > keystore.properties
       - name: Build debug and release APKs of both flavors
         run: ./gradlew --continue assemblePlayDebug assembleFossDebug assemblePlayRelease assembleFossRelease
       - name: Upload APKs

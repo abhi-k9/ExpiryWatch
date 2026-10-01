@@ -118,6 +118,16 @@ keyPassword=…
 
 Without it, release builds are signed with the debug key.
 
+To sign the release APKs that CI builds, add these repository secrets (Settings → Secrets and
+variables → Actions):
+
+| Secret | Value |
+|--------|-------|
+| `RELEASE_KEYSTORE_BASE64` | The keystore file, base64-encoded on a single line (`base64 -w 0 release.jks`) |
+| `RELEASE_KEYSTORE_PASSWORD` | The keystore password |
+| `RELEASE_KEY_ALIAS` | The key's alias |
+| `RELEASE_KEY_PASSWORD` | Optional: the key's password, if it differs from the keystore's |
+
 ## Testing and checks
 
 ```bash
