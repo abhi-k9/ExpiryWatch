@@ -51,6 +51,32 @@ jobs:
           key-password: ${{ secrets.RELEASE_KEY_PASSWORD }}
       - name: Build debug and release APKs of both flavors
         run: ./gradlew --continue assemblePlayDebug assembleFossDebug assemblePlayRelease assembleFossRelease
+      - name: Check that R8 kept ML Kit's components
+        run: |
+          # ML Kit finds its components by class name in manifest metadata and creates them by
+          # reflection, so R8 must keep each of them, with its constructor, under its own name.
+          manifest=$(find app/build/intermediates -path '*merged_manifest*playRelease*' -name AndroidManifest.xml | head -1)
+          mapping=$(find app/build -name mapping.txt -path '*playRelease*' | sort | head -1)
+          registrars=$(grep -o 'com\.google\.firebase\.components:[A-Za-z0-9_.$]*' "$manifest" | cut -d: -f2 | sort -u)
+          if [ -z "$registrars" ]; then
+            echo "::error::No ML Kit components found in $manifest"
+            exit 1
+          fi
+          status=0
+          for registrar in $registrars; do
+            if awk -v cls="$registrar" '
+              $0 == cls " -> " cls ":" { inClass = 1; next }
+              inClass && /^[^ ]/ { exit }
+              inClass && /void <init>\(\)/ { found = 1; exit }
+              END { exit !found }' "$mapping"; then
+              echo "Kept: $registrar"
+            else
+              echo "::error::R8 removed or renamed $registrar or its constructor."
+              grep -F "$registrar" "$mapping" || true
+              status=1
+            fi
+          done
+          exit $status
       - name: Upload APKs
         uses: actions/upload-artifact@v7
         with:
