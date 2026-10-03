@@ -173,6 +173,11 @@ blocked, barcode lookups, backups, item changes, the camera, process starts and 
 starts with a snapshot of the app and device: versions, notification and battery settings,
 scheduled reminders, recent process exits and how much data is stored.
 
+Release builds are obfuscated by R8, so crash stack traces in the log name classes like `pp2`. To
+read one, run the **Retrace** workflow from the Actions tab with the app version and flavor shown at
+the top of the log, and paste the stack trace. Releases also include each flavor's R8 mapping file
+for use with the Android SDK's `retrace` tool.
+
 It only contains technical details. Items are identified by number, never by name, and scanned
 codes other than product barcodes (such as QR codes) are recorded by length only. The log is capped
 at about 512 KB, isn't included in backups, and never leaves the device unless you export it.

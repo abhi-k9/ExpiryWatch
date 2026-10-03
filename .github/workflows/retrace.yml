@@ -1,0 +1,94 @@
+name: Retrace
+
+# Turns an obfuscated stack trace from a release build, for example the crash in an exported
+# diagnostics log, back into the original class, method and line names. Run it from the Actions
+# tab. It uses the mapping file attached to the release, or rebuilds the release to recreate it.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version the trace comes from, such as 1.1.0 ("Version" in the diagnostics)
+        required: true
+      flavor:
+        description: Flavor ("Barcode scanning" in the diagnostics; ML Kit is play, ZXing is foss)
+        type: choice
+        options: [ play, foss ]
+        default: play
+      stacktrace:
+        description: The stack trace
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  retrace:
+    name: Retrace
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Read the inputs
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_STACKTRACE: ${{ inputs.stacktrace }}
+        run: |
+          version="${INPUT_VERSION#v}"
+          if ! [[ "$version" =~ ^[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
+            echo "::error::Versions look like 1.2.3, but got \"$version\"."
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          printf '%s\n' "$INPUT_STACKTRACE" > "$RUNNER_TEMP/stacktrace.txt"
+          # The Run workflow form takes a single line, so put each frame back on its own line.
+          if [ "$(wc -l < "$RUNNER_TEMP/stacktrace.txt")" -le 1 ]; then
+            sed -E -i 's/[[:space:]]+(at [^ ]+\()/\n\t\1/g; s/[[:space:]]+(Caused by: )/\n\1/g' "$RUNNER_TEMP/stacktrace.txt"
+          fi
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/v${{ env.VERSION }}
+      - name: Download the mapping from the release
+        id: download
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLAVOR: ${{ inputs.flavor }}
+        run: |
+          if gh release download "v$VERSION" --repo "$GITHUB_REPOSITORY" \
+            --pattern "ExpiryWatch-$VERSION-$FLAVOR-mapping.txt" --output "$RUNNER_TEMP/mapping.txt"; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::The release has no mapping file, so it is rebuilt to recreate it."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: ./.github/actions/setup
+      - name: Rebuild the release's mapping
+        if: steps.download.outputs.found != 'true'
+        env:
+          FLAVOR: ${{ inputs.flavor }}
+        run: |
+          # Same version, so the same code and the same R8 output as the release.
+          ./gradlew ":app:minify${FLAVOR^}ReleaseWithR8" "-Pexpirywatch.versionName=$VERSION"
+          cp "app/build/outputs/mapping/${FLAVOR}Release/mapping.txt" "$RUNNER_TEMP/mapping.txt"
+      - name: Retrace
+        run: |
+          # R8 names stack frames' source files after the mapping's hash, so a mismatch shows up here.
+          expected=$(grep -o 'r8-map-id-[0-9a-f]*' "$RUNNER_TEMP/stacktrace.txt" | head -1 | sed 's/r8-map-id-//')
+          actual=$(sed -n 's/^# pg_map_hash: SHA-256 //p' "$RUNNER_TEMP/mapping.txt")
+          if [ -n "$expected" ] && [ "$expected" != "$actual" ]; then
+            echo "::warning::The trace's mapping is $expected, but the mapping found is $actual. Check the version and flavor."
+          fi
+          # The Android SDK's retrace, or else R8's from the Gradle cache.
+          retrace() {
+            local tool="$ANDROID_HOME/cmdline-tools/latest/bin/retrace"
+            if [ -x "$tool" ]; then
+              "$tool" "$@"
+            else
+              java -cp "$(find ~/.gradle/caches/modules-2 -name 'r8-*.jar' | sort -V | tail -1)" \
+                com.android.tools.r8.retrace.Retrace "$@"
+            fi
+          }
+          retrace "$RUNNER_TEMP/mapping.txt" "$RUNNER_TEMP/stacktrace.txt" | tee "$RUNNER_TEMP/retraced.txt"
+          {
+            echo '```'
+            cat "$RUNNER_TEMP/retraced.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
