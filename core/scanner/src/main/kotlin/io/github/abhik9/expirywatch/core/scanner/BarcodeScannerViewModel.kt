@@ -44,10 +44,10 @@ class BarcodeScannerViewModel @Inject constructor(
     private val _torch = MutableStateFlow(TorchState())
     val torch: StateFlow<TorchState> = _torch.asStateFlow()
 
-    private val _isCameraUnavailable = MutableStateFlow(false)
+    private val _isUnavailable = MutableStateFlow(false)
 
-    /** The camera couldn't be started, e.g. because there is none or it failed to initialize. */
-    val isCameraUnavailable: StateFlow<Boolean> = _isCameraUnavailable.asStateFlow()
+    /** The scanner couldn't be started, e.g. because there is no camera or the barcode reader failed. */
+    val isUnavailable: StateFlow<Boolean> = _isUnavailable.asStateFlow()
 
     private val _detectedBarcode = MutableStateFlow<String?>(null)
 
@@ -55,8 +55,17 @@ class BarcodeScannerViewModel @Inject constructor(
     val detectedBarcode: StateFlow<String?> = _detectedBarcode.asStateFlow()
 
     private val analysisExecutor = Executors.newSingleThreadExecutor()
-    private val analyzer = analyzerFactory.create { barcode ->
-        if (_detectedBarcode.compareAndSet(expect = null, update = barcode)) log.record { "scanner: barcode detected" }
+    private val analyzer: BarcodeAnalyzer? = try {
+        analyzerFactory.create { barcode ->
+            if (_detectedBarcode.compareAndSet(expect = null, update = barcode)) {
+                log.record { "scanner: barcode detected" }
+            }
+        }
+    } catch (e: RuntimeException) {
+        // E.g. ML Kit missing a component: the user can still type the barcode.
+        log.record { "scanner: barcode reader unavailable: ${e.stackTraceToString()}" }
+        _isUnavailable.value = true
+        null
     }
 
     private val preview = Preview.Builder().build().apply {
@@ -76,12 +85,13 @@ class BarcodeScannerViewModel @Inject constructor(
                 .build(),
         )
         .build()
-        .apply { setAnalyzer(analysisExecutor, analyzer) }
+        .apply { analyzer?.let { setAnalyzer(analysisExecutor, it) } }
 
     private var camera: Camera? = null
 
     /** Binds the camera to [lifecycleOwner] until the calling coroutine is cancelled. */
     suspend fun bindToCamera(appContext: Context, lifecycleOwner: LifecycleOwner) {
+        if (analyzer == null) return
         val (cameraProvider, boundCamera) = try {
             val provider = ProcessCameraProvider.awaitInstance(appContext)
             provider to provider.bindToLifecycle(
@@ -94,7 +104,7 @@ class BarcodeScannerViewModel @Inject constructor(
             throw e
         } catch (e: Exception) {
             log.record { "scanner: camera unavailable: $e" }
-            _isCameraUnavailable.value = true
+            _isUnavailable.value = true
             return
         }
         camera = boundCamera
@@ -121,7 +131,7 @@ class BarcodeScannerViewModel @Inject constructor(
 
     override fun onCleared() {
         imageAnalysis.clearAnalyzer()
-        analyzer.close()
+        analyzer?.close()
         analysisExecutor.shutdown()
     }
 
