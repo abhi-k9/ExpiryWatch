@@ -67,7 +67,9 @@ jobs:
         run: |
           # Same version, so the same code and the same R8 output as the release.
           ./gradlew ":app:minify${FLAVOR^}ReleaseWithR8" "-Pexpirywatch.versionName=$VERSION"
-          cp "app/build/outputs/mapping/${FLAVOR}Release/mapping.txt" "$RUNNER_TEMP/mapping.txt"
+          # Where R8 writes the mapping depends on the Android Gradle plugin version.
+          find app/build -name mapping.txt -path "*${FLAVOR}Release*"
+          cp "$(find app/build -name mapping.txt -path "*${FLAVOR}Release*" | sort | head -1)" "$RUNNER_TEMP/mapping.txt"
       - name: Retrace
         run: |
           # R8 names stack frames' source files after the mapping's hash, so a mismatch shows up here.
