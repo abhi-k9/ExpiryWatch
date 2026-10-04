@@ -1,6 +1,7 @@
 package io.github.abhik9.expirywatch.feature.settings
 
 import android.Manifest
+import android.app.AlarmManager
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -19,6 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Alarm
+import androidx.compose.material.icons.outlined.AlarmOff
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Code
@@ -72,6 +75,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.app.AlarmManagerCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -135,6 +139,7 @@ internal fun SettingsRoute(
         onExpiringSoonDaysChange = viewModel::setExpiringSoonDays,
         onRemindersEnabledChange = viewModel::setRemindersEnabled,
         onReminderTimeChange = viewModel::setReminderTime,
+        onExactRemindersChange = viewModel::setExactReminders,
         onManageLabels = onManageLabels,
         onExport = { exportLauncher.launch(viewModel.suggestedBackupFileName) },
         // Some file managers label JSON files as plain text or a generic binary.
@@ -173,6 +178,7 @@ internal fun SettingsScreen(
     onExpiringSoonDaysChange: (Int) -> Unit,
     onRemindersEnabledChange: (Boolean) -> Unit,
     onReminderTimeChange: (LocalTime) -> Unit,
+    onExactRemindersChange: (Boolean) -> Unit,
     onManageLabels: (LabelKind) -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
@@ -196,7 +202,13 @@ internal fun SettingsScreen(
                 .padding(bottom = 24.dp),
         ) {
             AppearanceSection(settings, onThemeModeChange, onDynamicColorChange)
-            RemindersSection(settings, onExpiringSoonDaysChange, onRemindersEnabledChange, onReminderTimeChange)
+            RemindersSection(
+                settings = settings,
+                onExpiringSoonDaysChange = onExpiringSoonDaysChange,
+                onRemindersEnabledChange = onRemindersEnabledChange,
+                onReminderTimeChange = onReminderTimeChange,
+                onExactRemindersChange = onExactRemindersChange,
+            )
 
             SectionHeader(stringResource(R.string.feature_settings_section_organize))
             SettingsRow(
@@ -273,13 +285,16 @@ private fun RemindersSection(
     onExpiringSoonDaysChange: (Int) -> Unit,
     onRemindersEnabledChange: (Boolean) -> Unit,
     onReminderTimeChange: (LocalTime) -> Unit,
+    onExactRemindersChange: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
-    // Checked again on return to the screen, since the user may change it in the system settings.
+    // Checked again on return to the screen, since the user may change them in the system settings.
     var canPostNotifications by remember { mutableStateOf(context.canPostNotifications()) }
+    var canScheduleExactAlarms by remember { mutableStateOf(context.canScheduleExactAlarms()) }
     LifecycleResumeEffect(context) {
         canPostNotifications = context.canPostNotifications()
+        canScheduleExactAlarms = context.canScheduleExactAlarms()
         onPauseOrDispose {}
     }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -316,6 +331,26 @@ private fun RemindersSection(
         enabled = settings.remindersEnabled,
         onClick = { showTimePicker = true },
     )
+    SwitchRow(
+        icon = Icons.Outlined.Alarm,
+        title = stringResource(R.string.feature_settings_exact_reminders),
+        subtitle = stringResource(R.string.feature_settings_exact_reminders_summary),
+        checked = settings.exactReminders,
+        enabled = settings.remindersEnabled,
+        onCheckedChange = { exact ->
+            onExactRemindersChange(exact)
+            if (exact && !canScheduleExactAlarms) context.openExactAlarmSettings()
+        },
+    )
+    // Since Android 12, only the user can allow the app to set alarms, in the system settings.
+    if (settings.remindersEnabled && settings.exactReminders && !canScheduleExactAlarms) {
+        SettingsRow(
+            icon = Icons.Outlined.AlarmOff,
+            title = stringResource(R.string.feature_settings_alarms_blocked),
+            subtitle = stringResource(R.string.feature_settings_alarms_blocked_summary),
+            onClick = { context.openExactAlarmSettings() },
+        )
+    }
 
     // The slider moves freely while dragging; the setting is saved when the finger lifts.
     var sliderDays by remember(settings.expiringSoonDays) { mutableFloatStateOf(settings.expiringSoonDays.toFloat()) }
@@ -511,13 +546,15 @@ private fun SwitchRow(
     subtitle: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
 ) {
+    val alpha = if (enabled) 1f else DISABLED_ALPHA
     ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = { Text(subtitle) },
+        headlineContent = { Text(title, color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)) },
+        supportingContent = { Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha)) },
         leadingContent = { Icon(icon, contentDescription = null) },
-        trailingContent = { Switch(checked = checked, onCheckedChange = null) },
-        modifier = Modifier.toggleableRow(checked, onCheckedChange),
+        trailingContent = { Switch(checked = checked, onCheckedChange = null, enabled = enabled) },
+        modifier = Modifier.toggleableRow(checked, onCheckedChange, enabled),
     )
 }
 
@@ -532,6 +569,20 @@ private fun Context.openNotificationSettings() {
     } catch (e: ActivityNotFoundException) {
         // Some devices don't have the per-app notification screen; the app's details page does.
         startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
+    }
+}
+
+// Always allowed before Android 12; since then, the user allows it under "Alarms & reminders".
+private fun Context.canScheduleExactAlarms(): Boolean =
+    AlarmManagerCompat.canScheduleExactAlarms(checkNotNull(getSystemService(AlarmManager::class.java)))
+
+private fun Context.openExactAlarmSettings() {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+    val packageUri = Uri.fromParts("package", packageName, null)
+    try {
+        startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, packageUri))
+    } catch (e: ActivityNotFoundException) {
+        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri))
     }
 }
 

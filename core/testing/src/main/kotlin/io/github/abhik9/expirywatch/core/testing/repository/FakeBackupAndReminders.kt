@@ -40,15 +40,21 @@ class FakeReminderScheduler : ReminderScheduler {
     /** The currently scheduled time, or `null` when no reminder is scheduled. */
     var scheduledTime: LocalTime? = null
         private set
+
+    /** Whether the scheduled reminder is exact. */
+    var exact = false
+        private set
     var scheduleCalls = 0
         private set
 
-    override suspend fun scheduleDaily(time: LocalTime) {
+    override suspend fun scheduleDaily(time: LocalTime, exact: Boolean) {
         scheduledTime = time
+        this.exact = exact
         scheduleCalls++
     }
 
     override suspend fun cancel() {
         scheduledTime = null
+        exact = false
     }
 }

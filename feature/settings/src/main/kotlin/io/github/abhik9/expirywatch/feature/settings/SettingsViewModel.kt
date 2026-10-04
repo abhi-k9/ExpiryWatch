@@ -87,6 +87,8 @@ class SettingsViewModel @Inject constructor(
 
     fun setReminderTime(time: LocalTime) = launch { settingsRepository.setReminderTime(time) }
 
+    fun setExactReminders(exact: Boolean) = launch { settingsRepository.setExactReminders(exact) }
+
     fun exportTo(uri: String) = runBackup(BackupOperation.EXPORT) { exportBackup(uri) }
 
     fun importFrom(uri: String) = runBackup(BackupOperation.IMPORT) { importBackup(uri) }

@@ -27,5 +27,7 @@ class FakeUserSettingsRepository(initial: UserSettings = UserSettings()) : UserS
 
     override suspend fun setReminderTime(time: LocalTime) = state.update { it.copy(reminderTime = time) }
 
+    override suspend fun setExactReminders(exact: Boolean) = state.update { it.copy(exactReminders = exact) }
+
     override suspend fun setSortOrder(sortOrder: ItemSortOrder) = state.update { it.copy(sortOrder = sortOrder) }
 }

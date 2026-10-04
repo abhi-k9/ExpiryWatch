@@ -40,6 +40,7 @@ class UserSettingsDataSourceTest {
         dataSource.setExpiringSoonDays(5)
         dataSource.setRemindersEnabled(false)
         dataSource.setReminderTime(LocalTime.of(18, 45))
+        dataSource.setExactReminders(true)
         dataSource.setSortOrder(ItemSortOrder.NAME)
 
         assertEquals(
@@ -49,6 +50,7 @@ class UserSettingsDataSourceTest {
                 expiringSoonDays = 5,
                 remindersEnabled = false,
                 reminderTime = LocalTime.of(18, 45),
+                exactReminders = true,
                 sortOrder = ItemSortOrder.NAME,
             ),
             dataSource.settings.first(),

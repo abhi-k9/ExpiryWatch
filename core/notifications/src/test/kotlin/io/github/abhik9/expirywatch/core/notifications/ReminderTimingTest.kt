@@ -29,6 +29,21 @@ class ReminderTimingTest {
     }
 
     @Test
+    fun aCheckIsForTheLatestReminderAtOrBeforeNow() {
+        assertEquals(at("2026-10-02T09:00"), lastOccurrence(nine, at("2026-10-02T09:00")))
+        assertEquals(at("2026-10-02T09:00"), lastOccurrence(nine, at("2026-10-02T23:59")))
+        assertEquals(at("2026-10-01T09:00"), lastOccurrence(nine, at("2026-10-02T08:59")))
+    }
+
+    @Test
+    fun aSkippedReminderTimeIsJustAfterTheGapForBoth() {
+        // Clocks jump from 02:00 to 03:00 on 2026-03-08 in Denver, so the 02:30 check runs at 03:30.
+        val halfPastTwo = LocalTime.of(2, 30)
+        val check = nextOccurrence(halfPastTwo, at("2026-03-07T22:00"))
+        assertEquals(check, lastOccurrence(halfPastTwo, check.plusSeconds(5)))
+    }
+
+    @Test
     fun theNextReminderIsOnSchedule() {
         assertTrue(isOnSchedule(at("2026-10-02T09:00"), nine, now = at("2026-10-02T00:14")))
         // WorkManager counts from when the previous run ended, a few seconds after the hour.

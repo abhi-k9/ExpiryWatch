@@ -15,7 +15,10 @@ Built with Kotlin, Jetpack Compose and Material 3, following Google's recommende
   the name, brand and photo.
 - **Opened items**: record when a package was opened and how long it keeps afterwards (e.g. "use
   within 3 days"); the earlier of the two dates counts.
-- **Daily reminders** at a time you choose, summarizing expired and soon-to-expire items.
+- **Daily reminders** at a time you choose, summarizing expired and soon-to-expire items. Android
+  may deliver them late to save battery; turn on **Exact time** to get them on time with an alarm.
+  Since Android 12 this needs permission to set alarms; the app opens that system setting when you
+  turn it on.
 - **Insights**: how much you used up versus threw away, a monthly trend and the most wasted
   categories.
 - **Home-screen widget** listing what expires next.
@@ -72,7 +75,7 @@ The app follows a layered, multi-module architecture with unidirectional data fl
 | `core:data` | Repository implementations |
 | `core:database` | Room database |
 | `core:datastore` | User settings |
-| `core:notifications` | Daily reminder worker and notifications |
+| `core:notifications` | Daily reminder work, exact alarms and notifications |
 | `core:diagnostics` | Diagnostics log and report |
 | `core:scanner`, `core:scanner-mlkit`, `core:scanner-zxing` | CameraX scanner UI and the two analyzers |
 | `core:designsystem` | Theme, colors and basic components |
@@ -170,7 +173,7 @@ To investigate an issue, turn on **Record diagnostics** in Settings, reproduce t
 
 The log records what the app does and why: reminder scheduling and checks, notifications shown or
 blocked, barcode lookups, backups, item changes, the camera, process starts and crashes. The export
-starts with a snapshot of the app and device: versions, notification and battery settings,
+starts with a snapshot of the app and device: versions, notification, alarm and battery settings,
 scheduled reminders, recent process exits and how much data is stored.
 
 Release builds are obfuscated by R8, so crash stack traces in the log name classes like `pp2`. To

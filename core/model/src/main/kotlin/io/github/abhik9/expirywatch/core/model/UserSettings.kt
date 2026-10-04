@@ -9,6 +9,8 @@ data class UserSettings(
     val expiringSoonDays: Int = DEFAULT_EXPIRING_SOON_DAYS,
     val remindersEnabled: Boolean = true,
     val reminderTime: LocalTime = DEFAULT_REMINDER_TIME,
+    /** Show the reminder at exactly [reminderTime] with an alarm, if the system allows the app to set one. */
+    val exactReminders: Boolean = false,
     val sortOrder: ItemSortOrder = ItemSortOrder.EXPIRY_SOONEST,
 ) {
     companion object {

@@ -19,5 +19,7 @@ interface UserSettingsRepository {
 
     suspend fun setReminderTime(time: LocalTime)
 
+    suspend fun setExactReminders(exact: Boolean)
+
     suspend fun setSortOrder(sortOrder: ItemSortOrder)
 }

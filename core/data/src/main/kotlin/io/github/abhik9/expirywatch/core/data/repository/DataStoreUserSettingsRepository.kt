@@ -34,6 +34,10 @@ internal class DataStoreUserSettingsRepository @Inject constructor(
         dataSource.setReminderTime(time)
     }
 
+    override suspend fun setExactReminders(exact: Boolean) {
+        dataSource.setExactReminders(exact)
+    }
+
     override suspend fun setSortOrder(sortOrder: ItemSortOrder) {
         dataSource.setSortOrder(sortOrder)
     }

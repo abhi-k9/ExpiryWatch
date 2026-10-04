@@ -12,7 +12,9 @@ import java.time.LocalTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -93,10 +95,16 @@ class ItemLifecycleUseCasesTest {
 
         advanceUntilIdle()
         assertEquals(LocalTime.of(9, 0), scheduler.scheduledTime)
+        assertFalse(scheduler.exact)
 
         settings.setReminderTime(LocalTime.of(18, 30))
         advanceUntilIdle()
         assertEquals(LocalTime.of(18, 30), scheduler.scheduledTime)
+
+        settings.setExactReminders(true)
+        advanceUntilIdle()
+        assertEquals(LocalTime.of(18, 30), scheduler.scheduledTime)
+        assertTrue(scheduler.exact)
 
         // Unrelated changes don't reschedule.
         val callsBefore = scheduler.scheduleCalls
@@ -109,5 +117,26 @@ class ItemLifecycleUseCasesTest {
         assertNull(scheduler.scheduledTime)
 
         job.cancel()
+    }
+
+    @Test
+    fun reminderScheduleCanBeAppliedAgainWithoutAChange() = runTest {
+        val settings = FakeUserSettingsRepository(
+            UserSettings(remindersEnabled = true, reminderTime = LocalTime.of(7, 15), exactReminders = true),
+        )
+        val scheduler = FakeReminderScheduler()
+        val sync = SyncReminderScheduleUseCase(settings, scheduler)
+
+        sync.once()
+        sync.once()
+
+        assertEquals(2, scheduler.scheduleCalls)
+        assertEquals(LocalTime.of(7, 15), scheduler.scheduledTime)
+        assertTrue(scheduler.exact)
+
+        settings.setRemindersEnabled(false)
+        sync.once()
+
+        assertNull(scheduler.scheduledTime)
     }
 }

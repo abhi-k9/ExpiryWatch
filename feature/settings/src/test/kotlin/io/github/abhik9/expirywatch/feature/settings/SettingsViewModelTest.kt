@@ -25,6 +25,7 @@ import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -59,10 +60,12 @@ class SettingsViewModelTest {
         viewModel.setThemeMode(ThemeMode.DARK)
         viewModel.setReminderTime(LocalTime.of(20, 15))
         viewModel.setRemindersEnabled(false)
+        viewModel.setExactReminders(true)
 
         assertEquals(ThemeMode.DARK, settings.current.themeMode)
         assertEquals(LocalTime.of(20, 15), settings.current.reminderTime)
         assertFalse(settings.current.remindersEnabled)
+        assertTrue(settings.current.exactReminders)
     }
 
     @Test

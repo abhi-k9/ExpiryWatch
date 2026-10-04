@@ -40,6 +40,8 @@ class UserSettingsDataSource @Inject constructor(
         it[Keys.REMINDER_MINUTE_OF_DAY] = time.hour * MINUTES_PER_HOUR + time.minute
     }
 
+    suspend fun setExactReminders(exact: Boolean) = dataStore.edit { it[Keys.EXACT_REMINDERS] = exact }
+
     suspend fun setSortOrder(sortOrder: ItemSortOrder) = dataStore.edit { it[Keys.SORT_ORDER] = sortOrder.name }
 
     private fun Preferences.toUserSettings(): UserSettings {
@@ -54,6 +56,7 @@ class UserSettingsDataSource @Inject constructor(
                 ?.takeIf { it in 0 until MINUTES_PER_DAY }
                 ?.let { LocalTime.of(it / MINUTES_PER_HOUR, it % MINUTES_PER_HOUR) }
                 ?: defaults.reminderTime,
+            exactReminders = this[Keys.EXACT_REMINDERS] ?: defaults.exactReminders,
             sortOrder = enumOrDefault(this[Keys.SORT_ORDER], defaults.sortOrder),
         )
     }
@@ -67,6 +70,7 @@ class UserSettingsDataSource @Inject constructor(
         val EXPIRING_SOON_DAYS = intPreferencesKey("expiring_soon_days")
         val REMINDERS_ENABLED = booleanPreferencesKey("reminders_enabled")
         val REMINDER_MINUTE_OF_DAY = intPreferencesKey("reminder_minute_of_day")
+        val EXACT_REMINDERS = booleanPreferencesKey("exact_reminders")
         val SORT_ORDER = stringPreferencesKey("sort_order")
     }
 
