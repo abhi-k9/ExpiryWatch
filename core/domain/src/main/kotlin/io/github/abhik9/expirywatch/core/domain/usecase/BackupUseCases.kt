@@ -34,15 +34,13 @@ class ExportBackupUseCase @Inject constructor(
     private val clock: Clock,
     private val log: EventLog,
 ) {
-    suspend operator fun invoke(uri: String): BackupResult {
+    suspend operator fun invoke(uri: String): BackupResult = try {
         val snapshot = backupRepository.createSnapshot()
-        return try {
-            documentStore.writeText(uri, BackupCodec.encode(snapshot, exportedAt = Instant.now(clock)))
-            BackupResult.Success(snapshot.stats()).also { log.record { "backup: exported ${it.stats}" } }
-        } catch (e: IOException) {
-            log.record { "backup: export failed: $e" }
-            BackupResult.IoError
-        }
+        documentStore.writeText(uri, BackupCodec.encode(snapshot, exportedAt = Instant.now(clock)))
+        BackupResult.Success(snapshot.stats()).also { log.record { "backup: exported ${it.stats}" } }
+    } catch (e: IOException) {
+        log.record { "backup: export failed: $e" }
+        BackupResult.IoError
     }
 }
 
@@ -65,7 +63,12 @@ class ImportBackupUseCase @Inject constructor(
             log.record { "backup: import rejected: ${e.message}" }
             return BackupResult.InvalidFile(e.message.orEmpty())
         }
-        backupRepository.restore(snapshot)
+        try {
+            backupRepository.restore(snapshot)
+        } catch (e: IOException) {
+            log.record { "backup: restore failed: $e" }
+            return BackupResult.IoError
+        }
         return BackupResult.Success(snapshot.stats()).also { log.record { "backup: imported ${it.stats}" } }
     }
 }

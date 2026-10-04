@@ -103,8 +103,11 @@ class SettingsViewModel @Inject constructor(
         if (isBackupInProgress) return
         isBackupInProgress = true
         viewModelScope.launch {
-            val result = block()
-            isBackupInProgress = false
+            val result = try {
+                block()
+            } finally {
+                isBackupInProgress = false
+            }
             _events.send(SettingsEvent.BackupFinished(operation, result))
         }
     }

@@ -36,7 +36,14 @@ internal class MlKitBarcodeAnalyzer(
             image.close()
             return
         }
-        scanner.process(InputImage.fromMediaImage(mediaImage, image.imageInfo.rotationDegrees))
+        val result = try {
+            scanner.process(InputImage.fromMediaImage(mediaImage, image.imageInfo.rotationDegrees))
+        } catch (e: RuntimeException) {
+            // E.g. a frame arriving while the scanner closes. Skip it; it must still be closed.
+            image.close()
+            return
+        }
+        result
             .addOnSuccessListener { barcodes ->
                 barcodes.firstNotNullOfOrNull { barcode -> barcode.rawValue?.takeIf { it.isNotBlank() } }
                     ?.let(onBarcodeDetected)

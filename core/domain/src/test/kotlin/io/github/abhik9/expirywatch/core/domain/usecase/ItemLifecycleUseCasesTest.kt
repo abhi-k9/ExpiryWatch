@@ -1,5 +1,6 @@
 package io.github.abhik9.expirywatch.core.domain.usecase
 
+import app.cash.turbine.test
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.UserSettings
 import io.github.abhik9.expirywatch.core.testing.TestData
@@ -57,11 +58,29 @@ class ItemLifecycleUseCasesTest {
         )
         val settings = FakeUserSettingsRepository(UserSettings(expiringSoonDays = 3))
 
-        val summary = GetExpirySummaryUseCase(items, settings, TestTime.clock)()
+        val summary = GetExpirySummaryUseCase(items, settings, ObserveTodayUseCase(TestTime.clock))()
 
         assertEquals(listOf("Old"), summary.expired.map { it.item.name })
         assertEquals(listOf("Soon"), summary.expiringSoon.map { it.item.name })
         assertEquals(listOf("Old", "Soon", "Later"), summary.items.map { it.item.name })
+    }
+
+    @Test
+    fun observedExpirySummaryFollowsItemsAndSettings() = runTest {
+        items.setItems(listOf(TestData.item(id = 1, name = "Milk", expiresInDays = 5)))
+        val settings = FakeUserSettingsRepository(UserSettings(expiringSoonDays = 3))
+        val useCase = GetExpirySummaryUseCase(items, settings, ObserveTodayUseCase(TestTime.clock))
+
+        useCase.observe().test {
+            assertEquals(emptyList(), awaitItem().expiringSoon)
+
+            settings.setExpiringSoonDays(7)
+            assertEquals(listOf("Milk"), awaitItem().expiringSoon.map { it.item.name })
+
+            items.setItems(emptyList())
+            assertEquals(emptyList(), awaitItem().items)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

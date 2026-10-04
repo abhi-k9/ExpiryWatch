@@ -3,6 +3,9 @@ package io.github.abhik9.expirywatch.feature.widget
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
@@ -59,8 +62,13 @@ class ExpiryWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val entryPoint = EntryPointAccessors.fromApplication(context.applicationContext, WidgetEntryPoint::class.java)
-        val summary = entryPoint.getExpirySummaryUseCase().invoke()
+        val getExpirySummary = entryPoint.getExpirySummaryUseCase()
+        val initialSummary = getExpirySummary()
         provideContent {
+            // Glance runs this once per session and only recomposes on later updates, so the data
+            // is observed rather than loaded once.
+            val summaries = remember { getExpirySummary.observe() }
+            val summary by summaries.collectAsState(initialSummary)
             GlanceTheme {
                 ExpiryWidgetContent(summary)
             }

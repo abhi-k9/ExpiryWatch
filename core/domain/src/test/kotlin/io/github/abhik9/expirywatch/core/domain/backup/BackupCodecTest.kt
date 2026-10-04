@@ -85,6 +85,38 @@ class BackupCodecTest {
     }
 
     @Test
+    fun rejectsInvalidOrDuplicateIds() {
+        // Restoring such ids would break the links between items and their category or location.
+        val invalid = listOf(
+            """{"format": "expirywatch-backup", "version": 1, "categories": [{"id": 0, "name": "Dairy"}]}""",
+            """{"format": "expirywatch-backup", "version": 1, "locations": [{"id": -3, "name": "Fridge"}]}""",
+            """{"format": "expirywatch-backup", "version": 1,
+               "categories": [{"id": 4, "name": "Dairy"}, {"id": 4, "name": "Meat"}]}""",
+            """{"format": "expirywatch-backup", "version": 1,
+               "items": [{"id": 0, "name": "Milk", "expiryDate": "2026-03-12"}]}""",
+        )
+        invalid.forEach { json -> assertFailsWith<BackupFormatException>(json) { BackupCodec.decode(json) } }
+    }
+
+    @Test
+    fun dropsValuesTheEditorWouldReject() {
+        val decoded = BackupCodec.decode(
+            """
+            {"format": "expirywatch-backup", "version": 1,
+             "items": [{"id": 1, "name": "Milk", "expiryDate": "2026-03-12", "quantity": 1e12, "useWithinDays": 99999}],
+             "products": [{"barcode": "4001234567890", "name": "Milk", "quantity": -2, "useWithinDays": 0}]}
+            """.trimIndent(),
+        )
+
+        val item = decoded.items.single()
+        assertEquals(1.0, item.quantity)
+        assertNull(item.useWithinDaysAfterOpening)
+        val product = decoded.products.single()
+        assertNull(product.quantity)
+        assertNull(product.useWithinDaysAfterOpening)
+    }
+
+    @Test
     fun toleratesMissingReferencesAndUnknownValues() {
         val decoded = BackupCodec.decode(
             """{"format": "expirywatch-backup", "version": 1, "futureField": true,

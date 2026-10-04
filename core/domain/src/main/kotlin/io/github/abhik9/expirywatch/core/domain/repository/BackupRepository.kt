@@ -3,10 +3,16 @@ package io.github.abhik9.expirywatch.core.domain.repository
 import io.github.abhik9.expirywatch.core.domain.backup.BackupSnapshot
 
 interface BackupRepository {
-    /** Reads everything the user has entered. */
+    /**
+     * Reads everything the user has entered.
+     * @throws java.io.IOException when the data can't be read.
+     */
     suspend fun createSnapshot(): BackupSnapshot
 
-    /** Atomically replaces all of the user's data with [snapshot]. */
+    /**
+     * Atomically replaces all of the user's data with [snapshot].
+     * @throws java.io.IOException when the data can't be written; nothing is changed then.
+     */
     suspend fun restore(snapshot: BackupSnapshot)
 }
 

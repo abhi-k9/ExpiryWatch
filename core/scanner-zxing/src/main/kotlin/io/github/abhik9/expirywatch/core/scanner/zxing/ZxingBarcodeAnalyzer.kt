@@ -19,13 +19,19 @@ internal class ZxingBarcodeAnalyzer(
             if (buffer.size != data.remaining()) buffer = ByteArray(data.remaining())
             data.get(buffer)
 
-            decoder.decode(
-                luminance = buffer,
-                rowStride = plane.rowStride,
-                width = image.width,
-                height = image.height,
-                rotationDegrees = image.imageInfo.rotationDegrees,
-            )?.let(onBarcodeDetected)
+            val barcode = try {
+                decoder.decode(
+                    luminance = buffer,
+                    rowStride = plane.rowStride,
+                    width = image.width,
+                    height = image.height,
+                    rotationDegrees = image.imageInfo.rotationDegrees,
+                )
+            } catch (e: RuntimeException) {
+                // A frame ZXing can't handle; an exception here would end the analysis thread.
+                null
+            }
+            barcode?.let(onBarcodeDetected)
         }
     }
 

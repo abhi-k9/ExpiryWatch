@@ -20,6 +20,8 @@
     <string name="feature_settings_reminders">Daily reminder</string>
     <string name="feature_settings_reminders_summary">Get a notification when items have expired or are about to</string>
     <string name="feature_settings_reminder_time">Reminder time</string>
+    <string name="feature_settings_notifications_blocked">Notifications are off</string>
+    <string name="feature_settings_notifications_blocked_summary">Reminders can\'t be shown until you allow notifications for ExpiryWatch. Tap to open the settings.</string>
     <string name="feature_settings_expiring_soon">Expiring soon</string>
     <plurals name="feature_settings_expiring_soon_summary">
         <item quantity="one">Flag items %d day before they expire</item>

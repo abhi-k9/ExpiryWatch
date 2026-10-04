@@ -33,11 +33,9 @@ internal class RemindersDiagnosticsSection @Inject constructor(
     }
 
     private fun WorkInfo.describe(): String {
-        val time = tags.firstOrNull { it.startsWith(WorkManagerReminderScheduler.TAG_PREFIX) }
-            ?.removePrefix(WorkManagerReminderScheduler.TAG_PREFIX)
         val nextRun = nextScheduleTimeMillis.takeIf { it != Long.MAX_VALUE }?.let {
             OffsetDateTime.ofInstant(Instant.ofEpochMilli(it), ZoneId.systemDefault()).truncatedTo(ChronoUnit.SECONDS)
         }
-        return "$state, at $time, next run $nextRun, attempts $runAttemptCount"
+        return "$state, next run $nextRun, attempts $runAttemptCount"
     }
 }

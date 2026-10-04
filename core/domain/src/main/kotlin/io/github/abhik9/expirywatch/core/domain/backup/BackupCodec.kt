@@ -1,5 +1,6 @@
 package io.github.abhik9.expirywatch.core.domain.backup
 
+import io.github.abhik9.expirywatch.core.domain.usecase.ItemValidator
 import io.github.abhik9.expirywatch.core.model.Category
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemStatus
@@ -70,6 +71,11 @@ object BackupCodec {
     }
 
     private fun BackupFileDto.toSnapshot(): BackupSnapshot {
+        // Rows keep their ids, so items can refer to categories and locations by id.
+        requireValidIds(categories.map { it.id }, "categories")
+        requireValidIds(locations.map { it.id }, "locations")
+        requireValidIds(items.map { it.id }, "items")
+
         val categoriesById = categories
             .map { Category(id = it.id, name = it.name.trim(), emoji = it.emoji) }
             .filter { it.name.isNotEmpty() }
@@ -78,10 +84,6 @@ object BackupCodec {
             .map { StorageLocation(id = it.id, name = it.name.trim(), emoji = it.emoji) }
             .filter { it.name.isNotEmpty() }
             .associateBy { it.id }
-
-        if (items.map { it.id }.toSet().size != items.size) {
-            throw BackupFormatException("Backup contains duplicate items")
-        }
 
         return BackupSnapshot(
             categories = categoriesById.values.toList(),
@@ -96,11 +98,12 @@ object BackupCodec {
                     // References to categories or locations missing from the file are dropped.
                     category = dto.categoryId?.let(categoriesById::get),
                     location = dto.locationId?.let(locationsById::get),
-                    quantity = dto.quantity.takeIf { it.isFinite() && it > 0 } ?: 1.0,
+                    quantity = dto.quantity.takeIf(::isValidQuantity) ?: 1.0,
                     unit = enumValueOrDefault(dto.unit, QuantityUnit.PIECES),
                     expiryDate = LocalDate.parse(dto.expiryDate),
                     openedDate = dto.openedDate?.let(LocalDate::parse),
-                    useWithinDaysAfterOpening = dto.useWithinDaysAfterOpening?.takeIf { it > 0 },
+                    useWithinDaysAfterOpening = dto.useWithinDaysAfterOpening
+                        ?.takeIf { it in ItemValidator.OPENED_WINDOW_DAYS_RANGE },
                     notes = dto.notes,
                     imageUrl = dto.imageUrl,
                     status = enumValueOrDefault(dto.status, ItemStatus.ACTIVE),
@@ -127,14 +130,23 @@ object BackupCodec {
                         imageUrl = dto.imageUrl,
                         categoryId = dto.categoryId?.takeIf(categoriesById::containsKey),
                         locationId = dto.locationId?.takeIf(locationsById::containsKey),
-                        quantity = dto.quantity,
+                        quantity = dto.quantity?.takeIf(::isValidQuantity),
                         unit = dto.unit?.let { enumValueOrDefault(it, QuantityUnit.PIECES) },
-                        useWithinDaysAfterOpening = dto.useWithinDaysAfterOpening,
+                        useWithinDaysAfterOpening = dto.useWithinDaysAfterOpening
+                            ?.takeIf { it in ItemValidator.OPENED_WINDOW_DAYS_RANGE },
                         source = ProductSource.HISTORY,
                     )
                 },
         )
     }
+
+    private fun requireValidIds(ids: List<Long>, kind: String) {
+        if (ids.any { it <= 0 }) throw BackupFormatException("Backup contains $kind with invalid ids")
+        if (ids.toSet().size != ids.size) throw BackupFormatException("Backup contains duplicate $kind")
+    }
+
+    private fun isValidQuantity(quantity: Double): Boolean =
+        quantity.isFinite() && quantity > 0 && quantity <= ItemValidator.MAX_QUANTITY
 
     private fun parseInstant(value: String): Instant = try {
         Instant.parse(value)

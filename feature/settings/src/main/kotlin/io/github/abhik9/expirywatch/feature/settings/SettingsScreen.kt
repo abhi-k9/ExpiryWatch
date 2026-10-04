@@ -1,9 +1,13 @@
 package io.github.abhik9.expirywatch.feature.settings
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
 import android.content.res.Resources
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.text.format.DateFormat
 import android.text.format.Formatter
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -27,6 +31,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Kitchen
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material.icons.outlined.Schedule
@@ -68,6 +73,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.abhik9.expirywatch.core.common.AppInfo
 import io.github.abhik9.expirywatch.core.designsystem.component.SectionHeader
@@ -270,8 +276,14 @@ private fun RemindersSection(
 ) {
     val context = LocalContext.current
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        onRemindersEnabledChange(granted)
+    // Checked again on return to the screen, since the user may change it in the system settings.
+    var canPostNotifications by remember { mutableStateOf(context.canPostNotifications()) }
+    LifecycleResumeEffect(context) {
+        canPostNotifications = context.canPostNotifications()
+        onPauseOrDispose {}
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        canPostNotifications = context.canPostNotifications()
     }
 
     SectionHeader(stringResource(R.string.feature_settings_section_reminders))
@@ -279,15 +291,24 @@ private fun RemindersSection(
         icon = Icons.Outlined.Notifications,
         title = stringResource(R.string.feature_settings_reminders),
         subtitle = stringResource(R.string.feature_settings_reminders_summary),
-        checked = settings.remindersEnabled && context.canPostNotifications(),
+        checked = settings.remindersEnabled,
         onCheckedChange = { enabled ->
-            if (enabled && !context.canPostNotifications() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            onRemindersEnabledChange(enabled)
+            if (enabled && !canPostNotifications && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            } else {
-                onRemindersEnabledChange(enabled)
             }
         },
     )
+    // If the permission was denied for good, or notifications were turned off in the system
+    // settings, the app can't ask again: point to where the user can allow them.
+    if (settings.remindersEnabled && !canPostNotifications) {
+        SettingsRow(
+            icon = Icons.Outlined.NotificationsOff,
+            title = stringResource(R.string.feature_settings_notifications_blocked),
+            subtitle = stringResource(R.string.feature_settings_notifications_blocked_summary),
+            onClick = { context.openNotificationSettings() },
+        )
+    }
     SettingsRow(
         icon = Icons.Outlined.Schedule,
         title = stringResource(R.string.feature_settings_reminder_time),
@@ -502,6 +523,17 @@ private fun SwitchRow(
 
 // Covers both the Android 13+ permission and notifications turned off in system settings.
 private fun Context.canPostNotifications(): Boolean = NotificationManagerCompat.from(this).areNotificationsEnabled()
+
+private fun Context.openNotificationSettings() {
+    val notificationSettings = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+    try {
+        startActivity(notificationSettings)
+    } catch (e: ActivityNotFoundException) {
+        // Some devices don't have the per-app notification screen; the app's details page does.
+        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
+    }
+}
 
 private const val DISABLED_ALPHA = 0.38f
 private const val DIAGNOSTICS_MIME_TYPE = "text/plain"

@@ -25,6 +25,9 @@ class ExpiryNotifier @Inject constructor(
     @ApplicationContext private val context: Context,
     private val log: EventLog,
 ) {
+    /** Creates the reminders channel, so it can be set up in the system settings before the first reminder. */
+    fun createChannel() = with(context) { ensureChannel(NotificationManagerCompat.from(this)) }
+
     /** Posts a summary of expired and soon-to-expire items, or removes it when there are none. */
     fun showExpiryReminder(summary: ExpirySummary): Unit = with(context) {
         val notificationManager = NotificationManagerCompat.from(this)
