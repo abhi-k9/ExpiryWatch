@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.first
  * check to the reminder time, in case this one came late.
  */
 @HiltWorker
-class ExpiryReminderWorker @AssistedInject constructor(
+class ExpiryReminderWorker @AssistedInject internal constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val settingsRepository: UserSettingsRepository,
