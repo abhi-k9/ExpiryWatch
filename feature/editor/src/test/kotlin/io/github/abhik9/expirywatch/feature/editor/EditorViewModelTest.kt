@@ -18,6 +18,7 @@ import io.github.abhik9.expirywatch.core.testing.repository.FakeItemRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeProductCatalog
 import io.github.abhik9.expirywatch.core.testing.repository.FakeProductHistoryRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeStorageLocationRepository
+import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepository
 import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -34,6 +35,7 @@ class EditorViewModelTest {
     private val items = FakeItemRepository()
     private val history = FakeProductHistoryRepository()
     private val catalog = FakeProductCatalog()
+    private val settings = FakeUserSettingsRepository()
 
     private fun viewModel(key: EditorNavKey = EditorNavKey()) = EditorViewModel(
         key = key,
@@ -42,7 +44,7 @@ class EditorViewModelTest {
         itemRepository = items,
         saveItem = SaveItemUseCase(items, history, TestTime.clock),
         finishItem = FinishItemUseCase(items, TestTime.clock),
-        lookupProduct = LookupProductUseCase(history, catalog, EventLog.NONE),
+        lookupProduct = LookupProductUseCase(history, catalog, settings, EventLog.NONE),
         clock = TestTime.clock,
     )
 
@@ -157,6 +159,17 @@ class EditorViewModelTest {
         viewModel.onBarcodeScanned("3017620422003")
 
         assertEquals(LookupState.Unavailable, viewModel.lookup)
+    }
+
+    @Test
+    fun saysWhenOnlineLookupIsOff() = runTest {
+        settings.setOnlineProductLookup(false)
+        val viewModel = viewModel()
+
+        viewModel.onBarcodeScanned("3017620422003")
+
+        assertEquals(LookupState.NotFoundOnlineLookupOff, viewModel.lookup)
+        assertEquals(emptyList(), catalog.requestedBarcodes)
     }
 
     @Test

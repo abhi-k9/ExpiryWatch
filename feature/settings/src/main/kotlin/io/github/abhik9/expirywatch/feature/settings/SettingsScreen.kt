@@ -39,6 +39,7 @@ import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Timelapse
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -94,6 +95,7 @@ import kotlin.math.roundToInt
 @Composable
 internal fun SettingsRoute(
     onManageLabels: (LabelKind) -> Unit,
+    onOpenAdvanced: () -> Unit,
     viewModel: SettingsViewModel,
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -141,6 +143,7 @@ internal fun SettingsRoute(
         onReminderTimeChange = viewModel::setReminderTime,
         onExactRemindersChange = viewModel::setExactReminders,
         onManageLabels = onManageLabels,
+        onOpenAdvanced = onOpenAdvanced,
         onExport = { exportLauncher.launch(viewModel.suggestedBackupFileName) },
         // Some file managers label JSON files as plain text or a generic binary.
         onImport = { importLauncher.launch(arrayOf(BackupCodec.MIME_TYPE, "text/plain", "application/octet-stream")) },
@@ -180,6 +183,7 @@ internal fun SettingsScreen(
     onReminderTimeChange: (LocalTime) -> Unit,
     onExactRemindersChange: (Boolean) -> Unit,
     onManageLabels: (LabelKind) -> Unit,
+    onOpenAdvanced: () -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
     diagnostics: DiagnosticsState,
@@ -226,6 +230,15 @@ internal fun SettingsScreen(
 
             BackupSection(isBackupInProgress = isBackupInProgress, onExport = onExport, onImport = onImport)
             DiagnosticsSection(diagnostics, onDiagnosticsRecordingChange, onExportDiagnostics, onClearDiagnostics)
+
+            SectionHeader(stringResource(R.string.feature_settings_section_advanced))
+            SettingsRow(
+                icon = Icons.Outlined.Tune,
+                title = stringResource(R.string.feature_settings_advanced),
+                subtitle = stringResource(R.string.feature_settings_advanced_summary),
+                onClick = onOpenAdvanced,
+            )
+
             AboutSection(appInfo)
         }
     }
@@ -515,7 +528,7 @@ private fun AboutSection(appInfo: AppInfo) {
 }
 
 @Composable
-private fun SettingsRow(
+internal fun SettingsRow(
     icon: ImageVector,
     title: String,
     subtitle: String? = null,
@@ -540,7 +553,7 @@ private fun SettingsRow(
 }
 
 @Composable
-private fun SwitchRow(
+internal fun SwitchRow(
     icon: ImageVector,
     title: String,
     subtitle: String,

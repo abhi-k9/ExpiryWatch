@@ -112,6 +112,8 @@ private fun LookupStatus(lookup: LookupState) {
         LookupState.NotFound -> stringResource(R.string.feature_editor_lookup_not_found)
 
         LookupState.Unavailable -> stringResource(R.string.feature_editor_lookup_unavailable)
+
+        LookupState.NotFoundOnlineLookupOff -> stringResource(R.string.feature_editor_lookup_online_off)
     }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (lookup == LookupState.Loading) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())

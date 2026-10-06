@@ -78,6 +78,26 @@
     <string name="feature_settings_diagnostics_exported">Diagnostics exported</string>
     <string name="feature_settings_diagnostics_export_failed">Couldn\'t export the diagnostics. Please try again.</string>
 
+    <string name="feature_settings_section_advanced">Advanced</string>
+    <string name="feature_settings_advanced">Advanced options</string>
+    <string name="feature_settings_advanced_summary">Grouping in the item list, what reminders include and online product lookup</string>
+    <string name="feature_settings_section_item_list">Item list</string>
+    <string name="feature_settings_grouping">Show items of the same product together</string>
+    <string name="feature_settings_grouping_summary">Folds them into one row with the next to expire. Tap it to see each one.</string>
+    <string name="feature_settings_grouping_off">Don\'t group</string>
+    <string name="feature_settings_grouping_off_summary">Every item has a row of its own</string>
+    <string name="feature_settings_grouping_name">Same name</string>
+    <string name="feature_settings_grouping_name_summary">Ignoring capitals, accents and spacing</string>
+    <string name="feature_settings_grouping_name_and_brand">Same name and brand</string>
+    <string name="feature_settings_grouping_name_and_brand_summary">Keeps different brands of the same thing apart</string>
+    <string name="feature_settings_keep_together">Keep each product in one group</string>
+    <string name="feature_settings_keep_together_summary">Show all of a product\'s dates together, under the status of the one that expires first. When off, each status has its own group.</string>
+    <string name="feature_settings_remind_expired">Include expired items</string>
+    <string name="feature_settings_remind_expired_summary">List items that have already expired in the daily reminder, not just those about to</string>
+    <string name="feature_settings_section_scanning">Barcode scanning</string>
+    <string name="feature_settings_online_lookup">Look up products online</string>
+    <string name="feature_settings_online_lookup_summary">Fill in unknown products from Open Food Facts. When off, barcodes never leave your device and only products you saved before are filled in.</string>
+
     <string name="feature_settings_section_about">About</string>
     <string name="feature_settings_version">Version</string>
     <string name="feature_settings_barcode_engine">Barcode scanning</string>

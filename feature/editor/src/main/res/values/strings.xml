@@ -14,6 +14,7 @@
     <string name="feature_editor_lookup_found_history">Filled in from an item you saved before</string>
     <string name="feature_editor_lookup_found_off">Filled in from Open Food Facts</string>
     <string name="feature_editor_lookup_not_found">Product not found. Enter the details below and they\'ll be remembered for next time.</string>
+    <string name="feature_editor_lookup_online_off">Not among the products you saved before. Looking up products online is turned off in Settings → Advanced options.</string>
     <string name="feature_editor_lookup_unavailable">Couldn\'t reach Open Food Facts. Check your connection or enter the details below.</string>
 
     <string name="feature_editor_name">Name</string>

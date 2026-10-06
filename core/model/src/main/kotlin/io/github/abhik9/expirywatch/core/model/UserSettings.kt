@@ -12,6 +12,17 @@ data class UserSettings(
     /** Show the reminder at exactly [reminderTime] with an alarm, if the system allows the app to set one. */
     val exactReminders: Boolean = false,
     val sortOrder: ItemSortOrder = ItemSortOrder.EXPIRY_SOONEST,
+    /** Which items the list folds into one row as the same product. */
+    val productGrouping: ProductGrouping = ProductGrouping.NAME,
+    /**
+     * Keep all of a product's items in one group, under the status of the one that expires first,
+     * rather than a group in each status.
+     */
+    val keepProductsTogether: Boolean = false,
+    /** List expired items in the daily reminder, not just those about to expire. */
+    val remindAboutExpired: Boolean = true,
+    /** Look up unknown barcodes in the online product catalog. */
+    val onlineProductLookup: Boolean = true,
 ) {
     companion object {
         const val DEFAULT_EXPIRING_SOON_DAYS = 3
@@ -24,6 +35,18 @@ enum class ThemeMode {
     SYSTEM,
     LIGHT,
     DARK,
+}
+
+/** What makes items the same product, to show them together in the list. */
+enum class ProductGrouping {
+    /** Every item has a row of its own. */
+    OFF,
+
+    /** The same name, ignoring case, accents and spacing. */
+    NAME,
+
+    /** The same name and brand. */
+    NAME_AND_BRAND,
 }
 
 enum class ItemSortOrder {

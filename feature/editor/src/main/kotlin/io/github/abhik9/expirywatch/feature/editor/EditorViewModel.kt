@@ -102,6 +102,8 @@ sealed interface LookupState {
     data object NotFound : LookupState
 
     data object Unavailable : LookupState
+
+    data object NotFoundOnlineLookupOff : LookupState
 }
 
 sealed interface EditorEvent {
@@ -196,6 +198,8 @@ class EditorViewModel @AssistedInject constructor(
                 ProductLookupResult.NotFound -> LookupState.NotFound
 
                 ProductLookupResult.CatalogUnavailable -> LookupState.Unavailable
+
+                ProductLookupResult.NotFoundOnlineLookupOff -> LookupState.NotFoundOnlineLookupOff
             }
         }
     }

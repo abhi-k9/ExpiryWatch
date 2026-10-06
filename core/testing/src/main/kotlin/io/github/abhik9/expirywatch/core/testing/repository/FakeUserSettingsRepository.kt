@@ -2,6 +2,7 @@ package io.github.abhik9.expirywatch.core.testing.repository
 
 import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
+import io.github.abhik9.expirywatch.core.model.ProductGrouping
 import io.github.abhik9.expirywatch.core.model.ThemeMode
 import io.github.abhik9.expirywatch.core.model.UserSettings
 import java.time.LocalTime
@@ -30,4 +31,15 @@ class FakeUserSettingsRepository(initial: UserSettings = UserSettings()) : UserS
     override suspend fun setExactReminders(exact: Boolean) = state.update { it.copy(exactReminders = exact) }
 
     override suspend fun setSortOrder(sortOrder: ItemSortOrder) = state.update { it.copy(sortOrder = sortOrder) }
+
+    override suspend fun setProductGrouping(grouping: ProductGrouping) =
+        state.update { it.copy(productGrouping = grouping) }
+
+    override suspend fun setKeepProductsTogether(keepTogether: Boolean) =
+        state.update { it.copy(keepProductsTogether = keepTogether) }
+
+    override suspend fun setRemindAboutExpired(remind: Boolean) = state.update { it.copy(remindAboutExpired = remind) }
+
+    override suspend fun setOnlineProductLookup(enabled: Boolean) =
+        state.update { it.copy(onlineProductLookup = enabled) }
 }

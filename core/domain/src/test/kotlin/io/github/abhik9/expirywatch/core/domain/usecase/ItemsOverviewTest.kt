@@ -3,6 +3,7 @@ package io.github.abhik9.expirywatch.core.domain.usecase
 import io.github.abhik9.expirywatch.core.model.ExpiryStatus
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
+import io.github.abhik9.expirywatch.core.model.ProductGrouping
 import io.github.abhik9.expirywatch.core.testing.TestData
 import io.github.abhik9.expirywatch.core.testing.TestTime
 import java.time.Instant
@@ -23,7 +24,9 @@ class ItemsOverviewTest {
         query: ItemQuery = ItemQuery(),
         sortOrder: ItemSortOrder = ItemSortOrder.EXPIRY_SOONEST,
         items: List<Item> = all,
-    ) = buildItemsOverview(items, query, sortOrder, today, expiringSoonDays = 3)
+        grouping: ProductGrouping = ProductGrouping.NAME,
+        keepProductsTogether: Boolean = false,
+    ) = buildItemsOverview(items, query, sortOrder, today, expiringSoonDays = 3, grouping, keepProductsTogether)
 
     @Test
     fun computesStatusAndDaysForEachItem() {
@@ -172,5 +175,65 @@ class ItemsOverviewTest {
         ).sections.flatMap { section -> section.groups.map { it.key } }
 
         assertEquals(2, keys.toSet().size)
+    }
+
+    @Test
+    fun groupingCanBeTurnedOff() {
+        val moreMilk = TestData.item(id = 5, name = "Milk", expiresInDays = 2)
+
+        assertEquals(
+            listOf(ExpiryStatus.EXPIRING_SOON to listOf(listOf(1L), listOf(5L))),
+            overview(items = listOf(milk, moreMilk), grouping = ProductGrouping.OFF).layout(),
+        )
+    }
+
+    @Test
+    fun groupingCanTellBrandsApart() {
+        val ownBrand = TestData.item(id = 5, name = "Milk", expiresInDays = 2).copy(brand = "Farm")
+        val sameBrand = TestData.item(id = 6, name = "milk", expiresInDays = 3).copy(brand = " farm ")
+        val items = listOf(milk, ownBrand, sameBrand)
+
+        assertEquals(
+            listOf(ExpiryStatus.EXPIRING_SOON to listOf(listOf(1L), listOf(5L, 6L))),
+            overview(items = items, grouping = ProductGrouping.NAME_AND_BRAND).layout(),
+        )
+        assertEquals(
+            listOf(ExpiryStatus.EXPIRING_SOON to listOf(listOf(1L, 5L, 6L))),
+            overview(items = items, grouping = ProductGrouping.NAME).layout(),
+        )
+    }
+
+    @Test
+    fun productsKeptTogetherGoUnderTheStatusOfTheirFirstItem() {
+        val freshMilk = TestData.item(id = 5, name = "Milk", expiresInDays = 20)
+        val staleMilk = TestData.item(id = 6, name = "Milk", expiresInDays = -1)
+        val items = listOf(milk, apples, freshMilk, staleMilk, creme)
+
+        val result = overview(items = items, keepProductsTogether = true)
+
+        assertEquals(
+            listOf(
+                ExpiryStatus.EXPIRED to listOf(listOf(6L, 1L, 5L)),
+                ExpiryStatus.EXPIRING_SOON to listOf(listOf(4L)),
+                ExpiryStatus.FRESH to listOf(listOf(3L)),
+            ),
+            result.layout(),
+        )
+        // Headers count the items in their own status, like the status summary.
+        assertEquals(listOf(1, 1, 1), result.sections.map { it.itemCount })
+    }
+
+    @Test
+    fun productsKeptTogetherSortByTheirFirstItem() {
+        val freshMilk = TestData.item(id = 5, name = "Milk", expiresInDays = 20)
+        val items = listOf(milk, freshMilk, creme, apples)
+
+        assertEquals(
+            listOf(
+                ExpiryStatus.FRESH to listOf(listOf(3L)),
+                ExpiryStatus.EXPIRING_SOON to listOf(listOf(4L), listOf(1L, 5L)),
+            ),
+            overview(items = items, sortOrder = ItemSortOrder.EXPIRY_LATEST, keepProductsTogether = true).layout(),
+        )
     }
 }

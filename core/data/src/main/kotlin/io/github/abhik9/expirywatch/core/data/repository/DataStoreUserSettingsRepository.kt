@@ -3,6 +3,7 @@ package io.github.abhik9.expirywatch.core.data.repository
 import io.github.abhik9.expirywatch.core.datastore.UserSettingsDataSource
 import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
+import io.github.abhik9.expirywatch.core.model.ProductGrouping
 import io.github.abhik9.expirywatch.core.model.ThemeMode
 import io.github.abhik9.expirywatch.core.model.UserSettings
 import java.time.LocalTime
@@ -40,5 +41,21 @@ internal class DataStoreUserSettingsRepository @Inject constructor(
 
     override suspend fun setSortOrder(sortOrder: ItemSortOrder) {
         dataSource.setSortOrder(sortOrder)
+    }
+
+    override suspend fun setProductGrouping(grouping: ProductGrouping) {
+        dataSource.setProductGrouping(grouping)
+    }
+
+    override suspend fun setKeepProductsTogether(keepTogether: Boolean) {
+        dataSource.setKeepProductsTogether(keepTogether)
+    }
+
+    override suspend fun setRemindAboutExpired(remind: Boolean) {
+        dataSource.setRemindAboutExpired(remind)
+    }
+
+    override suspend fun setOnlineProductLookup(enabled: Boolean) {
+        dataSource.setOnlineProductLookup(enabled)
     }
 }

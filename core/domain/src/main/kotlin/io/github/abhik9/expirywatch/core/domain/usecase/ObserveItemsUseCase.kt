@@ -5,6 +5,7 @@ import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepositor
 import io.github.abhik9.expirywatch.core.model.ExpiryStatus
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
+import io.github.abhik9.expirywatch.core.model.ProductGrouping
 import io.github.abhik9.expirywatch.core.model.daysUntilExpiry
 import io.github.abhik9.expirywatch.core.model.effectiveExpiryDate
 import io.github.abhik9.expirywatch.core.model.expiryStatus
@@ -35,7 +36,7 @@ data class ItemWithExpiry(
 
 /**
  * Active items of the same product, such as three cartons of milk that expire on different days.
- * Items are the same product when their names match, ignoring case, accents and spacing.
+ * What counts as the same product is up to the user; see [ProductGrouping].
  *
  * @property key identifies the group within the list.
  * @property entries soonest to expire first, so the first is the one to use next.
@@ -47,12 +48,17 @@ data class ItemGroup(
     val next: ItemWithExpiry get() = entries.first()
 }
 
-/** A part of the list: the items in one [status], or all of them when [status] is `null`. */
+/**
+ * A part of the list: the items in one [status], or all of them when [status] is `null`. When
+ * products are kept together, a group is in the status of its first item, so it can hold items in
+ * other statuses too.
+ */
 data class ItemSection(
     val status: ExpiryStatus?,
     val groups: List<ItemGroup>,
 ) {
-    val itemCount: Int get() = groups.sumOf { it.entries.size }
+    /** How many of the section's items are in its status. */
+    val itemCount: Int get() = groups.sumOf { group -> group.entries.count { status == null || it.status == status } }
 }
 
 data class ItemsOverview(
@@ -60,7 +66,8 @@ data class ItemsOverview(
     val items: List<ItemWithExpiry>,
     /**
      * The same items to show in the list: under a header per status when sorted by expiry and
-     * not filtered by status, and grouped by product. A group goes where its first item sorts.
+     * not filtered by status, and grouped by product. A group goes where its first item sorts, or
+     * when products are kept together, where its item that expires first sorts.
      */
     val sections: List<ItemSection>,
     /** How many items match the query in each status, ignoring the query's status filter. */
@@ -89,6 +96,8 @@ class ObserveItemsUseCase @Inject constructor(
             sortOrder = settings.sortOrder,
             today = today,
             expiringSoonDays = settings.expiringSoonDays,
+            grouping = settings.productGrouping,
+            keepProductsTogether = settings.keepProductsTogether,
         )
     }
 }
@@ -99,6 +108,8 @@ internal fun buildItemsOverview(
     sortOrder: ItemSortOrder,
     today: LocalDate,
     expiringSoonDays: Int,
+    grouping: ProductGrouping = ProductGrouping.NAME,
+    keepProductsTogether: Boolean = false,
 ): ItemsOverview {
     val searchTerms = query.searchText.normalizedForSearch()
         .split(' ')
@@ -122,16 +133,23 @@ internal fun buildItemsOverview(
         matchingExceptStatus.count { it.status == status }
     }
 
+    val sortComparator = sortOrder.comparator()
     val visible = matchingExceptStatus
         .filter { query.status == null || it.status == query.status }
-        .sortedWith(sortOrder.comparator())
+        .sortedWith(sortComparator)
 
-    val sections = if (sortOrder.sectionsByStatus && query.status == null) {
-        visible.groupBy { it.status }.map { (status, inStatus) ->
-            ItemSection(status, inStatus.groupedByProduct(sectionKey = status.name))
+    val sections = when {
+        !sortOrder.sectionsByStatus || query.status != null ->
+            listOf(ItemSection(status = null, groups = visible.groupedByProduct(grouping, sectionKey = "all")))
+
+        keepProductsTogether -> visible.groupedByProduct(grouping, sectionKey = "together")
+            .sortedWith { a, b -> sortComparator.compare(a.next, b.next) }
+            .groupBy { it.next.status }
+            .map { (status, groups) -> ItemSection(status, groups) }
+
+        else -> visible.groupBy { it.status }.map { (status, inStatus) ->
+            ItemSection(status, inStatus.groupedByProduct(grouping, sectionKey = status.name))
         }
-    } else {
-        listOf(ItemSection(status = null, groups = visible.groupedByProduct("all")))
     }
 
     return ItemsOverview(
@@ -148,8 +166,8 @@ private val ItemSortOrder.sectionsByStatus: Boolean
     get() = this == ItemSortOrder.EXPIRY_SOONEST || this == ItemSortOrder.EXPIRY_LATEST
 
 /** Groups sorted items by product, keeping the order in which each product first appears. */
-private fun List<ItemWithExpiry>.groupedByProduct(sectionKey: String): List<ItemGroup> =
-    groupBy { it.item.name.productKey() }.map { (product, entries) ->
+private fun List<ItemWithExpiry>.groupedByProduct(grouping: ProductGrouping, sectionKey: String): List<ItemGroup> =
+    groupBy { it.item.productKey(grouping) }.map { (product, entries) ->
         ItemGroup(
             key = "$sectionKey/$product",
             entries = entries.sortedWith(
@@ -158,10 +176,17 @@ private fun List<ItemWithExpiry>.groupedByProduct(sectionKey: String): List<Item
         )
     }
 
+/** What identifies the item's product, as far as [grouping] is concerned. */
+private fun Item.productKey(grouping: ProductGrouping): String = when (grouping) {
+    ProductGrouping.OFF -> "#$id"
+    ProductGrouping.NAME -> name.comparable()
+    ProductGrouping.NAME_AND_BRAND -> "${name.comparable()}\u0000${brand.orEmpty().comparable()}"
+}
+
 private val whitespace = "\\s+".toRegex()
 
-/** What identifies a product: its name, ignoring case, accents and spacing. */
-internal fun String.productKey(): String = normalizedForSearch().replace(whitespace, " ")
+/** Ignores case, accents and spacing. */
+private fun String.comparable(): String = normalizedForSearch().replace(whitespace, " ")
 
 private fun ItemSortOrder.comparator(): Comparator<ItemWithExpiry> {
     val byName = compareBy<ItemWithExpiry> { it.item.name.lowercase(Locale.ROOT) }

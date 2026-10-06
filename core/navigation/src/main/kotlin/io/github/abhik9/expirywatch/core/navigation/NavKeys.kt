@@ -26,6 +26,10 @@ data class EditorNavKey(
     val scanBarcode: Boolean = false,
 ) : NavKey
 
+/** Settings most people never need to change. */
+@Serializable
+data object AdvancedSettingsNavKey : NavKey
+
 /** Lets the user rename, add and delete categories or storage locations. */
 @Serializable
 data class ManageLabelsNavKey(val kind: LabelKind) : NavKey

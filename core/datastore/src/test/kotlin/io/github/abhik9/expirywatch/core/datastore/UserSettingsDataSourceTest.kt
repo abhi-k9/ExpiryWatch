@@ -2,6 +2,7 @@ package io.github.abhik9.expirywatch.core.datastore
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
+import io.github.abhik9.expirywatch.core.model.ProductGrouping
 import io.github.abhik9.expirywatch.core.model.ThemeMode
 import io.github.abhik9.expirywatch.core.model.UserSettings
 import java.time.LocalTime
@@ -42,6 +43,10 @@ class UserSettingsDataSourceTest {
         dataSource.setReminderTime(LocalTime.of(18, 45))
         dataSource.setExactReminders(true)
         dataSource.setSortOrder(ItemSortOrder.NAME)
+        dataSource.setProductGrouping(ProductGrouping.NAME_AND_BRAND)
+        dataSource.setKeepProductsTogether(true)
+        dataSource.setRemindAboutExpired(false)
+        dataSource.setOnlineProductLookup(false)
 
         assertEquals(
             UserSettings(
@@ -52,6 +57,10 @@ class UserSettingsDataSourceTest {
                 reminderTime = LocalTime.of(18, 45),
                 exactReminders = true,
                 sortOrder = ItemSortOrder.NAME,
+                productGrouping = ProductGrouping.NAME_AND_BRAND,
+                keepProductsTogether = true,
+                remindAboutExpired = false,
+                onlineProductLookup = false,
             ),
             dataSource.settings.first(),
         )

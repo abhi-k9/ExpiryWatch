@@ -5,6 +5,7 @@ import io.github.abhik9.expirywatch.core.model.ProductSource
 import io.github.abhik9.expirywatch.core.testing.diagnostics.RecordingEventLog
 import io.github.abhik9.expirywatch.core.testing.repository.FakeProductCatalog
 import io.github.abhik9.expirywatch.core.testing.repository.FakeProductHistoryRepository
+import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepository
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -14,7 +15,8 @@ class LookupProductUseCaseTest {
     private val history = FakeProductHistoryRepository()
     private val catalog = FakeProductCatalog()
     private val log = RecordingEventLog()
-    private val lookup = LookupProductUseCase(history, catalog, log)
+    private val settings = FakeUserSettingsRepository()
+    private val lookup = LookupProductUseCase(history, catalog, settings, log)
 
     private val ean = "3017620422003"
 
@@ -72,5 +74,18 @@ class LookupProductUseCaseTest {
             ),
             log.messages,
         )
+    }
+
+    @Test
+    fun onlyTheUsersHistoryIsSearchedWhenOnlineLookupIsOff() = runTest {
+        settings.setOnlineProductLookup(false)
+        val remembered = ProductInfo(barcode = ean, name = "My spread", source = ProductSource.HISTORY)
+        val oats = "4001234567890"
+        catalog.products[oats] = ProductInfo(barcode = oats, name = "Oats", source = ProductSource.OPEN_FOOD_FACTS)
+        history.remember(remembered)
+
+        assertEquals(ProductLookupResult.Found(remembered), lookup(ean))
+        assertEquals(ProductLookupResult.NotFoundOnlineLookupOff, lookup(oats))
+        assertEquals(emptyList(), catalog.requestedBarcodes)
     }
 }

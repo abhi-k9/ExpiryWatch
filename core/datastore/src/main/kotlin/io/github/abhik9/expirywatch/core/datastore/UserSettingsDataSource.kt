@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
+import io.github.abhik9.expirywatch.core.model.ProductGrouping
 import io.github.abhik9.expirywatch.core.model.ThemeMode
 import io.github.abhik9.expirywatch.core.model.UserSettings
 import java.io.IOException
@@ -44,6 +45,16 @@ class UserSettingsDataSource @Inject constructor(
 
     suspend fun setSortOrder(sortOrder: ItemSortOrder) = dataStore.edit { it[Keys.SORT_ORDER] = sortOrder.name }
 
+    suspend fun setProductGrouping(grouping: ProductGrouping) =
+        dataStore.edit { it[Keys.PRODUCT_GROUPING] = grouping.name }
+
+    suspend fun setKeepProductsTogether(keepTogether: Boolean) =
+        dataStore.edit { it[Keys.KEEP_PRODUCTS_TOGETHER] = keepTogether }
+
+    suspend fun setRemindAboutExpired(remind: Boolean) = dataStore.edit { it[Keys.REMIND_ABOUT_EXPIRED] = remind }
+
+    suspend fun setOnlineProductLookup(enabled: Boolean) = dataStore.edit { it[Keys.ONLINE_PRODUCT_LOOKUP] = enabled }
+
     private fun Preferences.toUserSettings(): UserSettings {
         val defaults = UserSettings()
         return UserSettings(
@@ -58,6 +69,10 @@ class UserSettingsDataSource @Inject constructor(
                 ?: defaults.reminderTime,
             exactReminders = this[Keys.EXACT_REMINDERS] ?: defaults.exactReminders,
             sortOrder = enumOrDefault(this[Keys.SORT_ORDER], defaults.sortOrder),
+            productGrouping = enumOrDefault(this[Keys.PRODUCT_GROUPING], defaults.productGrouping),
+            keepProductsTogether = this[Keys.KEEP_PRODUCTS_TOGETHER] ?: defaults.keepProductsTogether,
+            remindAboutExpired = this[Keys.REMIND_ABOUT_EXPIRED] ?: defaults.remindAboutExpired,
+            onlineProductLookup = this[Keys.ONLINE_PRODUCT_LOOKUP] ?: defaults.onlineProductLookup,
         )
     }
 
@@ -72,6 +87,10 @@ class UserSettingsDataSource @Inject constructor(
         val REMINDER_MINUTE_OF_DAY = intPreferencesKey("reminder_minute_of_day")
         val EXACT_REMINDERS = booleanPreferencesKey("exact_reminders")
         val SORT_ORDER = stringPreferencesKey("sort_order")
+        val PRODUCT_GROUPING = stringPreferencesKey("product_grouping")
+        val KEEP_PRODUCTS_TOGETHER = booleanPreferencesKey("keep_products_together")
+        val REMIND_ABOUT_EXPIRED = booleanPreferencesKey("remind_about_expired")
+        val ONLINE_PRODUCT_LOOKUP = booleanPreferencesKey("online_product_lookup")
     }
 
     private companion object {

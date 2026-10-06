@@ -27,6 +27,10 @@ Built with Kotlin, Jetpack Compose and Material 3, following Google's recommende
 - **Home-screen widget** listing what expires next.
 - **Backup and restore** to a JSON file through the system file picker.
 - **Diagnostics**: an opt-in log of what the app does, to export when reporting an issue.
+- **Advanced options** in Settings: what counts as the same product in the list (same name, same
+  name and brand, or no grouping) and whether a product's items stay in one group across
+  statuses; whether daily reminders include expired items; and whether unknown barcodes are looked
+  up online, so they can stay on the device.
 - Customizable **categories and storage locations**, light/dark theme, dynamic color, launcher
   shortcuts and an adaptive layout (navigation rail on tablets and foldables).
 

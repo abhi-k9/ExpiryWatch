@@ -52,8 +52,11 @@ class ReminderCheckTest {
     private val settings = FakeUserSettingsRepository(UserSettings(reminderTime = reminderTime))
     private val log = RecordingEventLog()
 
+    private val items by lazy {
+        FakeItemRepository(listOf(TestData.item(id = 1, expiresInDays = -1, today = LocalDate.now(clock))))
+    }
+
     private val check by lazy {
-        val items = FakeItemRepository(listOf(TestData.item(id = 1, expiresInDays = -1, today = LocalDate.now(clock))))
         ReminderCheck(
             settingsRepository = settings,
             getExpirySummary = GetExpirySummaryUseCase(items, settings, ObserveTodayUseCase(clock)),
@@ -127,5 +130,20 @@ class ReminderCheckTest {
 
         assertEquals(0, remindersShown())
         assertEquals(null, nextCheck())
+    }
+
+    @Test
+    fun expiredItemsCanBeLeftOutOfTheReminder() = runTest {
+        settings.setRemindAboutExpired(false)
+
+        check("the daily work")
+        assertEquals(0, remindersShown())
+        assertTrue("reminder notification: removed, nothing needs attention" in log.messages)
+
+        // The next day, something is about to expire too.
+        items.upsert(TestData.item(name = "Bread", expiresInDays = 2, today = LocalDate.now(clock).plusDays(1)))
+        daysLater = 1
+        check("the daily work")
+        assertTrue("reminder notification: shown for 1 items" in log.messages)
     }
 }

@@ -3,9 +3,11 @@ package io.github.abhik9.expirywatch.core.domain.usecase
 import io.github.abhik9.expirywatch.core.common.diagnostics.EventLog
 import io.github.abhik9.expirywatch.core.domain.repository.ProductCatalog
 import io.github.abhik9.expirywatch.core.domain.repository.ProductHistoryRepository
+import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
 import io.github.abhik9.expirywatch.core.model.ProductInfo
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.flow.first
 
 sealed interface ProductLookupResult {
     data class Found(val product: ProductInfo) : ProductLookupResult
@@ -14,15 +16,20 @@ sealed interface ProductLookupResult {
 
     /** The online catalog couldn't be reached, e.g. because the device is offline. */
     data object CatalogUnavailable : ProductLookupResult
+
+    /** Not among the user's saved products, and they turned off looking up products online. */
+    data object NotFoundOnlineLookupOff : ProductLookupResult
 }
 
 /**
  * Finds details for a scanned barcode: first among products the user saved before, then in the
- * online catalog. The user's own history wins, since it reflects how they like to record items.
+ * online catalog unless the user turned that off. The user's own history wins, since it reflects
+ * how they like to record items.
  */
 class LookupProductUseCase @Inject constructor(
     private val history: ProductHistoryRepository,
     private val catalog: ProductCatalog,
+    private val settingsRepository: UserSettingsRepository,
     private val log: EventLog,
 ) {
     suspend operator fun invoke(rawBarcode: String): ProductLookupResult {
@@ -38,6 +45,11 @@ class LookupProductUseCase @Inject constructor(
         if (!barcode.isRetailProductCode()) {
             log.record { "lookup ${barcode.forLog()}: not a retail product code" }
             return ProductLookupResult.NotFound
+        }
+
+        if (!settingsRepository.settings.first().onlineProductLookup) {
+            log.record { "lookup $barcode: not in history, and online lookup is off" }
+            return ProductLookupResult.NotFoundOnlineLookupOff
         }
 
         val product = try {

@@ -1,6 +1,7 @@
 package io.github.abhik9.expirywatch.core.domain.repository
 
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
+import io.github.abhik9.expirywatch.core.model.ProductGrouping
 import io.github.abhik9.expirywatch.core.model.ThemeMode
 import io.github.abhik9.expirywatch.core.model.UserSettings
 import java.time.LocalTime
@@ -22,4 +23,12 @@ interface UserSettingsRepository {
     suspend fun setExactReminders(exact: Boolean)
 
     suspend fun setSortOrder(sortOrder: ItemSortOrder)
+
+    suspend fun setProductGrouping(grouping: ProductGrouping)
+
+    suspend fun setKeepProductsTogether(keepTogether: Boolean)
+
+    suspend fun setRemindAboutExpired(remind: Boolean)
+
+    suspend fun setOnlineProductLookup(enabled: Boolean)
 }
