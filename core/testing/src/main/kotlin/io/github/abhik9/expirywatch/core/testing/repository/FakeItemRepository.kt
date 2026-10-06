@@ -39,6 +39,8 @@ class FakeItemRepository(initialItems: List<Item> = emptyList()) : ItemRepositor
         return id
     }
 
+    override suspend fun upsertAll(items: List<Item>): List<Long> = items.map { upsert(it) }
+
     override suspend fun updateStatus(id: Long, status: ItemStatus, finishedDate: LocalDate?) {
         items.update { all ->
             val item = all[id] ?: return@update all

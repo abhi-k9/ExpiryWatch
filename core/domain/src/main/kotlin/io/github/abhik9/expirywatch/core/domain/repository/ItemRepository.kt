@@ -19,6 +19,9 @@ interface ItemRepository {
     /** Inserts a new item (when [Item.id] is 0) or updates an existing one. Returns its id. */
     suspend fun upsert(item: Item): Long
 
+    /** Saves all of [items] like [upsert], or none of them if one fails. Returns their ids in order. */
+    suspend fun upsertAll(items: List<Item>): List<Long>
+
     suspend fun updateStatus(id: Long, status: ItemStatus, finishedDate: LocalDate?)
 
     suspend fun delete(id: Long)

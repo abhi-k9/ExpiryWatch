@@ -6,21 +6,29 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.RemoveCircleOutline
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SuggestionChip
@@ -29,6 +37,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -41,6 +50,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -118,7 +128,6 @@ private fun LookupStatus(lookup: LookupState) {
 }
 
 /** A read-only field that opens a date picker when tapped. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DateField(
     label: String,
@@ -155,33 +164,127 @@ internal fun DateField(
     }
 
     if (showPicker) {
-        val latestMillis = latestSelectableDate?.toUtcMillis()
-        val pickerState = rememberDatePickerState(
-            initialSelectedDateMillis = date?.toUtcMillis(),
-            selectableDates = object : SelectableDates {
-                override fun isSelectableDate(utcTimeMillis: Long): Boolean =
-                    latestMillis == null || utcTimeMillis <= latestMillis
+        PickDateDialog(
+            initialDate = date,
+            latestSelectableDate = latestSelectableDate,
+            onConfirm = { picked ->
+                onDateChange(picked)
+                showPicker = false
             },
+            onDismiss = { showPicker = false },
         )
-        DatePickerDialog(
-            onDismissRequest = { showPicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        pickerState.selectedDateMillis?.let { onDateChange(it.utcMillisToLocalDate()) }
-                        showPicker = false
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PickDateDialog(
+    initialDate: LocalDate?,
+    onConfirm: (LocalDate) -> Unit,
+    onDismiss: () -> Unit,
+    latestSelectableDate: LocalDate? = null,
+) {
+    val latestMillis = latestSelectableDate?.toUtcMillis()
+    val pickerState = rememberDatePickerState(
+        initialSelectedDateMillis = initialDate?.toUtcMillis(),
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                latestMillis == null || utcTimeMillis <= latestMillis
+        },
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = { pickerState.selectedDateMillis?.let { onConfirm(it.utcMillisToLocalDate()) } },
+                enabled = pickerState.selectedDateMillis != null,
+            ) {
+                Text(stringResource(R.string.feature_editor_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.feature_editor_cancel)) }
+        },
+    ) {
+        DatePicker(state = pickerState)
+    }
+}
+
+/**
+ * More of the same product that expires on other days, such as the rest of a multipack. Each date
+ * is saved as an unopened item of its own, with the same name and details.
+ *
+ * @param suggestedDate where the date picker starts when adding a date.
+ */
+@Composable
+internal fun AdditionalDates(
+    dates: List<AdditionalDateForm>,
+    invalidQuantities: Set<Int>,
+    suggestedDate: LocalDate?,
+    onAdd: (LocalDate) -> Unit,
+    onChange: (key: Int, transform: (AdditionalDateForm) -> AdditionalDateForm) -> Unit,
+    onRemove: (key: Int) -> Unit,
+) {
+    dates.forEach { row ->
+        key(row.key) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DateField(
+                    label = stringResource(R.string.feature_editor_expiry_date),
+                    date = row.expiryDate,
+                    onDateChange = { date -> onChange(row.key) { it.copy(expiryDate = date) } },
+                    modifier = Modifier.weight(3f),
+                )
+                val isInvalid = row.key in invalidQuantities
+                OutlinedTextField(
+                    value = row.quantityText,
+                    onValueChange = { text -> onChange(row.key) { it.copy(quantityText = text) } },
+                    modifier = Modifier.weight(2f),
+                    label = { Text(stringResource(R.string.feature_editor_quantity)) },
+                    isError = isInvalid,
+                    supportingText = if (isInvalid) {
+                        { Text(stringResource(R.string.feature_editor_error_quantity)) }
+                    } else {
+                        null
                     },
-                    enabled = pickerState.selectedDateMillis != null,
-                ) {
-                    Text(stringResource(R.string.feature_editor_ok))
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                )
+                IconButton(onClick = { onRemove(row.key) }, modifier = Modifier.padding(top = 4.dp)) {
+                    Icon(
+                        Icons.Outlined.RemoveCircleOutline,
+                        contentDescription = stringResource(
+                            R.string.feature_editor_remove_date,
+                            row.expiryDate.formatMedium(),
+                        ),
+                    )
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPicker = false }) { Text(stringResource(R.string.feature_editor_cancel)) }
-            },
-        ) {
-            DatePicker(state = pickerState)
+            }
         }
+    }
+
+    var showPicker by rememberSaveable { mutableStateOf(false) }
+    Column {
+        OutlinedButton(onClick = { showPicker = true }) {
+            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+            Text(stringResource(R.string.feature_editor_add_date))
+        }
+        Text(
+            text = stringResource(R.string.feature_editor_add_date_help),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    }
+    if (showPicker) {
+        PickDateDialog(
+            initialDate = suggestedDate,
+            onConfirm = { date ->
+                onAdd(date)
+                showPicker = false
+            },
+            onDismiss = { showPicker = false },
+        )
     }
 }
 

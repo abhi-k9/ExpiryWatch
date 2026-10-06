@@ -37,6 +37,10 @@
     <string name="feature_editor_opened_description">Once opened, many products keep for less time</string>
     <string name="feature_editor_opened_date">Opened on</string>
     <string name="feature_editor_use_within_days">Use within (days after opening)</string>
+    <string name="feature_editor_add_date">Add another date</string>
+    <string name="feature_editor_add_date_help">For more of the same that expires on another day. Each date is saved as an item of its own.</string>
+    <!-- Describes the button that removes an additional expiry date, e.g. "Remove Mar 15, 2026". -->
+    <string name="feature_editor_remove_date">Remove %s</string>
     <string name="feature_editor_use_within_days_help">Optional, e.g. 3 for milk. Remembered for this barcode.</string>
 
     <string name="feature_editor_section_details">Details</string>

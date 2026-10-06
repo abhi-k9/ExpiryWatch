@@ -12,6 +12,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.abhik9.expirywatch.core.domain.repository.CategoryRepository
 import io.github.abhik9.expirywatch.core.domain.repository.ItemRepository
 import io.github.abhik9.expirywatch.core.domain.repository.StorageLocationRepository
+import io.github.abhik9.expirywatch.core.domain.usecase.AdditionalDate
 import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemValidationError
 import io.github.abhik9.expirywatch.core.domain.usecase.LookupProductUseCase
@@ -56,7 +57,33 @@ data class EditorForm(
     val useWithinDaysText: String = "",
     val notes: String = "",
     val imageUrl: String? = null,
+    val additionalDates: List<AdditionalDateForm> = emptyList(),
 )
+
+/** More of the same product that expires on another day, saved as an item of its own. */
+data class AdditionalDateForm(
+    /** Tells the rows apart while they're edited. */
+    val key: Int,
+    val expiryDate: LocalDate,
+    val quantityText: String = "1",
+)
+
+/** The latest of the expiry dates entered so far, where the next one most likely is. */
+internal val EditorForm.latestExpiryDate: LocalDate?
+    get() = (listOfNotNull(expiryDate) + additionalDates.map { it.expiryDate }).maxOrNull()
+
+internal fun EditorForm.withAdditionalDate(date: LocalDate): EditorForm {
+    val key = (additionalDates.maxOfOrNull { it.key } ?: 0) + 1
+    return copy(additionalDates = additionalDates + AdditionalDateForm(key, date))
+}
+
+internal fun EditorForm.updateAdditionalDate(
+    key: Int,
+    transform: (AdditionalDateForm) -> AdditionalDateForm,
+): EditorForm = copy(additionalDates = additionalDates.map { if (it.key == key) transform(it) else it })
+
+internal fun EditorForm.withoutAdditionalDate(key: Int): EditorForm =
+    copy(additionalDates = additionalDates.filterNot { it.key == key })
 
 enum class EditorError {
     NAME_REQUIRED,
@@ -97,6 +124,10 @@ class EditorViewModel @AssistedInject constructor(
     var form by mutableStateOf(EditorForm())
         private set
     var errors by mutableStateOf(emptySet<EditorError>())
+        private set
+
+    /** Keys of the additional dates whose quantity isn't valid. */
+    var invalidAdditionalQuantities by mutableStateOf(emptySet<Int>())
         private set
     var lookup by mutableStateOf<LookupState>(LookupState.Idle)
         private set
@@ -141,7 +172,7 @@ class EditorViewModel @AssistedInject constructor(
 
     fun updateForm(transform: (EditorForm) -> EditorForm) {
         form = transform(form)
-        if (errors.isNotEmpty()) errors = validate(form)
+        if (errors.isNotEmpty() || invalidAdditionalQuantities.isNotEmpty()) revalidate()
     }
 
     fun onBarcodeScanned(barcode: String) {
@@ -170,16 +201,17 @@ class EditorViewModel @AssistedInject constructor(
     }
 
     fun save() {
-        val currentErrors = validate(form)
-        errors = currentErrors
-        if (currentErrors.isNotEmpty() || isSaving) return
+        if (!revalidate() || isSaving) return
         val expiryDate = form.expiryDate ?: return
 
         isSaving = true
         val submitted = form
         viewModelScope.launch {
             val item = buildItem(submitted, expiryDate)
-            when (val result = saveItem(item)) {
+            val additionalDates = submitted.additionalDates.mapNotNull { row ->
+                row.quantityText.parseQuantity()?.let { AdditionalDate(row.expiryDate, it) }
+            }
+            when (val result = saveItem(item, additionalDates)) {
                 is SaveItemResult.Saved -> _events.send(EditorEvent.Done)
                 is SaveItemResult.Invalid -> errors = result.errors.map(::toEditorError).toSet()
             }
@@ -225,11 +257,19 @@ class EditorViewModel @AssistedInject constructor(
         )
     }
 
+    /** Checks the form and shows what's wrong with it. Returns whether it can be saved. */
+    private fun revalidate(): Boolean {
+        errors = validate(form)
+        invalidAdditionalQuantities = form.additionalDates
+            .filterNot { it.quantityText.isValidQuantity() }
+            .mapTo(mutableSetOf()) { it.key }
+        return errors.isEmpty() && invalidAdditionalQuantities.isEmpty()
+    }
+
     private fun validate(form: EditorForm): Set<EditorError> = buildSet {
         if (form.name.isBlank()) add(EditorError.NAME_REQUIRED)
         if (form.expiryDate == null) add(EditorError.EXPIRY_REQUIRED)
-        val quantity = form.quantityText.parseQuantity()
-        if (quantity == null || quantity <= 0.0) add(EditorError.QUANTITY_INVALID)
+        if (!form.quantityText.isValidQuantity()) add(EditorError.QUANTITY_INVALID)
         val window = form.useWithinDaysText.trim()
         if (window.isNotEmpty() && (window.toIntOrNull() ?: 0) <= 0) add(EditorError.OPENED_WINDOW_INVALID)
     }
@@ -252,6 +292,8 @@ class EditorViewModel @AssistedInject constructor(
 
 /** Accepts both "1.5" and "1,5", since many locales use a decimal comma. */
 internal fun String.parseQuantity(): Double? = trim().replace(',', '.').toDoubleOrNull()?.takeIf { it.isFinite() }
+
+private fun String.isValidQuantity(): Boolean = parseQuantity()?.let { it > 0.0 } == true
 
 /**
  * Formats a quantity for editing in the user's locale, falling back to "1.5" style for locales whose

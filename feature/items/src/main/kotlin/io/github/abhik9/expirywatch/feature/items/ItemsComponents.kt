@@ -20,6 +20,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Search
@@ -54,16 +56,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.abhik9.expirywatch.core.designsystem.theme.ExpiryWatchTheme
+import io.github.abhik9.expirywatch.core.domain.usecase.ItemGroup
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemQuery
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemWithExpiry
 import io.github.abhik9.expirywatch.core.model.Category
@@ -76,6 +81,7 @@ import io.github.abhik9.expirywatch.core.model.StorageLocation
 import io.github.abhik9.expirywatch.core.ui.ExpiryBadge
 import io.github.abhik9.expirywatch.core.ui.ItemThumbnail
 import io.github.abhik9.expirywatch.core.ui.colors
+import io.github.abhik9.expirywatch.core.ui.formatMedium
 import io.github.abhik9.expirywatch.core.ui.formatQuantity
 import io.github.abhik9.expirywatch.core.ui.label
 import java.time.LocalDate
@@ -334,15 +340,14 @@ private fun DropdownFilterChip(
 }
 
 /**
- * An item that can be swiped right to mark it used up, or left to mark it thrown away. The same
- * actions are offered to accessibility services as custom actions.
+ * An item, shown by [content], that can be swiped right to mark it used up, or left to mark it
+ * thrown away. The same actions are offered to accessibility services as custom actions.
  */
 @Composable
 internal fun SwipeableItemRow(
-    entry: ItemWithExpiry,
-    onClick: () -> Unit,
     onFinish: (ItemStatus) -> Unit,
     modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
 ) {
     // Guards against the swipe callback firing more than once for the same gesture.
     var finished by remember { mutableStateOf(false) }
@@ -388,7 +393,7 @@ internal fun SwipeableItemRow(
         },
         backgroundContent = { SwipeBackground(dismissState.dismissDirection) },
     ) {
-        ItemRow(entry = entry, onClick = onClick)
+        content()
     }
 }
 
@@ -479,6 +484,120 @@ internal fun ItemRow(
         }
     }
 }
+
+/**
+ * A product with several items, such as cartons of milk that expire on different days, with the
+ * one to use next. Tapping it shows or hides the items.
+ */
+@Composable
+internal fun ItemGroupRow(
+    group: ItemGroup,
+    expanded: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val next = group.next
+    val items = group.entries.map { it.item }
+    val state = stringResource(
+        if (expanded) R.string.feature_items_group_expanded else R.string.feature_items_group_collapsed,
+    )
+    Surface(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { stateDescription = state },
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            ItemThumbnail(item = items.firstOrNull { it.imageUrl != null } ?: next.item)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = next.item.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                val details = listOfNotNull(
+                    pluralStringResource(R.plurals.feature_items_group_dates, items.size, items.size),
+                    items.totalQuantity(),
+                    items.sharedOrNull { it.brand },
+                    items.sharedOrNull { it.location }?.let { "${it.emoji} ${it.name}" },
+                ).joinToString(separator = " · ")
+                Text(
+                    text = details,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            ExpiryBadge(status = next.status, daysUntilExpiry = next.daysUntilExpiry)
+            Icon(
+                imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/**
+ * One of the items of an [ItemGroupRow], told apart by its printed expiry date. The brand and
+ * location are only shown when they differ between the group's items.
+ */
+@Composable
+internal fun GroupEntryRow(
+    entry: ItemWithExpiry,
+    showBrand: Boolean,
+    showLocation: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val item = entry.item
+    Surface(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = item.expiryDate.formatMedium(), style = MaterialTheme.typography.titleSmall)
+                val details = listOfNotNull(
+                    formatQuantity(item.quantity, item.unit),
+                    item.brand?.takeIf { showBrand },
+                    item.location?.takeIf { showLocation }?.let { "${it.emoji} ${it.name}" },
+                    stringResource(R.string.feature_items_opened).takeIf { item.openedDate != null },
+                ).joinToString(separator = " · ")
+                Text(
+                    text = details,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            ExpiryBadge(status = entry.status, daysUntilExpiry = entry.daysUntilExpiry)
+        }
+    }
+}
+
+/** The value every item has, or `null` if they differ. */
+private inline fun <T> List<Item>.sharedOrNull(value: (Item) -> T?): T? = map(value).distinct().singleOrNull()
+
+/** How much there is in all, if every item is counted in the same unit. */
+@Composable
+private fun List<Item>.totalQuantity(): String? =
+    sharedOrNull { it.unit }?.let { unit -> formatQuantity(sumOf { it.quantity }, unit) }
 
 @Composable
 internal fun ExpiryStatus.headerColor(): Color = colors.accent

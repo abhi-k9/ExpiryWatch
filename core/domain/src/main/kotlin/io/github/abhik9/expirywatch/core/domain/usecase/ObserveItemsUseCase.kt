@@ -33,9 +33,36 @@ data class ItemWithExpiry(
     val daysUntilExpiry: Long,
 )
 
+/**
+ * Active items of the same product, such as three cartons of milk that expire on different days.
+ * Items are the same product when their names match, ignoring case, accents and spacing.
+ *
+ * @property key identifies the group within the list.
+ * @property entries soonest to expire first, so the first is the one to use next.
+ */
+data class ItemGroup(
+    val key: String,
+    val entries: List<ItemWithExpiry>,
+) {
+    val next: ItemWithExpiry get() = entries.first()
+}
+
+/** A part of the list: the items in one [status], or all of them when [status] is `null`. */
+data class ItemSection(
+    val status: ExpiryStatus?,
+    val groups: List<ItemGroup>,
+) {
+    val itemCount: Int get() = groups.sumOf { it.entries.size }
+}
+
 data class ItemsOverview(
     /** Items matching every filter of the query, sorted by [sortOrder]. */
     val items: List<ItemWithExpiry>,
+    /**
+     * The same items to show in the list: under a header per status when sorted by expiry and
+     * not filtered by status, and grouped by product. A group goes where its first item sorts.
+     */
+    val sections: List<ItemSection>,
     /** How many items match the query in each status, ignoring the query's status filter. */
     val statusCounts: Map<ExpiryStatus, Int>,
     /** All active items, before any filtering. */
@@ -99,14 +126,42 @@ internal fun buildItemsOverview(
         .filter { query.status == null || it.status == query.status }
         .sortedWith(sortOrder.comparator())
 
+    val sections = if (sortOrder.sectionsByStatus && query.status == null) {
+        visible.groupBy { it.status }.map { (status, inStatus) ->
+            ItemSection(status, inStatus.groupedByProduct(sectionKey = status.name))
+        }
+    } else {
+        listOf(ItemSection(status = null, groups = visible.groupedByProduct("all")))
+    }
+
     return ItemsOverview(
         items = visible,
+        sections = sections,
         statusCounts = statusCounts,
         totalActiveCount = items.size,
         sortOrder = sortOrder,
         today = today,
     )
 }
+
+private val ItemSortOrder.sectionsByStatus: Boolean
+    get() = this == ItemSortOrder.EXPIRY_SOONEST || this == ItemSortOrder.EXPIRY_LATEST
+
+/** Groups sorted items by product, keeping the order in which each product first appears. */
+private fun List<ItemWithExpiry>.groupedByProduct(sectionKey: String): List<ItemGroup> =
+    groupBy { it.item.name.productKey() }.map { (product, entries) ->
+        ItemGroup(
+            key = "$sectionKey/$product",
+            entries = entries.sortedWith(
+                compareBy<ItemWithExpiry> { it.item.effectiveExpiryDate }.thenBy { it.item.id },
+            ),
+        )
+    }
+
+private val whitespace = "\\s+".toRegex()
+
+/** What identifies a product: its name, ignoring case, accents and spacing. */
+internal fun String.productKey(): String = normalizedForSearch().replace(whitespace, " ")
 
 private fun ItemSortOrder.comparator(): Comparator<ItemWithExpiry> {
     val byName = compareBy<ItemWithExpiry> { it.item.name.lowercase(Locale.ROOT) }

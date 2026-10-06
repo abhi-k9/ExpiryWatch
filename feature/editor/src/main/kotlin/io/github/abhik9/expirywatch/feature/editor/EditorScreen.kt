@@ -85,6 +85,7 @@ internal fun EditorRoute(
         isSaving = viewModel.isSaving,
         form = viewModel.form,
         errors = viewModel.errors,
+        invalidAdditionalQuantities = viewModel.invalidAdditionalQuantities,
         lookup = viewModel.lookup,
         categories = categories,
         locations = locations,
@@ -109,6 +110,7 @@ internal fun EditorScreen(
     isSaving: Boolean,
     form: EditorForm,
     errors: Set<EditorError>,
+    invalidAdditionalQuantities: Set<Int>,
     lookup: LookupState,
     categories: List<Category>,
     locations: List<StorageLocation>,
@@ -231,6 +233,15 @@ internal fun EditorScreen(
             ExpiryQuickPicks(today = today, onPick = { date -> onFormChange { it.copy(expiryDate = date) } })
 
             OpenedSection(form = form, errors = errors, today = today, onFormChange = onFormChange)
+
+            AdditionalDates(
+                dates = form.additionalDates,
+                invalidQuantities = invalidAdditionalQuantities,
+                suggestedDate = form.latestExpiryDate,
+                onAdd = { date -> onFormChange { it.withAdditionalDate(date) } },
+                onChange = { key, transform -> onFormChange { it.updateAdditionalDate(key, transform) } },
+                onRemove = { key -> onFormChange { it.withoutAdditionalDate(key) } },
+            )
 
             SectionHeader(stringResource(R.string.feature_editor_section_details), Modifier.padding(top = 8.dp))
             val selectedCategory = categories.firstOrNull { it.id == form.categoryId }

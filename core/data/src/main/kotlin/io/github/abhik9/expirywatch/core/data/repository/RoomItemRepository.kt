@@ -1,7 +1,8 @@
 package io.github.abhik9.expirywatch.core.data.repository
 
+import androidx.room.withTransaction
 import io.github.abhik9.expirywatch.core.common.diagnostics.EventLog
-import io.github.abhik9.expirywatch.core.database.dao.ItemDao
+import io.github.abhik9.expirywatch.core.database.ExpiryWatchDatabase
 import io.github.abhik9.expirywatch.core.database.model.PopulatedItem
 import io.github.abhik9.expirywatch.core.database.model.asEntity
 import io.github.abhik9.expirywatch.core.database.model.asExternalModel
@@ -15,9 +16,11 @@ import kotlinx.coroutines.flow.map
 
 /** Records changes by id only: item names and notes are personal data. */
 internal class RoomItemRepository @Inject constructor(
-    private val itemDao: ItemDao,
+    private val database: ExpiryWatchDatabase,
     private val log: EventLog,
 ) : ItemRepository {
+    private val itemDao = database.itemDao()
+
     override fun observeActiveItems(): Flow<List<Item>> =
         itemDao.observeActive().map { it.map(PopulatedItem::asExternalModel) }
 
@@ -35,6 +38,9 @@ internal class RoomItemRepository @Inject constructor(
         log.record { "items: updated #${item.id}, expires ${item.expiryDate}" }
         item.id
     }
+
+    override suspend fun upsertAll(items: List<Item>): List<Long> =
+        database.withTransaction { items.map { upsert(it) } }
 
     override suspend fun updateStatus(id: Long, status: ItemStatus, finishedDate: LocalDate?) {
         itemDao.updateStatus(id, status, finishedDate)

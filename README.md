@@ -10,6 +10,9 @@ Built with Kotlin, Jetpack Compose and Material 3, following Google's recommende
 - **Item list** sorted by expiry, grouped into *Expired*, *Expiring soon* and *Fresh*, with
   search (ignores case and accents), category and location filters, and several sort orders.
 - **Swipe to finish**: swipe right when an item is used up, left when it's thrown away, with undo.
+- **Several of the same product**: give an item more expiry dates in the editor, for example one per
+  carton of a multipack. Each date is kept as an item of its own, and the list folds items with
+  the same name into one row showing the next to expire; tap it to see, edit or finish each one.
 - **Barcode scanning** with the camera. The details you enter are remembered per barcode, and
   unknown products are looked up in [Open Food Facts](https://world.openfoodfacts.org) to fill in
   the name, brand and photo.

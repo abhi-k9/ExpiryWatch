@@ -117,4 +117,18 @@ class ItemsViewModelTest {
         viewModel.undoFinish(milk)
         assertEquals(ItemStatus.ACTIVE, items.currentItems.first { it.id == milk.id }.status)
     }
+
+    @Test
+    fun productGroupsOpenAndClose() = runTest {
+        items.upsert(TestData.item(name = "Milk", expiresInDays = 3))
+        val viewModel = viewModel()
+        val milk = viewModel.successState().overview.sections.flatMap { it.groups }.single { it.entries.size > 1 }
+        assertEquals(listOf(1L, 4L), milk.entries.map { it.item.id })
+
+        viewModel.onGroupClick(milk.key)
+        assertEquals(setOf(milk.key), viewModel.expandedGroups)
+
+        viewModel.onGroupClick(milk.key)
+        assertEquals(emptySet(), viewModel.expandedGroups)
+    }
 }

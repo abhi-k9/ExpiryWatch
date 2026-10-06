@@ -19,6 +19,13 @@
     <!-- Section header, e.g. "Expiring soon · 3". -->
     <string name="feature_items_section_header">%1$s · %2$d</string>
     <string name="feature_items_opened">Opened</string>
+    <!-- On a product with several items, each with its own expiry date. -->
+    <plurals name="feature_items_group_dates">
+        <item quantity="one">%d date</item>
+        <item quantity="other">%d dates</item>
+    </plurals>
+    <string name="feature_items_group_expanded">Expanded</string>
+    <string name="feature_items_group_collapsed">Collapsed</string>
     <string name="feature_items_action_consumed">Used up</string>
     <string name="feature_items_action_wasted">Thrown away</string>
     <string name="feature_items_marked_consumed">%s marked as used up</string>

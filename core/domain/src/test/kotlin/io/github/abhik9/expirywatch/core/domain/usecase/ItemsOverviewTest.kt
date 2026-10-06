@@ -93,4 +93,84 @@ class ItemsOverviewTest {
         )
         assertEquals(4, result.totalActiveCount)
     }
+
+    private fun ItemsOverview.layout(): List<Pair<ExpiryStatus?, List<List<Long>>>> =
+        sections.map { section -> section.status to section.groups.map { group -> group.entries.map { it.item.id } } }
+
+    @Test
+    fun sectionsFollowTheStatusesInSortOrder() {
+        assertEquals(
+            listOf(
+                ExpiryStatus.EXPIRED to listOf(listOf(2L)),
+                ExpiryStatus.EXPIRING_SOON to listOf(listOf(1L), listOf(4L)),
+                ExpiryStatus.FRESH to listOf(listOf(3L)),
+            ),
+            overview().layout(),
+        )
+    }
+
+    @Test
+    fun itemsOfTheSameProductAreGroupedSoonestFirst() {
+        val moreMilk = TestData.item(id = 5, name = " MILK ", expiresInDays = 3)
+        val evenMoreMilk = TestData.item(id = 6, name = "milk", expiresInDays = 2)
+
+        val result = overview(items = all + moreMilk + evenMoreMilk)
+
+        val soon = result.sections.single { it.status == ExpiryStatus.EXPIRING_SOON }
+        assertEquals(
+            listOf(listOf(1L, 6L, 5L), listOf(4L)),
+            soon.groups.map { group -> group.entries.map { it.item.id } },
+        )
+        assertEquals(milk, soon.groups.first().next.item)
+        assertEquals(4, soon.itemCount)
+    }
+
+    @Test
+    fun aProductIsGroupedWithinEachStatusItHasItemsIn() {
+        val freshMilk = TestData.item(id = 5, name = "Milk", expiresInDays = 20)
+        val staleMilk = TestData.item(id = 6, name = "Milk", expiresInDays = -1)
+
+        val layout = overview(items = listOf(milk, freshMilk, staleMilk)).layout()
+
+        assertEquals(
+            listOf(
+                ExpiryStatus.EXPIRED to listOf(listOf(6L)),
+                ExpiryStatus.EXPIRING_SOON to listOf(listOf(1L)),
+                ExpiryStatus.FRESH to listOf(listOf(5L)),
+            ),
+            layout,
+        )
+    }
+
+    @Test
+    fun withoutStatusSectionsAProductIsOneGroupPlacedByItsFirstItem() {
+        val freshMilk = TestData.item(id = 5, name = "Milk", expiresInDays = 20)
+        val staleMilk = TestData.item(id = 6, name = "Milk", expiresInDays = -1)
+        val items = listOf(milk, apples, freshMilk, staleMilk)
+
+        assertEquals(
+            listOf(null to listOf(listOf(3L), listOf(6L, 1L, 5L))),
+            overview(sortOrder = ItemSortOrder.NAME, items = items).layout(),
+        )
+        assertEquals(
+            listOf(null to listOf(listOf(6L, 1L, 5L))),
+            overview(query = ItemQuery(searchText = "milk"), sortOrder = ItemSortOrder.NAME, items = items).layout(),
+        )
+        // Filtering by status shows only that status's items, still grouped.
+        assertEquals(
+            listOf(null to listOf(listOf(1L))),
+            overview(query = ItemQuery(status = ExpiryStatus.EXPIRING_SOON), items = items).layout(),
+        )
+    }
+
+    @Test
+    fun groupKeysAreUniqueAcrossSections() {
+        val freshMilk = TestData.item(id = 5, name = "Milk", expiresInDays = 20)
+
+        val keys = overview(
+            items = listOf(milk, freshMilk),
+        ).sections.flatMap { section -> section.groups.map { it.key } }
+
+        assertEquals(2, keys.toSet().size)
+    }
 }

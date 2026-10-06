@@ -41,8 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.abhik9.expirywatch.core.designsystem.component.EmptyState
 import io.github.abhik9.expirywatch.core.designsystem.component.SectionHeader
+import io.github.abhik9.expirywatch.core.domain.usecase.ItemGroup
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemQuery
-import io.github.abhik9.expirywatch.core.domain.usecase.ItemWithExpiry
 import io.github.abhik9.expirywatch.core.model.ExpiryStatus
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
@@ -84,6 +84,7 @@ internal fun ItemsRoute(
     ItemsScreen(
         uiState = uiState,
         searchText = viewModel.searchText,
+        expandedGroups = viewModel.expandedGroups,
         snackbarHostState = snackbarHostState,
         onSearchTextChange = viewModel::onSearchTextChange,
         onStatusFilterChange = viewModel::onStatusFilterChange,
@@ -91,6 +92,7 @@ internal fun ItemsRoute(
         onLocationFilterChange = viewModel::onLocationFilterChange,
         onClearFilters = viewModel::clearFilters,
         onSortOrderChange = viewModel::onSortOrderChange,
+        onGroupClick = viewModel::onGroupClick,
         onItemClick = onItemClick,
         onFinish = viewModel::finish,
         onAddItem = onAddItem,
@@ -103,6 +105,7 @@ internal fun ItemsRoute(
 internal fun ItemsScreen(
     uiState: ItemsUiState,
     searchText: String,
+    expandedGroups: Set<String>,
     snackbarHostState: SnackbarHostState,
     onSearchTextChange: (String) -> Unit,
     onStatusFilterChange: (ExpiryStatus?) -> Unit,
@@ -110,6 +113,7 @@ internal fun ItemsScreen(
     onLocationFilterChange: (Long?) -> Unit,
     onClearFilters: () -> Unit,
     onSortOrderChange: (ItemSortOrder) -> Unit,
+    onGroupClick: (String) -> Unit,
     onItemClick: (Item) -> Unit,
     onFinish: (Item, ItemStatus) -> Unit,
     onAddItem: () -> Unit,
@@ -159,11 +163,13 @@ internal fun ItemsScreen(
 
             is ItemsUiState.Success -> ItemsContent(
                 state = uiState,
+                expandedGroups = expandedGroups,
                 contentPadding = innerPadding,
                 onStatusFilterChange = onStatusFilterChange,
                 onCategoryFilterChange = onCategoryFilterChange,
                 onLocationFilterChange = onLocationFilterChange,
                 onClearFilters = onClearFilters,
+                onGroupClick = onGroupClick,
                 onItemClick = onItemClick,
                 onFinish = onFinish,
                 onAddItem = onAddItem,
@@ -175,11 +181,13 @@ internal fun ItemsScreen(
 @Composable
 private fun ItemsContent(
     state: ItemsUiState.Success,
+    expandedGroups: Set<String>,
     contentPadding: PaddingValues,
     onStatusFilterChange: (ExpiryStatus?) -> Unit,
     onCategoryFilterChange: (Long?) -> Unit,
     onLocationFilterChange: (Long?) -> Unit,
     onClearFilters: () -> Unit,
+    onGroupClick: (String) -> Unit,
     onItemClick: (Item) -> Unit,
     onFinish: (Item, ItemStatus) -> Unit,
     onAddItem: () -> Unit,
@@ -229,37 +237,85 @@ private fun ItemsContent(
             item(key = "no-results", contentType = "empty") {
                 NoMatchingItems(query = state.query, onClearFilters = onClearFilters)
             }
-        } else if (overview.sortOrder.groupsByStatus && state.query.status == null) {
-            overview.items.groupBy { it.status }.forEach { (status, itemsInGroup) ->
-                item(key = "header-$status", contentType = "header") {
-                    SectionHeader(
-                        text = stringResource(R.string.feature_items_section_header, status.label(), itemsInGroup.size),
-                        color = status.headerColor(),
-                        modifier = Modifier.animateItem(),
-                    )
-                }
-                itemRows(itemsInGroup, onItemClick, onFinish)
-            }
         } else {
-            itemRows(overview.items, onItemClick, onFinish)
+            overview.sections.forEach { section ->
+                section.status?.let { status ->
+                    item(key = "header-$status", contentType = "header") {
+                        SectionHeader(
+                            text = stringResource(
+                                R.string.feature_items_section_header,
+                                status.label(),
+                                section.itemCount,
+                            ),
+                            color = status.headerColor(),
+                            modifier = Modifier.animateItem(),
+                        )
+                    }
+                }
+                itemGroups(section.groups, expandedGroups, onGroupClick, onItemClick, onFinish)
+            }
         }
     }
 }
 
-private fun LazyListScope.itemRows(
-    items: List<ItemWithExpiry>,
+/**
+ * Shows a product with one item as that item, and one with several as a row that opens to show
+ * each of them, soonest to expire first.
+ */
+private fun LazyListScope.itemGroups(
+    groups: List<ItemGroup>,
+    expandedGroups: Set<String>,
+    onGroupClick: (String) -> Unit,
     onItemClick: (Item) -> Unit,
     onFinish: (Item, ItemStatus) -> Unit,
 ) {
-    items(items, key = { it.item.id }, contentType = { "item" }) { entry ->
-        SwipeableItemRow(
-            entry = entry,
-            onClick = { onItemClick(entry.item) },
-            onFinish = { outcome -> onFinish(entry.item, outcome) },
-            modifier = Modifier
-                .animateItem()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-        )
+    groups.forEach { group ->
+        val single = group.entries.singleOrNull()
+        if (single != null) {
+            item(key = single.item.id, contentType = "item") {
+                SwipeableItemRow(
+                    onFinish = { outcome -> onFinish(single.item, outcome) },
+                    modifier = Modifier
+                        .animateItem()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                ) {
+                    ItemRow(entry = single, onClick = { onItemClick(single.item) })
+                }
+            }
+            return@forEach
+        }
+
+        val expanded = group.key in expandedGroups
+        item(key = "group-${group.key}", contentType = "group") {
+            ItemGroupRow(
+                group = group,
+                expanded = expanded,
+                onClick = { onGroupClick(group.key) },
+                modifier = Modifier
+                    .animateItem()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
+        if (expanded) {
+            // Only what tells the items apart: shared details are on the group's row.
+            val showBrand = group.entries.distinctBy { it.item.brand }.size > 1
+            val showLocation = group.entries.distinctBy { it.item.location }.size > 1
+            items(group.entries, key = { it.item.id }, contentType = { "group-item" }) { entry ->
+                SwipeableItemRow(
+                    onFinish = { outcome -> onFinish(entry.item, outcome) },
+                    modifier = Modifier
+                        .animateItem()
+                        .padding(start = 40.dp, end = 16.dp, top = 2.dp, bottom = 2.dp),
+                ) {
+                    GroupEntryRow(
+                        entry = entry,
+                        showBrand = showBrand,
+                        showLocation = showLocation,
+                        onClick = { onItemClick(entry.item) },
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -280,8 +336,5 @@ private fun NoMatchingItems(query: ItemQuery, onClearFilters: () -> Unit) {
         },
     )
 }
-
-private val ItemSortOrder.groupsByStatus: Boolean
-    get() = this == ItemSortOrder.EXPIRY_SOONEST || this == ItemSortOrder.EXPIRY_LATEST
 
 private val FAB_CLEARANCE = 152.dp

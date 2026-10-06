@@ -65,6 +65,10 @@ class ItemsViewModel @AssistedInject constructor(
     var searchText by mutableStateOf("")
         private set
 
+    /** Keys of the product groups opened to show each of their items. */
+    var expandedGroups by mutableStateOf(emptySet<String>())
+        private set
+
     private val filters = MutableStateFlow(ItemQuery(status = initialStatus))
 
     private val query: Flow<ItemQuery> = combine(filters, snapshotFlow { searchText }) { currentFilters, text ->
@@ -100,6 +104,10 @@ class ItemsViewModel @AssistedInject constructor(
     fun clearFilters() {
         searchText = ""
         filters.value = ItemQuery()
+    }
+
+    fun onGroupClick(key: String) {
+        expandedGroups = if (key in expandedGroups) expandedGroups - key else expandedGroups + key
     }
 
     fun onSortOrderChange(sortOrder: ItemSortOrder) {

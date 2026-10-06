@@ -83,6 +83,52 @@ class EditorViewModelTest {
     }
 
     @Test
+    fun savesEachAdditionalDateAsAnItemOfItsOwn() = runTest {
+        val viewModel = viewModel()
+        viewModel.updateForm {
+            it.copy(name = "Yogurt", quantityText = "2", expiryDate = TestTime.today.plusDays(2))
+                .withAdditionalDate(TestTime.today.plusDays(5))
+                .withAdditionalDate(TestTime.today.plusDays(9))
+                .withAdditionalDate(TestTime.today.plusDays(12))
+        }
+        val (_, second, third) = viewModel.form.additionalDates
+        viewModel.updateForm { it.updateAdditionalDate(second.key) { row -> row.copy(quantityText = "3") } }
+        viewModel.updateForm { it.withoutAdditionalDate(third.key) }
+
+        viewModel.events.test {
+            viewModel.save()
+            assertEquals(EditorEvent.Done, awaitItem())
+        }
+
+        val today = TestTime.today
+        assertEquals(
+            listOf(today.plusDays(2) to 2.0, today.plusDays(5) to 1.0, today.plusDays(9) to 3.0),
+            items.currentItems.map { it.expiryDate to it.quantity },
+        )
+        assertTrue(items.currentItems.all { it.name == "Yogurt" })
+    }
+
+    @Test
+    fun anInvalidAdditionalQuantityIsShownAndNothingIsSaved() = runTest {
+        val viewModel = viewModel()
+        viewModel.updateForm {
+            it.copy(name = "Yogurt", expiryDate = TestTime.today).withAdditionalDate(TestTime.today.plusDays(3))
+        }
+        val key = viewModel.form.additionalDates.single().key
+        viewModel.updateForm { it.updateAdditionalDate(key) { row -> row.copy(quantityText = "0") } }
+
+        viewModel.save()
+
+        assertEquals(setOf(key), viewModel.invalidAdditionalQuantities)
+        assertEquals(emptySet(), viewModel.errors)
+        assertTrue(items.currentItems.isEmpty())
+
+        // Fixing it clears the error straight away.
+        viewModel.updateForm { it.updateAdditionalDate(key) { row -> row.copy(quantityText = "1") } }
+        assertEquals(emptySet(), viewModel.invalidAdditionalQuantities)
+    }
+
+    @Test
     fun scanningFillsEmptyFieldsFromTheCatalog() = runTest {
         catalog.products["3017620422003"] = ProductInfo(
             barcode = "3017620422003",

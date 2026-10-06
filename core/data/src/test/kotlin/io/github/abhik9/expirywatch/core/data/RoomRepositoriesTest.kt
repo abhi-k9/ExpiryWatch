@@ -20,6 +20,7 @@ import io.github.abhik9.expirywatch.core.testing.TestTime
 import io.github.abhik9.expirywatch.core.testing.diagnostics.RecordingEventLog
 import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepository
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -43,7 +44,7 @@ class RoomRepositoriesTest {
     @Test
     fun itemsAreInsertedThenUpdated() = runTest {
         val database = newDatabase()
-        val items = RoomItemRepository(database.itemDao(), EventLog.NONE)
+        val items = RoomItemRepository(database, EventLog.NONE)
 
         val id = items.upsert(TestData.item(name = "Milk", category = null, location = null))
         items.upsert(items.observeItem(id).first()!!.copy(name = "Oat milk"))
@@ -52,9 +53,34 @@ class RoomRepositoriesTest {
     }
 
     @Test
+    fun severalItemsAreSavedTogetherOrNotAtAll() = runTest {
+        val items = RoomItemRepository(newDatabase(), EventLog.NONE)
+
+        val ids = items.upsertAll(
+            listOf(
+                TestData.item(name = "Milk", expiresInDays = 2, category = null, location = null),
+                TestData.item(name = "Milk", expiresInDays = 9, category = null, location = null),
+            ),
+        )
+        assertEquals(2, ids.toSet().size)
+
+        // The second item points at a category that doesn't exist, so the first one isn't kept either.
+        val missingCategory = Category(id = 999, name = "Gone", emoji = "❓")
+        assertFailsWith<Exception> {
+            items.upsertAll(
+                listOf(
+                    TestData.item(name = "Bread", category = null, location = null),
+                    TestData.item(name = "Cheese", category = missingCategory, location = null),
+                ),
+            )
+        }
+        assertEquals(listOf("Milk", "Milk"), items.getActiveItems().map { it.name })
+    }
+
+    @Test
     fun itemChangesAreRecordedByIdOnly() = runTest {
         val log = RecordingEventLog()
-        val items = RoomItemRepository(newDatabase().itemDao(), log)
+        val items = RoomItemRepository(newDatabase(), log)
 
         val id = items.upsert(TestData.item(name = "Milk", category = null, location = null))
         items.updateStatus(id, ItemStatus.CONSUMED, TestTime.today)
@@ -69,7 +95,7 @@ class RoomRepositoriesTest {
     @Test
     fun diagnosticsCountWhatIsStored() = runTest {
         val database = newDatabase()
-        val items = RoomItemRepository(database.itemDao(), EventLog.NONE)
+        val items = RoomItemRepository(database, EventLog.NONE)
         items.upsert(TestData.item(name = "Milk", category = null, location = null))
         val finished = items.upsert(TestData.item(name = "Bread", category = null, location = null))
         items.updateStatus(finished, ItemStatus.WASTED, TestTime.today)
@@ -106,7 +132,7 @@ class RoomRepositoriesTest {
             .upsert(StorageLocation(name = "Fridge", emoji = "🧊"))
         val dairy = Category(categoryId, "Dairy", "🧀")
         val fridge = StorageLocation(locationId, "Fridge", "🧊")
-        val sourceItems = RoomItemRepository(source.itemDao(), EventLog.NONE)
+        val sourceItems = RoomItemRepository(source, EventLog.NONE)
         sourceItems.upsert(TestData.item(name = "Milk", category = dairy, location = fridge).copy(barcode = "123"))
         val finishedId = sourceItems.upsert(TestData.item(name = "Spinach", category = null, location = null))
         sourceItems.updateStatus(finishedId, ItemStatus.WASTED, TestTime.today)
@@ -125,7 +151,7 @@ class RoomRepositoriesTest {
             listOf("Dairy"),
             RoomCategoryRepository(target.categoryDao()).observeCategories().first().map { it.name },
         )
-        val restoredMilk = RoomItemRepository(target.itemDao(), EventLog.NONE).getActiveItems().single()
+        val restoredMilk = RoomItemRepository(target, EventLog.NONE).getActiveItems().single()
         assertEquals(dairy, restoredMilk.category)
         assertEquals(fridge, restoredMilk.location)
         assertEquals("Milk", RoomProductHistoryRepository(target.productDao()).find("123")?.name)
