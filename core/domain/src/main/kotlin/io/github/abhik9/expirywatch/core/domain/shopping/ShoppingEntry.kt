@@ -45,7 +45,7 @@ data class ShoppingEntry(
         private fun parseLeadingQuantity(text: String): ShoppingEntry? {
             val match = leadingNumber.matchEntire(text) ?: return null
             val (number, space, rest) = match.destructured
-            val quantity = number.replace(',', '.').toDoubleOrNull()?.takeIf(::isValidQuantity) ?: return null
+            val quantity = number.replace(',', '.').toDoubleOrNull()?.takeIf(::isValidShoppingQuantity) ?: return null
             val firstWord = rest.substringBefore(' ')
             val unit = units[firstWord.lowercase().removeSuffix(".")]
             val afterUnit = rest.substringAfter(' ', missingDelimiterValue = "").removePrefix("of ").trim()
@@ -62,11 +62,12 @@ data class ShoppingEntry(
 
         private fun parseTrailingCount(text: String): ShoppingEntry? {
             val (name, count) = trailingCount.matchEntire(text)?.destructured ?: return null
-            val quantity = count.toDoubleOrNull()?.takeIf(::isValidQuantity) ?: return null
+            val quantity = count.toDoubleOrNull()?.takeIf(::isValidShoppingQuantity) ?: return null
             return ShoppingEntry(name.trim(), quantity)
         }
-
-        private fun isValidQuantity(quantity: Double): Boolean =
-            quantity.isFinite() && quantity > 0 && quantity <= ItemValidator.MAX_QUANTITY
     }
 }
+
+/** Whether [quantity] can be the amount of something to buy. */
+fun isValidShoppingQuantity(quantity: Double): Boolean =
+    quantity.isFinite() && quantity > 0 && quantity <= ItemValidator.MAX_QUANTITY

@@ -51,4 +51,11 @@ interface ShoppingRepository {
      * when [category] is `null`.
      */
     suspend fun rememberAdded(name: String, category: Category?, addedAt: Instant)
+
+    /**
+     * Remembers the product called [name] by that name and in [category], without counting it as
+     * added again, as when an item on a list is renamed or moved to another category. A product
+     * not added before is remembered as added once, at [at].
+     */
+    suspend fun rememberProduct(name: String, category: Category?, at: Instant)
 }

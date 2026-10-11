@@ -99,6 +99,25 @@ class RoomRepositoriesTest {
     }
 
     @Test
+    fun shoppingHistoryLearnsANewNameOrCategoryWithoutCountingIt() = runTest {
+        val database = newDatabase()
+        val dairyId = RoomCategoryRepository(database.categoryDao()).upsert(Category(name = "Dairy", emoji = "🧀"))
+        val dairy = Category(dairyId, "Dairy", "🧀")
+        val shopping = RoomShoppingRepository(database, EventLog.NONE)
+        shopping.rememberAdded("milk", null, TestTime.now)
+
+        shopping.rememberProduct("Milk", dairy, TestTime.now.plusSeconds(60))
+        shopping.rememberProduct("Oat milk", null, TestTime.now.plusSeconds(60))
+
+        val milk = shopping.findInHistory("milk")!!
+        assertEquals("Milk", milk.name)
+        assertEquals(dairy, milk.category)
+        assertEquals(1, milk.timesAdded)
+        assertEquals(TestTime.now, milk.lastAddedAt)
+        assertEquals(1, shopping.findInHistory("oat milk")?.timesAdded)
+    }
+
+    @Test
     fun shoppingChangesAreRecordedByIdOnly() = runTest {
         val log = RecordingEventLog()
         val shopping = RoomShoppingRepository(newDatabase(), log)

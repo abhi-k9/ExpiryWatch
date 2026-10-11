@@ -103,4 +103,21 @@ internal class RoomShoppingRepository @Inject constructor(
             )
         }
     }
+
+    override suspend fun rememberProduct(name: String, category: Category?, at: Instant) {
+        val key = productKey(name)
+        if (key.isEmpty()) return
+        database.withTransaction {
+            val known = dao.findInHistory(key)?.entry
+            dao.upsertHistory(
+                ShoppingHistoryEntity(
+                    productKey = key,
+                    name = name.trim(),
+                    categoryId = category?.id,
+                    timesAdded = known?.timesAdded ?: 1,
+                    lastAddedAt = known?.lastAddedAt ?: at,
+                ),
+            )
+        }
+    }
 }

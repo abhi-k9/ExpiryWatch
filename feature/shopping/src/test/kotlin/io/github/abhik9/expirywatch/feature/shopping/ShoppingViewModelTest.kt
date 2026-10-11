@@ -7,10 +7,12 @@ import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListUseCas
 import io.github.abhik9.expirywatch.core.domain.shopping.GetShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ObserveKnownProductsUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ObserveShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.SaveShoppingItemUseCase
 import io.github.abhik9.expirywatch.core.model.QuantityUnit
 import io.github.abhik9.expirywatch.core.testing.MainDispatcherRule
 import io.github.abhik9.expirywatch.core.testing.TestData
 import io.github.abhik9.expirywatch.core.testing.TestTime
+import io.github.abhik9.expirywatch.core.testing.repository.FakeCategoryRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeItemRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeShoppingRepository
 import kotlin.test.assertEquals
@@ -43,8 +45,10 @@ class ShoppingViewModelTest {
         ShoppingViewModel(
             observeShoppingList = ObserveShoppingListUseCase(shopping, getShoppingList),
             observeKnownProducts = observeKnownProducts,
+            categoryRepository = FakeCategoryRepository(listOf(TestData.dairy, TestData.produce)),
             getShoppingList = getShoppingList,
             addToShoppingList = AddToShoppingListUseCase(shopping, observeKnownProducts, TestTime.clock),
+            saveShoppingItem = SaveShoppingItemUseCase(shopping, TestTime.clock),
             shoppingRepository = shopping,
             clock = TestTime.clock,
         )
@@ -146,5 +150,44 @@ class ShoppingViewModelTest {
 
         viewModel.onCheckedChange(bread.copy(checkedAt = TestTime.now), checked = false)
         awaitState { it.overview.toBuyCount == 1 }
+    }
+
+    @Test
+    fun editsAnItemAndRemembersItsNewCategory() = runTest {
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        type("Bread")
+        viewModel.add()
+        val bread = awaitState { it.overview.toBuyCount == 1 }.overview.aisles.single().items.single()
+        assertEquals(listOf(TestData.dairy, TestData.produce), awaitState { true }.categories)
+
+        viewModel.onEdit(bread)
+        assertEquals(bread, viewModel.editing)
+        viewModel.save(bread.copy(name = "Rye bread ", category = TestData.produce, note = "sliced"))
+
+        assertEquals(null, viewModel.editing)
+        val moved = awaitState { it.overview.aisles.singleOrNull()?.category == TestData.produce }
+        val aisle = moved.overview.aisles.single()
+        assertEquals("Rye bread", aisle.items.single().name)
+        assertEquals("sliced", aisle.items.single().note)
+        assertEquals(TestData.produce, shopping.findInHistory("rye bread")?.category)
+    }
+
+    @Test
+    fun removesAnItemWithUndo() = runTest {
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        type("Bread")
+        viewModel.add()
+        val bread = awaitState { it.overview.toBuyCount == 1 }.overview.aisles.single().items.single()
+        viewModel.onEdit(bread)
+
+        viewModel.events.test {
+            viewModel.remove(bread)
+            assertEquals(ShoppingEvent.ItemRemoved(bread), awaitItem())
+            assertEquals(null, viewModel.editing)
+            awaitState { it.overview.isEmpty }
+
+            viewModel.undoRemove(bread)
+            assertEquals(listOf(bread), awaitState { it.overview.toBuyCount == 1 }.overview.aisles.single().items)
+        }
     }
 }

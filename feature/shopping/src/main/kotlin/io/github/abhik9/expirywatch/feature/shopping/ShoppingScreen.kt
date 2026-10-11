@@ -21,6 +21,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -47,6 +48,15 @@ internal fun ShoppingRoute(viewModel: ShoppingViewModel) {
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
+                is ShoppingEvent.ItemRemoved -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = resources.getString(R.string.feature_shopping_removed, event.item.name),
+                        actionLabel = resources.getString(R.string.feature_shopping_undo),
+                        withDismissAction = true,
+                    )
+                    if (result == SnackbarResult.ActionPerformed) viewModel.undoRemove(event.item)
+                }
+
                 is ShoppingEvent.CartCleared -> {
                     val count = event.items.size
                     val result = snackbarHostState.showSnackbar(
@@ -69,8 +79,25 @@ internal fun ShoppingRoute(viewModel: ShoppingViewModel) {
         onAdd = viewModel::add,
         onAddSuggestion = viewModel::addSuggestion,
         onCheckedChange = viewModel::onCheckedChange,
+        onEdit = viewModel::onEdit,
+        onRemove = viewModel::remove,
         onClearCart = viewModel::clearCart,
     )
+
+    val editing = viewModel.editing
+    val categories = (uiState as? ShoppingUiState.Success)?.categories.orEmpty()
+    if (editing != null) {
+        // A sheet of its own for each item, so it doesn't keep what was typed for another.
+        key(editing.id) {
+            ShoppingItemSheet(
+                item = editing,
+                categories = categories,
+                onSave = viewModel::save,
+                onRemove = { viewModel.remove(editing) },
+                onDismiss = viewModel::onEditDismiss,
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,6 +111,8 @@ internal fun ShoppingScreen(
     onAdd: () -> Unit,
     onAddSuggestion: (KnownProduct) -> Unit,
     onCheckedChange: (ShoppingItem, Boolean) -> Unit,
+    onEdit: (ShoppingItem) -> Unit,
+    onRemove: (ShoppingItem) -> Unit,
     onClearCart: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -137,6 +166,8 @@ internal fun ShoppingScreen(
                         overview = uiState.overview,
                         bottomPadding = innerPadding.calculateBottomPadding(),
                         onCheckedChange = onCheckedChange,
+                        onEdit = onEdit,
+                        onRemove = onRemove,
                         onClearCart = onClearCart,
                         modifier = Modifier.weight(1f),
                     )
@@ -152,6 +183,8 @@ private fun ShoppingItems(
     overview: ShoppingListOverview,
     bottomPadding: Dp,
     onCheckedChange: (ShoppingItem, Boolean) -> Unit,
+    onEdit: (ShoppingItem) -> Unit,
+    onRemove: (ShoppingItem) -> Unit,
     onClearCart: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -174,6 +207,8 @@ private fun ShoppingItems(
                 ShoppingItemRow(
                     item = item,
                     onCheckedChange = { checked -> onCheckedChange(item, checked) },
+                    onEdit = { onEdit(item) },
+                    onRemove = { onRemove(item) },
                     modifier = Modifier.animateItem(),
                 )
             }
@@ -186,6 +221,8 @@ private fun ShoppingItems(
                 ShoppingItemRow(
                     item = item,
                     onCheckedChange = { checked -> onCheckedChange(item, checked) },
+                    onEdit = { onEdit(item) },
+                    onRemove = { onRemove(item) },
                     modifier = Modifier.animateItem(),
                 )
             }

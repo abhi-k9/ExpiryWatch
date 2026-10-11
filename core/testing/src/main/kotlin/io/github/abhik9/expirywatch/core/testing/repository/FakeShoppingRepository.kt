@@ -87,4 +87,19 @@ class FakeShoppingRepository : ShoppingRepository {
             all + (key to entry)
         }
     }
+
+    override suspend fun rememberProduct(name: String, category: Category?, at: Instant) {
+        val key = productKey(name)
+        if (key.isEmpty()) return
+        history.update { all ->
+            val known = all[key]
+            val entry = ShoppingHistoryEntry(
+                name = name.trim(),
+                category = category,
+                timesAdded = known?.timesAdded ?: 1,
+                lastAddedAt = known?.lastAddedAt ?: at,
+            )
+            all + (key to entry)
+        }
+    }
 }

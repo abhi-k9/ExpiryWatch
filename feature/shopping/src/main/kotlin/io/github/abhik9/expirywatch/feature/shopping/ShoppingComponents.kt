@@ -1,20 +1,24 @@
 package io.github.abhik9.expirywatch.feature.shopping
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -22,16 +26,27 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDecoration
@@ -162,13 +177,87 @@ internal fun SuggestionRow(
     }
 }
 
-/** Something to buy, ticked off once it's in the cart. The whole row toggles it. */
+/**
+ * Something to buy. Tapping it ticks it off, touching and holding it opens it for editing, and
+ * swiping it to the start removes it. The same actions are offered to accessibility services.
+ */
 @Composable
 internal fun ShoppingItemRow(
     item: ShoppingItem,
     onCheckedChange: (Boolean) -> Unit,
+    onEdit: () -> Unit,
+    onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Guards against the swipe callback firing more than once for the same gesture.
+    var removed by remember { mutableStateOf(false) }
+    val removeOnce = {
+        if (!removed) {
+            removed = true
+            onRemove()
+        }
+    }
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) removeOnce()
+            value == SwipeToDismissBoxValue.EndToStart
+        },
+    )
+    val editLabel = stringResource(R.string.feature_shopping_edit)
+    val removeLabel = stringResource(R.string.feature_shopping_remove)
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = modifier.semantics {
+            customActions = listOf(
+                CustomAccessibilityAction(editLabel) {
+                    onEdit()
+                    true
+                },
+                CustomAccessibilityAction(removeLabel) {
+                    removeOnce()
+                    true
+                },
+            )
+        },
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) RemoveBackground()
+        },
+    ) {
+        ShoppingItemContent(
+            item = item,
+            modifier = Modifier
+                .background(MaterialTheme.colorScheme.background)
+                .combinedClickable(
+                    role = Role.Checkbox,
+                    onLongClickLabel = editLabel,
+                    onLongClick = onEdit,
+                    onClick = { onCheckedChange(!item.isChecked) },
+                )
+                .semantics { toggleableState = ToggleableState(item.isChecked) },
+        )
+    }
+}
+
+@Composable
+private fun RemoveBackground() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.errorContainer)
+            .padding(horizontal = 24.dp),
+        contentAlignment = Alignment.CenterEnd,
+    ) {
+        Icon(
+            Icons.Outlined.Delete,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    }
+}
+
+@Composable
+private fun ShoppingItemContent(item: ShoppingItem, modifier: Modifier = Modifier) {
     val textColor = if (item.isChecked) {
         MaterialTheme.colorScheme.onSurfaceVariant
     } else {
@@ -177,7 +266,6 @@ internal fun ShoppingItemRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .toggleable(value = item.isChecked, role = Role.Checkbox, onValueChange = onCheckedChange)
             .heightIn(min = 56.dp)
             .padding(horizontal = 16.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -239,16 +327,14 @@ internal fun CartHeader(
 
 @Preview(showBackground = true)
 @Composable
-private fun ShoppingItemRowPreview() {
+private fun ShoppingItemContentPreview() {
     ExpiryWatchTheme(dynamicColor = false) {
         Column {
-            ShoppingItemRow(
+            ShoppingItemContent(
                 item = ShoppingItem(listId = 1, name = "Flour", quantity = 1.5, unit = QuantityUnit.KILOGRAMS),
-                onCheckedChange = {},
             )
-            ShoppingItemRow(
+            ShoppingItemContent(
                 item = ShoppingItem(listId = 1, name = "Milk", note = "Lactose-free", checkedAt = Instant.EPOCH),
-                onCheckedChange = {},
             )
         }
     }
