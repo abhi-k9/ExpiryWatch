@@ -27,11 +27,10 @@ import io.github.abhik9.expirywatch.core.model.ProductSource
 import io.github.abhik9.expirywatch.core.model.QuantityUnit
 import io.github.abhik9.expirywatch.core.model.StorageLocation
 import io.github.abhik9.expirywatch.core.navigation.EditorNavKey
-import io.github.abhik9.expirywatch.core.ui.formatNumber
-import java.text.DecimalFormatSymbols
+import io.github.abhik9.expirywatch.core.ui.parseQuantity
+import io.github.abhik9.expirywatch.core.ui.toQuantityText
 import java.time.Clock
 import java.time.LocalDate
-import java.util.Locale
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -294,20 +293,7 @@ class EditorViewModel @AssistedInject constructor(
     }
 }
 
-/** Accepts both "1.5" and "1,5", since many locales use a decimal comma. */
-internal fun String.parseQuantity(): Double? = trim().replace(',', '.').toDoubleOrNull()?.takeIf { it.isFinite() }
-
 private fun String.isValidQuantity(): Boolean = parseQuantity()?.let { it > 0.0 } == true
-
-/**
- * Formats a quantity for editing in the user's locale, falling back to "1.5" style for locales whose
- * digits or decimal separator [parseQuantity] can't read back.
- */
-internal fun Double.toQuantityText(locale: Locale = Locale.getDefault()): String {
-    val symbols = DecimalFormatSymbols.getInstance(locale)
-    val isParseable = symbols.zeroDigit == '0' && symbols.decimalSeparator in ".,"
-    return formatNumber(this, if (isParseable) locale else Locale.ROOT)
-}
 
 private fun Item.toForm() = EditorForm(
     name = name,

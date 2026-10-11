@@ -19,6 +19,8 @@ import io.github.abhik9.expirywatch.core.testing.repository.FakeProductCatalog
 import io.github.abhik9.expirywatch.core.testing.repository.FakeProductHistoryRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeStorageLocationRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepository
+import io.github.abhik9.expirywatch.core.ui.parseQuantity
+import io.github.abhik9.expirywatch.core.ui.toQuantityText
 import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

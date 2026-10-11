@@ -15,14 +15,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.RemoveCircleOutline
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,7 +36,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -51,7 +47,6 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.github.abhik9.expirywatch.core.model.ProductSource
@@ -326,59 +321,6 @@ private enum class QuickPick(val days: Long = 0, val weeks: Long = 0, val months
         months > 0 -> pluralStringResource(R.plurals.feature_editor_quick_months, months.toInt(), months.toInt())
         weeks > 0 -> pluralStringResource(R.plurals.feature_editor_quick_weeks, weeks.toInt(), weeks.toInt())
         else -> pluralStringResource(R.plurals.feature_editor_quick_days, days.toInt(), days.toInt())
-    }
-}
-
-/**
- * A read-only field with a dropdown of [options] (id to label).
- *
- * @param noneText when not null, an extra first option that selects `null`.
- */
-@Composable
-internal fun PickerField(
-    label: String,
-    selectedText: String?,
-    noneText: String?,
-    options: List<Pair<Long, String>>,
-    onSelect: (Long?) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box(modifier = modifier) {
-        OutlinedTextField(
-            value = selectedText ?: noneText.orEmpty(),
-            onValueChange = {},
-            modifier = Modifier.fillMaxWidth(),
-            readOnly = true,
-            label = { Text(label) },
-            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
-            singleLine = true,
-        )
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clickable(role = Role.DropdownList, onClickLabel = label) { expanded = true },
-        )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            if (noneText != null) {
-                DropdownMenuItem(
-                    text = { Text(noneText) },
-                    onClick = {
-                        onSelect(null)
-                        expanded = false
-                    },
-                )
-            }
-            options.forEach { (id, text) ->
-                DropdownMenuItem(
-                    text = { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    onClick = {
-                        onSelect(id)
-                        expanded = false
-                    },
-                )
-            }
-        }
     }
 }
 

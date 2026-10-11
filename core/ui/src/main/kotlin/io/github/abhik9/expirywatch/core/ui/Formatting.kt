@@ -7,6 +7,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import io.github.abhik9.expirywatch.core.model.QuantityUnit
+import java.text.DecimalFormatSymbols
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.LocalTime
@@ -57,6 +58,19 @@ fun formatNumber(value: Double, locale: Locale): String = NumberFormat.getNumber
     maximumFractionDigits = 2
     isGroupingUsed = false
 }.format(value)
+
+/** Accepts both "1.5" and "1,5", since many locales use a decimal comma. */
+fun String.parseQuantity(): Double? = trim().replace(',', '.').toDoubleOrNull()?.takeIf { it.isFinite() }
+
+/**
+ * Formats a quantity for editing in the user's locale, falling back to "1.5" style for locales whose
+ * digits or decimal separator [parseQuantity] can't read back.
+ */
+fun Double.toQuantityText(locale: Locale = Locale.getDefault()): String {
+    val symbols = DecimalFormatSymbols.getInstance(locale)
+    val isParseable = symbols.zeroDigit == '0' && symbols.decimalSeparator in ".,"
+    return formatNumber(this, if (isParseable) locale else Locale.ROOT)
+}
 
 /** A date in the user's locale, e.g. "12 Mar 2026". */
 @Composable
