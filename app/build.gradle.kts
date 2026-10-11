@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.expirywatch.hilt)
 }
 
-// Release signing reads keystore.properties (not checked in) when present; see README.
+// Release signing reads keystore.properties (not checked in) when present; see RELEASING.md.
 val keystoreProperties = rootProject.file("keystore.properties").takeIf { it.exists() }?.let { file ->
     Properties().apply { file.inputStream().use(::load) }
 }
