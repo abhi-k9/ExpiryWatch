@@ -29,6 +29,8 @@ data class UserSettings(
     val dismissedRestockSuggestions: Set<String> = emptySet(),
     /** Category ids in the order the user walks through the shop; categories left out come after, by name. */
     val shoppingAisleOrder: List<Long> = emptyList(),
+    /** Keep the screen from turning off while the shopping list is open. */
+    val keepScreenOnWhileShopping: Boolean = false,
 ) {
     companion object {
         const val DEFAULT_EXPIRING_SOON_DAYS = 3

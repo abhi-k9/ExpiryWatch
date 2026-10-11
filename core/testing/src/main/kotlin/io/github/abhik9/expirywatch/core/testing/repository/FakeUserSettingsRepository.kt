@@ -50,4 +50,7 @@ class FakeUserSettingsRepository(initial: UserSettings = UserSettings()) : UserS
 
     override suspend fun setShoppingAisleOrder(categoryIds: List<Long>) =
         state.update { it.copy(shoppingAisleOrder = categoryIds) }
+
+    override suspend fun setKeepScreenOnWhileShopping(keepOn: Boolean) =
+        state.update { it.copy(keepScreenOnWhileShopping = keepOn) }
 }

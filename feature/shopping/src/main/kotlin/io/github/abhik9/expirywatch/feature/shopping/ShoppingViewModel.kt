@@ -64,6 +64,8 @@ sealed interface ShoppingUiState {
         val lists: List<ShoppingListSummary>,
         /** Products to buy again, because what the user had expired or is gone. */
         val restock: List<RestockSuggestion>,
+        /** Whether to keep the screen from turning off while the list is open. */
+        val keepScreenOn: Boolean = false,
     ) : ShoppingUiState
 }
 
@@ -134,8 +136,9 @@ class ShoppingViewModel @Inject constructor(
         observeShoppingListSummaries(),
         categories,
         observeRestockSuggestions(),
-    ) { currentOverview, lists, orderedCategories, restock ->
-        ListContent(currentOverview, lists, orderedCategories, restock)
+        settingsRepository.settings.map { it.keepScreenOnWhileShopping }.distinctUntilChanged(),
+    ) { currentOverview, lists, orderedCategories, restock, keepScreenOn ->
+        ListContent(currentOverview, lists, orderedCategories, restock, keepScreenOn)
     }
 
     val uiState: StateFlow<ShoppingUiState> = combine(
@@ -151,6 +154,7 @@ class ShoppingViewModel @Inject constructor(
             categories = currentContent.categories,
             lists = currentContent.lists,
             restock = currentContent.restock,
+            keepScreenOn = currentContent.keepScreenOn,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -284,6 +288,10 @@ class ShoppingViewModel @Inject constructor(
         viewModelScope.launch { renameShoppingList(listId, name) }
     }
 
+    fun setKeepScreenOn(keepOn: Boolean) {
+        viewModelScope.launch { settingsRepository.setKeepScreenOnWhileShopping(keepOn) }
+    }
+
     /** Puts the categories in the order the user walks through the shop. */
     fun arrangeAisles(categoryIds: List<Long>) {
         viewModelScope.launch { settingsRepository.setShoppingAisleOrder(categoryIds) }
@@ -319,4 +327,5 @@ private data class ListContent(
     val lists: List<ShoppingListSummary>,
     val categories: List<Category>,
     val restock: List<RestockSuggestion>,
+    val keepScreenOn: Boolean,
 )

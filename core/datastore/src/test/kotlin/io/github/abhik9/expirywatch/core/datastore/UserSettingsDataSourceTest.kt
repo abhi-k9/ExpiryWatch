@@ -50,6 +50,7 @@ class UserSettingsDataSourceTest {
         dataSource.setShoppingListId(7)
         dataSource.setDismissedRestockSuggestions(setOf("milk|2026-03-08"))
         dataSource.setShoppingAisleOrder(listOf(3, 1, 2))
+        dataSource.setKeepScreenOnWhileShopping(true)
 
         assertEquals(
             UserSettings(
@@ -67,6 +68,7 @@ class UserSettingsDataSourceTest {
                 shoppingListId = 7,
                 dismissedRestockSuggestions = setOf("milk|2026-03-08"),
                 shoppingAisleOrder = listOf(3, 1, 2),
+                keepScreenOnWhileShopping = true,
             ),
             dataSource.settings.first(),
         )

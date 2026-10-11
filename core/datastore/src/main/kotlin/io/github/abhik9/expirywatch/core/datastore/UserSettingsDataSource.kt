@@ -65,6 +65,9 @@ class UserSettingsDataSource @Inject constructor(
     suspend fun setShoppingAisleOrder(categoryIds: List<Long>) =
         dataStore.edit { it[Keys.SHOPPING_AISLE_ORDER] = categoryIds.joinToString(",") }
 
+    suspend fun setKeepScreenOnWhileShopping(keepOn: Boolean) =
+        dataStore.edit { it[Keys.KEEP_SCREEN_ON_WHILE_SHOPPING] = keepOn }
+
     private fun Preferences.toUserSettings(): UserSettings {
         val defaults = UserSettings()
         return UserSettings(
@@ -90,6 +93,7 @@ class UserSettingsDataSource @Inject constructor(
                 ?.split(',')
                 ?.mapNotNull { it.trim().toLongOrNull() }
                 ?: defaults.shoppingAisleOrder,
+            keepScreenOnWhileShopping = this[Keys.KEEP_SCREEN_ON_WHILE_SHOPPING] ?: defaults.keepScreenOnWhileShopping,
         )
     }
 
@@ -111,6 +115,7 @@ class UserSettingsDataSource @Inject constructor(
         val SHOPPING_LIST_ID = longPreferencesKey("shopping_list_id")
         val DISMISSED_RESTOCK_SUGGESTIONS = stringSetPreferencesKey("dismissed_restock_suggestions")
         val SHOPPING_AISLE_ORDER = stringPreferencesKey("shopping_aisle_order")
+        val KEEP_SCREEN_ON_WHILE_SHOPPING = booleanPreferencesKey("keep_screen_on_while_shopping")
     }
 
     private companion object {

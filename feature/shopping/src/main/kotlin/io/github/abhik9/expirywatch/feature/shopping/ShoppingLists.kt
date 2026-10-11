@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -34,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -48,8 +50,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
@@ -133,6 +138,8 @@ internal fun ListSwitcher(
 @Composable
 internal fun ListMenu(
     canDelete: Boolean,
+    keepScreenOn: Boolean,
+    onKeepScreenOnChange: (Boolean) -> Unit,
     onShare: (() -> Unit)?,
     onAddFromText: () -> Unit,
     onArrangeAisles: () -> Unit,
@@ -170,6 +177,19 @@ internal fun ListMenu(
                     onArrangeAisles()
                 },
                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.feature_shopping_keep_screen_on)) },
+                onClick = {
+                    expanded = false
+                    onKeepScreenOnChange(!keepScreenOn)
+                },
+                modifier = Modifier.semantics {
+                    role = Role.Switch
+                    toggleableState = ToggleableState(keepScreenOn)
+                },
+                leadingIcon = { Icon(Icons.Outlined.LightMode, contentDescription = null) },
+                trailingIcon = { Switch(checked = keepScreenOn, onCheckedChange = null) },
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.feature_shopping_rename_list)) },

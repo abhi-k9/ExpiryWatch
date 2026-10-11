@@ -22,6 +22,13 @@ internal object AppShortcuts {
                 DeepLink.AddItem(scanBarcode = true),
             ),
             shortcut(context, "add", R.string.shortcut_add, R.drawable.ic_shortcut_add, DeepLink.AddItem()),
+            shortcut(
+                context,
+                "shopping",
+                R.string.shortcut_shopping,
+                R.drawable.ic_shortcut_shopping,
+                DeepLink.Shopping,
+            ),
         )
         ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts)
     }

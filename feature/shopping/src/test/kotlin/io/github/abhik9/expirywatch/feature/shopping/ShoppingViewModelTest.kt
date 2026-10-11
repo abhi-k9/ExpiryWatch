@@ -337,4 +337,15 @@ class ShoppingViewModelTest {
 
         assertEquals("5000000000001", awaitLastAdded().item.barcode)
     }
+
+    @Test
+    fun keepsTheScreenOnWhenAsked() = runTest {
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        assertEquals(false, awaitState { true }.keepScreenOn)
+
+        viewModel.setKeepScreenOn(true)
+
+        awaitState { it.keepScreenOn }
+        assertEquals(true, settings.current.keepScreenOnWhileShopping)
+    }
 }

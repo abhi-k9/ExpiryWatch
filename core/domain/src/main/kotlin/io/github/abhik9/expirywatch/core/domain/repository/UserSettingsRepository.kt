@@ -37,4 +37,6 @@ interface UserSettingsRepository {
     suspend fun setDismissedRestockSuggestions(keys: Set<String>)
 
     suspend fun setShoppingAisleOrder(categoryIds: List<Long>)
+
+    suspend fun setKeepScreenOnWhileShopping(keepOn: Boolean)
 }

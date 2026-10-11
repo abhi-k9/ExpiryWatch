@@ -70,4 +70,8 @@ internal class DataStoreUserSettingsRepository @Inject constructor(
     override suspend fun setShoppingAisleOrder(categoryIds: List<Long>) {
         dataSource.setShoppingAisleOrder(categoryIds)
     }
+
+    override suspend fun setKeepScreenOnWhileShopping(keepOn: Boolean) {
+        dataSource.setKeepScreenOnWhileShopping(keepOn)
+    }
 }

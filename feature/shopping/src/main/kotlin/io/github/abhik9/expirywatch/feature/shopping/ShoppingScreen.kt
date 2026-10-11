@@ -21,6 +21,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -33,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -105,6 +107,7 @@ internal fun ShoppingRoute(
         onRenameList = viewModel::renameList,
         onDeleteList = viewModel::deleteList,
         onArrangeAisles = viewModel::arrangeAisles,
+        onKeepScreenOnChange = viewModel::setKeepScreenOn,
         onAddRestock = viewModel::addRestock,
         onAddAllRestock = viewModel::addAllRestock,
         onDismissRestock = viewModel::dismissRestock,
@@ -149,6 +152,7 @@ internal fun ShoppingScreen(
     onRenameList: (Long, String) -> Unit,
     onDeleteList: (Long) -> Unit,
     onArrangeAisles: (List<Long>) -> Unit,
+    onKeepScreenOnChange: (Boolean) -> Unit,
     onAddRestock: (RestockSuggestion) -> Unit,
     onAddAllRestock: (List<RestockSuggestion>) -> Unit,
     onDismissRestock: (RestockSuggestion) -> Unit,
@@ -156,6 +160,7 @@ internal fun ShoppingScreen(
 ) {
     var listDialog by rememberSaveable { mutableStateOf<ListDialog?>(null) }
     var showScanner by rememberSaveable { mutableStateOf(false) }
+    KeepScreenOn(enabled = (uiState as? ShoppingUiState.Success)?.keepScreenOn == true)
     val context = LocalContext.current
     val noCategory = stringResource(R.string.feature_shopping_no_category)
     Scaffold(
@@ -176,6 +181,8 @@ internal fun ShoppingScreen(
                     if (uiState is ShoppingUiState.Success) {
                         ListMenu(
                             canDelete = uiState.lists.size > 1,
+                            keepScreenOn = uiState.keepScreenOn,
+                            onKeepScreenOnChange = onKeepScreenOnChange,
                             onShare = if (uiState.overview.toBuyCount > 0) {
                                 {
                                     context.shareText(
@@ -402,4 +409,14 @@ private fun Context.shareText(subject: String, text: String) {
         .putExtra(Intent.EXTRA_SUBJECT, subject)
         .putExtra(Intent.EXTRA_TEXT, text)
     startActivity(Intent.createChooser(send, null))
+}
+
+/** Keeps the screen from turning off while this is shown and [enabled], as while shopping. */
+@Composable
+private fun KeepScreenOn(enabled: Boolean) {
+    val view = LocalView.current
+    DisposableEffect(view, enabled) {
+        view.keepScreenOn = enabled
+        onDispose { view.keepScreenOn = false }
+    }
 }

@@ -60,6 +60,7 @@
     </plurals>
     <string name="feature_shopping_delete_list_empty">There\'s nothing on it.</string>
     <string name="feature_shopping_arrange_aisles">Arrange aisles</string>
+    <string name="feature_shopping_keep_screen_on">Keep screen on</string>
     <string name="feature_shopping_arrange_aisles_help">Put the categories in the order you walk through the shop, and the list follows it.</string>
     <string name="feature_shopping_move_up">Move %s up</string>
     <string name="feature_shopping_move_down">Move %s down</string>
