@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -58,6 +59,7 @@ import io.github.abhik9.expirywatch.core.designsystem.theme.ExpiryWatchTheme
 import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListResult
 import io.github.abhik9.expirywatch.core.domain.shopping.KnownProduct
 import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingEntry
+import io.github.abhik9.expirywatch.core.domain.usecase.ProductLookupResult
 import io.github.abhik9.expirywatch.core.model.Category
 import io.github.abhik9.expirywatch.core.model.QuantityUnit
 import io.github.abhik9.expirywatch.core.model.ShoppingItem
@@ -73,12 +75,14 @@ import java.time.Instant
 internal fun AddItemField(
     input: String,
     lastAdded: AddToShoppingListResult?,
+    scanProblem: ProductLookupResult?,
     onInputChange: (String) -> Unit,
     onAdd: () -> Unit,
+    onScan: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val typed = ShoppingEntry.parse(input)
-    val feedback = if (typed == null) lastAdded?.message() else null
+    val feedback = if (typed == null) lastAdded?.message() ?: scanProblem?.message() else null
     val supportingText = when {
         feedback != null -> feedback
 
@@ -95,14 +99,19 @@ internal fun AddItemField(
         onValueChange = onInputChange,
         modifier = modifier,
         placeholder = { Text(stringResource(R.string.feature_shopping_add_hint)) },
-        trailingIcon = if (typed != null) {
-            {
+        trailingIcon = {
+            if (typed != null) {
                 IconButton(onClick = onAdd) {
                     Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.feature_shopping_add))
                 }
+            } else {
+                IconButton(onClick = onScan) {
+                    Icon(
+                        Icons.Outlined.QrCodeScanner,
+                        contentDescription = stringResource(R.string.feature_shopping_scan),
+                    )
+                }
             }
-        } else {
-            null
         },
         supportingText = {
             Text(
@@ -129,6 +138,17 @@ internal fun AddItemField(
 }
 
 private val ShoppingEntry.hasAmount: Boolean get() = quantity != 1.0 || unit != QuantityUnit.PIECES
+
+/** Why a scanned product couldn't be added, and what to do instead. */
+@Composable
+private fun ProductLookupResult.message(): String? = when (this) {
+    is ProductLookupResult.Found -> null
+
+    ProductLookupResult.CatalogUnavailable -> stringResource(R.string.feature_shopping_scan_unavailable)
+
+    ProductLookupResult.NotFound, ProductLookupResult.NotFoundOnlineLookupOff ->
+        stringResource(R.string.feature_shopping_scan_not_found)
+}
 
 @Composable
 private fun AddToShoppingListResult.message(): String = when (this) {

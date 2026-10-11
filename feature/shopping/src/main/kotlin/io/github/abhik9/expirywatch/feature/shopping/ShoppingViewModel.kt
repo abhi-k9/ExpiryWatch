@@ -31,6 +31,8 @@ import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingListSummary
 import io.github.abhik9.expirywatch.core.domain.shopping.aisleComparator
 import io.github.abhik9.expirywatch.core.domain.shopping.buildShoppingOverview
 import io.github.abhik9.expirywatch.core.domain.shopping.suggestProducts
+import io.github.abhik9.expirywatch.core.domain.usecase.LookupProductUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.ProductLookupResult
 import io.github.abhik9.expirywatch.core.model.Category
 import io.github.abhik9.expirywatch.core.model.ShoppingItem
 import java.time.Clock
@@ -43,6 +45,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -85,6 +88,7 @@ class ShoppingViewModel @Inject constructor(
     private val renameShoppingList: RenameShoppingListUseCase,
     private val deleteShoppingList: DeleteShoppingListUseCase,
     private val dismissRestockSuggestion: DismissRestockSuggestionUseCase,
+    private val lookupProduct: LookupProductUseCase,
     private val shoppingRepository: ShoppingRepository,
     private val settingsRepository: UserSettingsRepository,
     private val clock: Clock,
@@ -97,9 +101,16 @@ class ShoppingViewModel @Inject constructor(
     var lastAdded by mutableStateOf<AddToShoppingListResult?>(null)
         private set
 
+    /** Why the last barcode scanned couldn't be added, until the user types again. */
+    var scanProblem by mutableStateOf<ProductLookupResult?>(null)
+        private set
+
     /** The item being changed in the edit sheet, if any. */
     var editing by mutableStateOf<ShoppingItem?>(null)
         private set
+
+    /** A barcode scanned for a product that wasn't found, for what's typed next. */
+    private var unknownBarcode: String? = null
 
     private val aisleOrder: Flow<List<Long>> = settingsRepository.settings
         .map { it.shoppingAisleOrder }
@@ -153,6 +164,7 @@ class ShoppingViewModel @Inject constructor(
     fun onInputChange(text: String) {
         input = text
         lastAdded = null
+        scanProblem = null
     }
 
     /** Adds what's typed, such as "2 milk". */
@@ -170,8 +182,38 @@ class ShoppingViewModel @Inject constructor(
     private fun add(entry: ShoppingEntry) {
         // Cleared right away, so the next item can be typed while this one is saved.
         input = ""
+        val withBarcode = unknownBarcode?.let { entry.copy(barcode = it) } ?: entry
+        unknownBarcode = null
         viewModelScope.launch {
-            lastAdded = addToShoppingList(getShoppingList().id, entry)
+            lastAdded = addToShoppingList(getShoppingList().id, withBarcode)
+        }
+    }
+
+    /**
+     * Adds the product with the scanned [barcode]. When it isn't known, the user is asked to type
+     * its name, and the barcode goes with what they add next, so it's known from then on.
+     */
+    fun onBarcodeScanned(barcode: String) {
+        lastAdded = null
+        scanProblem = null
+        viewModelScope.launch {
+            when (val result = lookupProduct(barcode)) {
+                is ProductLookupResult.Found -> {
+                    val product = result.product
+                    val entry = ShoppingEntry(
+                        name = product.name,
+                        brand = product.brand,
+                        barcode = product.barcode,
+                        category = categories.first().firstOrNull { it.id == product.categoryId },
+                    )
+                    lastAdded = addToShoppingList(getShoppingList().id, entry)
+                }
+
+                else -> {
+                    unknownBarcode = barcode.trim()
+                    scanProblem = result
+                }
+            }
         }
     }
 

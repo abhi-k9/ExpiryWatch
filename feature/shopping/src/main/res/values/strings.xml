@@ -4,6 +4,9 @@
     <string name="feature_shopping_default_list_name">Shopping list</string>
     <string name="feature_shopping_add_hint">Add an item</string>
     <string name="feature_shopping_add">Add</string>
+    <string name="feature_shopping_scan">Scan a barcode</string>
+    <string name="feature_shopping_scan_not_found">That product isn\'t known yet. Type its name to add it.</string>
+    <string name="feature_shopping_scan_unavailable">Couldn\'t look that product up. Type its name to add it.</string>
     <string name="feature_shopping_amount_tip">Start with an amount, like “2 milk” or “500 g flour”</string>
     <!-- Under the add field while typing, what will be added, e.g. "flour · 2 kg". -->
     <string name="feature_shopping_preview">%1$s · %2$s</string>

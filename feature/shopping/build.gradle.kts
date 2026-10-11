@@ -5,3 +5,7 @@ plugins {
 android {
     namespace = "io.github.abhik9.expirywatch.feature.shopping"
 }
+
+dependencies {
+    implementation(projects.core.scanner)
+}

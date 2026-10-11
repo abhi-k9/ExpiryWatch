@@ -2,6 +2,7 @@ package io.github.abhik9.expirywatch.feature.shopping
 
 import androidx.compose.runtime.snapshots.Snapshot
 import app.cash.turbine.test
+import io.github.abhik9.expirywatch.core.common.diagnostics.EventLog
 import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListResult
 import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.CreateShoppingListUseCase
@@ -15,13 +16,19 @@ import io.github.abhik9.expirywatch.core.domain.shopping.ObserveShoppingListUseC
 import io.github.abhik9.expirywatch.core.domain.shopping.RenameShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.RestockReason
 import io.github.abhik9.expirywatch.core.domain.shopping.SaveShoppingItemUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.LookupProductUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveTodayUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.ProductLookupResult
+import io.github.abhik9.expirywatch.core.model.ProductInfo
+import io.github.abhik9.expirywatch.core.model.ProductSource
 import io.github.abhik9.expirywatch.core.model.QuantityUnit
 import io.github.abhik9.expirywatch.core.testing.MainDispatcherRule
 import io.github.abhik9.expirywatch.core.testing.TestData
 import io.github.abhik9.expirywatch.core.testing.TestTime
 import io.github.abhik9.expirywatch.core.testing.repository.FakeCategoryRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeItemRepository
+import io.github.abhik9.expirywatch.core.testing.repository.FakeProductCatalog
+import io.github.abhik9.expirywatch.core.testing.repository.FakeProductHistoryRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeShoppingRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepository
 import kotlin.test.assertEquals
@@ -48,6 +55,7 @@ class ShoppingViewModelTest {
     )
     private val settings = FakeUserSettingsRepository()
     private val getShoppingList = GetShoppingListUseCase(shopping, settings, "Shopping list", TestTime.clock)
+    private val catalog = FakeProductCatalog()
     private val observeKnownProducts = ObserveKnownProductsUseCase(shopping, items, TestTime.clock)
 
     // Made on first use in a test, once the rule has set the main dispatcher its scope runs on.
@@ -71,6 +79,7 @@ class ShoppingViewModelTest {
             renameShoppingList = RenameShoppingListUseCase(shopping),
             deleteShoppingList = DeleteShoppingListUseCase(shopping, settings),
             dismissRestockSuggestion = DismissRestockSuggestionUseCase(settings, TestTime.clock),
+            lookupProduct = LookupProductUseCase(FakeProductHistoryRepository(), catalog, settings, EventLog.NONE),
             shoppingRepository = shopping,
             settingsRepository = settings,
             clock = TestTime.clock,
@@ -290,5 +299,42 @@ class ShoppingViewModelTest {
         val arranged = awaitState { it.overview.aisles.first().category == TestData.produce }
         assertEquals(listOf(TestData.produce, TestData.dairy), arranged.categories)
         assertEquals(listOf(TestData.produce.id, TestData.dairy.id), settings.current.shoppingAisleOrder)
+    }
+
+    @Test
+    fun addsAScannedProduct() = runTest {
+        catalog.products["4008400404127"] = ProductInfo(
+            barcode = "4008400404127",
+            name = "Nutella",
+            brand = "Ferrero",
+            categoryId = TestData.dairy.id,
+            source = ProductSource.OPEN_FOOD_FACTS,
+        )
+        backgroundScope.launch { viewModel.uiState.collect {} }
+
+        viewModel.onBarcodeScanned("4008400404127")
+
+        val added = assertIs<AddToShoppingListResult.Added>(awaitLastAdded()).item
+        assertEquals("Nutella", added.name)
+        assertEquals("Ferrero", added.brand)
+        assertEquals("4008400404127", added.barcode)
+        assertEquals(TestData.dairy, added.category)
+    }
+
+    @Test
+    fun anUnknownBarcodeGoesWithWhatIsTypedNext() = runTest {
+        backgroundScope.launch { viewModel.uiState.collect {} }
+
+        viewModel.onBarcodeScanned("5000000000001")
+        withTimeout(5.seconds) {
+            while (viewModel.scanProblem == null) delay(10.milliseconds)
+        }
+        assertEquals(ProductLookupResult.NotFound, viewModel.scanProblem)
+
+        type("Oat drink")
+        assertEquals(null, viewModel.scanProblem)
+        viewModel.add()
+
+        assertEquals("5000000000001", awaitLastAdded().item.barcode)
     }
 }

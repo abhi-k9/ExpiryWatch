@@ -44,7 +44,9 @@ import io.github.abhik9.expirywatch.core.domain.shopping.KnownProduct
 import io.github.abhik9.expirywatch.core.domain.shopping.RestockSuggestion
 import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingListOverview
 import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingListText
+import io.github.abhik9.expirywatch.core.domain.usecase.ProductLookupResult
 import io.github.abhik9.expirywatch.core.model.ShoppingItem
+import io.github.abhik9.expirywatch.core.scanner.BarcodeScannerDialog
 
 @Composable
 internal fun ShoppingRoute(
@@ -86,6 +88,8 @@ internal fun ShoppingRoute(
         uiState = uiState,
         input = viewModel.input,
         lastAdded = viewModel.lastAdded,
+        scanProblem = viewModel.scanProblem,
+        onBarcodeScanned = viewModel::onBarcodeScanned,
         snackbarHostState = snackbarHostState,
         onInputChange = viewModel::onInputChange,
         onAdd = viewModel::add,
@@ -128,6 +132,8 @@ internal fun ShoppingScreen(
     uiState: ShoppingUiState,
     input: String,
     lastAdded: AddToShoppingListResult?,
+    scanProblem: ProductLookupResult?,
+    onBarcodeScanned: (String) -> Unit,
     snackbarHostState: SnackbarHostState,
     onInputChange: (String) -> Unit,
     onAdd: () -> Unit,
@@ -149,6 +155,7 @@ internal fun ShoppingScreen(
     modifier: Modifier = Modifier,
 ) {
     var listDialog by rememberSaveable { mutableStateOf<ListDialog?>(null) }
+    var showScanner by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val noCategory = stringResource(R.string.feature_shopping_no_category)
     Scaffold(
@@ -208,8 +215,10 @@ internal fun ShoppingScreen(
                 AddItemField(
                     input = input,
                     lastAdded = lastAdded,
+                    scanProblem = scanProblem,
                     onInputChange = onInputChange,
                     onAdd = onAdd,
+                    onScan = { showScanner = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
@@ -246,6 +255,17 @@ internal fun ShoppingScreen(
                 }
             }
         }
+    }
+
+    if (showScanner) {
+        BarcodeScannerDialog(
+            onBarcodeScanned = { barcode ->
+                showScanner = false
+                onBarcodeScanned(barcode)
+            },
+            onEnterManually = { showScanner = false },
+            onDismiss = { showScanner = false },
+        )
     }
 
     val success = uiState as? ShoppingUiState.Success ?: return
