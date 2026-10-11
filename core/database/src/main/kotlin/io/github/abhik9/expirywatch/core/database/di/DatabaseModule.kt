@@ -13,6 +13,7 @@ import io.github.abhik9.expirywatch.core.database.dao.CategoryDao
 import io.github.abhik9.expirywatch.core.database.dao.ItemDao
 import io.github.abhik9.expirywatch.core.database.dao.LocationDao
 import io.github.abhik9.expirywatch.core.database.dao.ProductDao
+import io.github.abhik9.expirywatch.core.database.dao.ShoppingDao
 import javax.inject.Singleton
 
 @Module
@@ -36,4 +37,7 @@ internal object DatabaseModule {
 
     @Provides
     fun providesProductDao(database: ExpiryWatchDatabase): ProductDao = database.productDao()
+
+    @Provides
+    fun providesShoppingDao(database: ExpiryWatchDatabase): ShoppingDao = database.shoppingDao()
 }

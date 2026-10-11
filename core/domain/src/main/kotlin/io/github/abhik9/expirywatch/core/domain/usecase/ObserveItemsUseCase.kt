@@ -1,5 +1,6 @@
 package io.github.abhik9.expirywatch.core.domain.usecase
 
+import io.github.abhik9.expirywatch.core.domain.productKey
 import io.github.abhik9.expirywatch.core.domain.repository.ItemRepository
 import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
 import io.github.abhik9.expirywatch.core.model.ExpiryStatus
@@ -179,14 +180,9 @@ private fun List<ItemWithExpiry>.groupedByProduct(grouping: ProductGrouping, sec
 /** What identifies the item's product, as far as [grouping] is concerned. */
 private fun Item.productKey(grouping: ProductGrouping): String = when (grouping) {
     ProductGrouping.OFF -> "#$id"
-    ProductGrouping.NAME -> name.comparable()
-    ProductGrouping.NAME_AND_BRAND -> "${name.comparable()}\u0000${brand.orEmpty().comparable()}"
+    ProductGrouping.NAME -> productKey(name)
+    ProductGrouping.NAME_AND_BRAND -> "${productKey(name)}\u0000${productKey(brand.orEmpty())}"
 }
-
-private val whitespace = "\\s+".toRegex()
-
-/** Ignores case, accents and spacing. */
-private fun String.comparable(): String = normalizedForSearch().replace(whitespace, " ")
 
 private fun ItemSortOrder.comparator(): Comparator<ItemWithExpiry> {
     val byName = compareBy<ItemWithExpiry> { it.item.name.lowercase(Locale.ROOT) }

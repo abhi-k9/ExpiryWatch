@@ -14,6 +14,7 @@ import io.github.abhik9.expirywatch.core.data.repository.RoomBackupRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomCategoryRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomItemRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomProductHistoryRepository
+import io.github.abhik9.expirywatch.core.data.repository.RoomShoppingRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomStorageLocationRepository
 import io.github.abhik9.expirywatch.core.domain.repository.BackupRepository
 import io.github.abhik9.expirywatch.core.domain.repository.CategoryRepository
@@ -21,6 +22,7 @@ import io.github.abhik9.expirywatch.core.domain.repository.DocumentStore
 import io.github.abhik9.expirywatch.core.domain.repository.ItemRepository
 import io.github.abhik9.expirywatch.core.domain.repository.ProductCatalog
 import io.github.abhik9.expirywatch.core.domain.repository.ProductHistoryRepository
+import io.github.abhik9.expirywatch.core.domain.repository.ShoppingRepository
 import io.github.abhik9.expirywatch.core.domain.repository.StorageLocationRepository
 import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
 
@@ -38,6 +40,9 @@ internal abstract class DataModule {
 
     @Binds
     abstract fun bindsProductHistoryRepository(repository: RoomProductHistoryRepository): ProductHistoryRepository
+
+    @Binds
+    abstract fun bindsShoppingRepository(repository: RoomShoppingRepository): ShoppingRepository
 
     @Binds
     abstract fun bindsProductCatalog(catalog: OpenFoodFactsProductCatalog): ProductCatalog

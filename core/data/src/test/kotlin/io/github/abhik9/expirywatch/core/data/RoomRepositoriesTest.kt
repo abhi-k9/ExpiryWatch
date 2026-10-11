@@ -8,12 +8,14 @@ import io.github.abhik9.expirywatch.core.data.repository.RoomBackupRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomCategoryRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomItemRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomProductHistoryRepository
+import io.github.abhik9.expirywatch.core.data.repository.RoomShoppingRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomStorageLocationRepository
 import io.github.abhik9.expirywatch.core.database.ExpiryWatchDatabase
 import io.github.abhik9.expirywatch.core.model.Category
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.ProductInfo
 import io.github.abhik9.expirywatch.core.model.ProductSource
+import io.github.abhik9.expirywatch.core.model.ShoppingItem
 import io.github.abhik9.expirywatch.core.model.StorageLocation
 import io.github.abhik9.expirywatch.core.testing.TestData
 import io.github.abhik9.expirywatch.core.testing.TestTime
@@ -78,6 +80,46 @@ class RoomRepositoriesTest {
     }
 
     @Test
+    fun shoppingHistoryCountsAdditionsAndKeepsTheCategory() = runTest {
+        val database = newDatabase()
+        val dairyId = RoomCategoryRepository(database.categoryDao()).upsert(Category(name = "Dairy", emoji = "🧀"))
+        val dairy = Category(dairyId, "Dairy", "🧀")
+        val shopping = RoomShoppingRepository(database, EventLog.NONE)
+
+        shopping.rememberAdded("Milk", dairy, TestTime.now)
+        shopping.rememberAdded(" oat MILK ", null, TestTime.now)
+        shopping.rememberAdded(" MILK ", null, TestTime.now.plusSeconds(60))
+
+        val milk = shopping.findInHistory("milk")!!
+        assertEquals("MILK", milk.name)
+        assertEquals(dairy, milk.category)
+        assertEquals(2, milk.timesAdded)
+        assertEquals(TestTime.now.plusSeconds(60), milk.lastAddedAt)
+        assertEquals(listOf("MILK", "oat MILK"), shopping.observeHistory().first().map { it.name })
+    }
+
+    @Test
+    fun shoppingChangesAreRecordedByIdOnly() = runTest {
+        val log = RecordingEventLog()
+        val shopping = RoomShoppingRepository(newDatabase(), log)
+
+        val list = shopping.createList("Groceries", TestTime.now)
+        val milk = shopping.upsertItem(ShoppingItem(listId = list, name = "Milk", createdAt = TestTime.now))
+        shopping.setChecked(listOf(milk), TestTime.now)
+        shopping.deleteItems(listOf(milk))
+
+        assertEquals(
+            listOf(
+                "shopping: created list #$list",
+                "shopping: added #$milk to list #$list",
+                "shopping: checked #$milk",
+                "shopping: removed #$milk",
+            ),
+            log.messages,
+        )
+    }
+
+    @Test
     fun itemChangesAreRecordedByIdOnly() = runTest {
         val log = RecordingEventLog()
         val items = RoomItemRepository(newDatabase(), log)
@@ -104,6 +146,7 @@ class RoomRepositoriesTest {
             database.categoryDao(),
             database.locationDao(),
             database.productDao(),
+            database.shoppingDao(),
             FakeUserSettingsRepository(),
         )
 
@@ -111,6 +154,7 @@ class RoomRepositoriesTest {
 
         assertEquals("Items: 1 active, 0 used up, 1 thrown away", lines[0])
         assertEquals("Categories: 0, locations: 0, remembered products: 0", lines[1])
+        assertEquals("Shopping lists: 0, with 0 items", lines[2])
         assertFalse(lines.any { "Milk" in it || "Bread" in it })
     }
 

@@ -5,6 +5,7 @@ import io.github.abhik9.expirywatch.core.database.dao.CategoryDao
 import io.github.abhik9.expirywatch.core.database.dao.ItemDao
 import io.github.abhik9.expirywatch.core.database.dao.LocationDao
 import io.github.abhik9.expirywatch.core.database.dao.ProductDao
+import io.github.abhik9.expirywatch.core.database.dao.ShoppingDao
 import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import javax.inject.Inject
@@ -16,6 +17,7 @@ internal class DataDiagnosticsSection @Inject constructor(
     private val categoryDao: CategoryDao,
     private val locationDao: LocationDao,
     private val productDao: ProductDao,
+    private val shoppingDao: ShoppingDao,
     private val settingsRepository: UserSettingsRepository,
 ) : DiagnosticsSection {
     override val title = "Data"
@@ -25,6 +27,7 @@ internal class DataDiagnosticsSection @Inject constructor(
             "${itemDao.count(ItemStatus.WASTED)} thrown away",
         "Categories: ${categoryDao.count()}, locations: ${locationDao.count()}, " +
             "remembered products: ${productDao.count()}",
+        "Shopping lists: ${shoppingDao.countLists()}, with ${shoppingDao.countItems()} items",
         "Settings: ${settingsRepository.settings.first()}",
     )
 }
