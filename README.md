@@ -22,6 +22,19 @@ Built with Kotlin, Jetpack Compose and Material 3, following Google's recommende
   may deliver them late to save battery; turn on **Exact time** to get them on time with an alarm.
   Since Android 12 this needs permission to set alarms; the app opens that system setting when you
   turn it on.
+- **Shopping lists**: keep several, such as groceries and pharmacy, and add to them by typing
+  ("2 l milk", "eggs x12", "butter (unsalted)"), from suggestions of what you buy often, or by
+  scanning a barcode. Products you've bought before go to the same category with their usual name.
+  - The list is grouped by aisle (the item's category), in the order of the aisles in your shop.
+    Tap an item to put it in the cart, swipe it away to remove it, and long-press it to change its
+    name, amount, category or note.
+  - **Buy again**: what expired, ran out or was thrown away in the last two weeks is suggested for
+    the list until you add or dismiss it. Put expired items on the list from the item list, with
+    one tap for all of them, or from the editor.
+  - **Put away** what you bought: the items in the cart become tracked items, with expiry dates
+    guessed from how long the product kept last time.
+  - Share a list as text, add items from text pasted or shared from another app, keep the screen on
+    while shopping, and open the list from a launcher shortcut.
 - **Insights**: how much you used up versus threw away, a monthly trend and the most wasted
   categories.
 - **Home-screen widget** listing what expires next.
@@ -62,8 +75,8 @@ The app follows a layered, multi-module architecture with unidirectional data fl
 
 - **UI layer**: Compose screens observe immutable UI state exposed by Hilt ViewModels.
 - **Domain layer** (`core:domain`): pure Kotlin use cases holding the business rules: expiry
-  status, filtering and sorting, validation, insights and the backup format. It defines repository
-  interfaces but doesn't depend on Android.
+  status, filtering and sorting, validation, insights, shopping lists and the backup format. It
+  defines repository interfaces but doesn't depend on Android.
 - **Data layer** (`core:data`): implements the repository interfaces with Room, DataStore, the Open
   Food Facts API and the Storage Access Framework.
 
@@ -72,6 +85,7 @@ The app follows a layered, multi-module architecture with unidirectional data fl
 | `app` | Application, activity, navigation shell, flavor wiring |
 | `feature:items` | The item list |
 | `feature:editor` | Add/edit screen and barcode lookup |
+| `feature:shopping` | Shopping lists, putting away what was bought, adding items from text |
 | `feature:insights` | Usage and waste statistics |
 | `feature:settings` | Settings, categories and locations, backup |
 | `feature:widget` | Glance home-screen widget |
