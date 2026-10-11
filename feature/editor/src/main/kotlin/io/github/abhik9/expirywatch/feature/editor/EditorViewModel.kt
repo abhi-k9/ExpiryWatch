@@ -112,7 +112,7 @@ sealed interface EditorEvent {
     data object Done : EditorEvent
 
     /** The item's product was put on a shopping list. */
-    data class AddedToShoppingList(val added: AddedToShoppingList) : EditorEvent
+    data class PutOnShoppingList(val added: AddedToShoppingList) : EditorEvent
 }
 
 @HiltViewModel(assistedFactory = EditorViewModel.Factory::class)
@@ -241,7 +241,7 @@ class EditorViewModel @AssistedInject constructor(
         val item = existingItem ?: return
         viewModelScope.launch {
             val added = addItemsToShoppingList(listOf(item))
-            if (added.names.isNotEmpty()) _events.send(EditorEvent.AddedToShoppingList(added))
+            if (added.names.isNotEmpty()) _events.send(EditorEvent.PutOnShoppingList(added))
         }
     }
 

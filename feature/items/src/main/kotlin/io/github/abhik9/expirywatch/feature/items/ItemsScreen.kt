@@ -85,7 +85,7 @@ internal fun ItemsRoute(
                     if (result == SnackbarResult.ActionPerformed) viewModel.undoFinish(event.item)
                 }
 
-                is ItemsEvent.AddedToShoppingList -> {
+                is ItemsEvent.PutOnShoppingList -> {
                     val names = event.added.names
                     val listName = event.added.list.name
                     val message = names.singleOrNull()

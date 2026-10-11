@@ -52,7 +52,7 @@ sealed interface ItemsUiState {
 sealed interface ItemsEvent {
     data class ItemFinished(val item: Item, val outcome: ItemStatus) : ItemsEvent
 
-    data class AddedToShoppingList(val added: AddedToShoppingList) : ItemsEvent
+    data class PutOnShoppingList(val added: AddedToShoppingList) : ItemsEvent
 }
 
 @HiltViewModel(assistedFactory = ItemsViewModel.Factory::class)
@@ -134,7 +134,7 @@ class ItemsViewModel @AssistedInject constructor(
     fun addToShoppingList(items: List<Item>) {
         viewModelScope.launch {
             val added = addItemsToShoppingList(items)
-            if (added.names.isNotEmpty()) _events.send(ItemsEvent.AddedToShoppingList(added))
+            if (added.names.isNotEmpty()) _events.send(ItemsEvent.PutOnShoppingList(added))
         }
     }
 

@@ -214,7 +214,7 @@ class EditorViewModelTest {
         viewModel.events.test {
             viewModel.addToShoppingList()
 
-            val added = assertIs<EditorEvent.AddedToShoppingList>(awaitItem()).added
+            val added = assertIs<EditorEvent.PutOnShoppingList>(awaitItem()).added
             assertEquals(listOf("Milk"), added.names)
         }
         assertEquals(listOf("Milk"), shopping.currentItems.map { it.name })

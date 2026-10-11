@@ -86,7 +86,7 @@ internal fun EditorRoute(
             when (event) {
                 EditorEvent.Done -> onDone()
 
-                is EditorEvent.AddedToShoppingList -> snackbarHostState.showSnackbar(
+                is EditorEvent.PutOnShoppingList -> snackbarHostState.showSnackbar(
                     message = resources.getString(
                         R.string.feature_editor_added_to_list,
                         event.added.names.first(),

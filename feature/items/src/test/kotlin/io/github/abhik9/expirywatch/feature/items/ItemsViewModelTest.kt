@@ -154,7 +154,7 @@ class ItemsViewModelTest {
         viewModel.events.test {
             viewModel.addToShoppingList(listOf(yogurt, milk))
 
-            val added = assertIs<ItemsEvent.AddedToShoppingList>(awaitItem()).added
+            val added = assertIs<ItemsEvent.PutOnShoppingList>(awaitItem()).added
             assertEquals("Shopping list", added.list.name)
             assertEquals(listOf("Yogurt", "Milk"), added.names)
         }
