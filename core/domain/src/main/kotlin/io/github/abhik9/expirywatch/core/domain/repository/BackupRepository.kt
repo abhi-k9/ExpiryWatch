@@ -10,7 +10,9 @@ interface BackupRepository {
     suspend fun createSnapshot(): BackupSnapshot
 
     /**
-     * Atomically replaces all of the user's data with [snapshot].
+     * Atomically replaces all of the user's data with [snapshot]. A snapshot without
+     * [shopping lists][BackupSnapshot.shopping] keeps the current ones, linked to the restored
+     * categories and locations of the same names.
      * @throws java.io.IOException when the data can't be written; nothing is changed then.
      */
     suspend fun restore(snapshot: BackupSnapshot)

@@ -52,11 +52,11 @@
 
     <string name="feature_settings_section_backup">Backup &amp; restore</string>
     <string name="feature_settings_export">Export backup</string>
-    <string name="feature_settings_export_summary">Save all your items, categories and locations to a file</string>
+    <string name="feature_settings_export_summary">Save all your items, categories, locations and shopping lists to a file</string>
     <string name="feature_settings_import">Import backup</string>
     <string name="feature_settings_import_summary">Restore from a file exported by ExpiryWatch</string>
     <string name="feature_settings_import_confirm_title">Replace your data?</string>
-    <string name="feature_settings_import_confirm_message">Importing replaces all items, categories and locations on this device with the ones in the backup. The file is checked first, so an invalid file changes nothing.</string>
+    <string name="feature_settings_import_confirm_message">Importing replaces all items, categories, locations and shopping lists on this device with the ones in the backup. A backup made before shopping lists keeps the ones you have. The file is checked first, so an invalid file changes nothing.</string>
     <string name="feature_settings_import_confirm">Choose file</string>
     <plurals name="feature_settings_export_done">
         <item quantity="one">Backup saved with %d item</item>

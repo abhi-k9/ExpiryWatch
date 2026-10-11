@@ -46,8 +46,8 @@ class SettingsViewModelTest {
     private val viewModel by lazy {
         SettingsViewModel(
             settingsRepository = settings,
-            exportBackup = ExportBackupUseCase(backups, documents, TestTime.clock, EventLog.NONE),
-            importBackup = ImportBackupUseCase(backups, documents, EventLog.NONE),
+            exportBackup = ExportBackupUseCase(backups, documents, settings, TestTime.clock, EventLog.NONE),
+            importBackup = ImportBackupUseCase(backups, documents, settings, EventLog.NONE),
             diagnosticsRepository = diagnostics,
             exportDiagnostics = ExportDiagnosticsUseCase(diagnostics, documents, EventLog.NONE),
             clock = TestTime.clock,

@@ -101,6 +101,8 @@ data class PopulatedShoppingHistory(
 
 fun ShoppingListEntity.asExternalModel() = ShoppingList(id = id, name = name, createdAt = createdAt)
 
+fun ShoppingList.asEntity() = ShoppingListEntity(id = id, name = name, createdAt = createdAt)
+
 fun PopulatedShoppingItem.asExternalModel() = ShoppingItem(
     id = item.id,
     listId = item.listId,
@@ -136,4 +138,13 @@ fun PopulatedShoppingHistory.asExternalModel() = ShoppingHistoryEntry(
     category = category?.asExternalModel(),
     timesAdded = entry.timesAdded,
     lastAddedAt = entry.lastAddedAt,
+)
+
+/** The history entry as stored under [productKey], the key of its name. */
+fun ShoppingHistoryEntry.asEntity(productKey: String) = ShoppingHistoryEntity(
+    productKey = productKey,
+    name = name,
+    categoryId = category?.id,
+    timesAdded = timesAdded,
+    lastAddedAt = lastAddedAt,
 )

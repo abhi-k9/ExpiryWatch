@@ -168,10 +168,12 @@ tests, both flavors' builds and lint on every push.
 
 ## Backup file format
 
-Backups are versioned JSON (`"format": "expirywatch-backup"`, `"version": 1`) with categories,
-locations, items and remembered products. The format has its own DTOs, separate from the domain
+Backups are versioned JSON (`"format": "expirywatch-backup"`, `"version": 2`) with categories,
+locations, items, remembered products and the shopping lists: their items, the products added to
+them before and the order of the aisles. The format has its own DTOs, separate from the domain
 models, so internal refactors can't silently change it. Importing validates the whole file before
-replacing any data.
+replacing any data. Version 1 files, from before shopping lists, still import; they keep the
+shopping lists on the device, moved to the restored categories and locations of the same name.
 
 ## Diagnostics
 

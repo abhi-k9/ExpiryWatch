@@ -6,15 +6,19 @@ import io.github.abhik9.expirywatch.core.domain.backup.BackupFormatException
 import io.github.abhik9.expirywatch.core.domain.backup.BackupSnapshot
 import io.github.abhik9.expirywatch.core.domain.repository.BackupRepository
 import io.github.abhik9.expirywatch.core.domain.repository.DocumentStore
+import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
 import java.io.IOException
 import java.time.Clock
 import java.time.Instant
 import javax.inject.Inject
+import kotlinx.coroutines.flow.first
 
 data class BackupStats(
     val itemCount: Int,
     val categoryCount: Int,
     val locationCount: Int,
+    val shoppingListCount: Int = 0,
+    val shoppingItemCount: Int = 0,
 )
 
 sealed interface BackupResult {
@@ -31,11 +35,14 @@ sealed interface BackupResult {
 class ExportBackupUseCase @Inject constructor(
     private val backupRepository: BackupRepository,
     private val documentStore: DocumentStore,
+    private val settingsRepository: UserSettingsRepository,
     private val clock: Clock,
     private val log: EventLog,
 ) {
     suspend operator fun invoke(uri: String): BackupResult = try {
+        val aisleOrder = settingsRepository.settings.first().shoppingAisleOrder
         val snapshot = backupRepository.createSnapshot()
+            .let { it.copy(shopping = it.shopping?.copy(aisleOrder = aisleOrder)) }
         documentStore.writeText(uri, BackupCodec.encode(snapshot, exportedAt = Instant.now(clock)))
         BackupResult.Success(snapshot.stats()).also { log.record { "backup: exported ${it.stats}" } }
     } catch (e: IOException) {
@@ -51,6 +58,7 @@ class ExportBackupUseCase @Inject constructor(
 class ImportBackupUseCase @Inject constructor(
     private val backupRepository: BackupRepository,
     private val documentStore: DocumentStore,
+    private val settingsRepository: UserSettingsRepository,
     private val log: EventLog,
 ) {
     suspend operator fun invoke(uri: String): BackupResult {
@@ -65,6 +73,7 @@ class ImportBackupUseCase @Inject constructor(
         }
         try {
             backupRepository.restore(snapshot)
+            snapshot.shopping?.let { settingsRepository.setShoppingAisleOrder(it.aisleOrder) }
         } catch (e: IOException) {
             log.record { "backup: restore failed: $e" }
             return BackupResult.IoError
@@ -77,4 +86,6 @@ private fun BackupSnapshot.stats() = BackupStats(
     itemCount = items.size,
     categoryCount = categories.size,
     locationCount = locations.size,
+    shoppingListCount = shopping?.lists?.size ?: 0,
+    shoppingItemCount = shopping?.items?.size ?: 0,
 )

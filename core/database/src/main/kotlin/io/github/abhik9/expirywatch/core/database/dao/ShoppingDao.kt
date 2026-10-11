@@ -75,6 +75,30 @@ interface ShoppingDao {
     @Query("SELECT list_id, COUNT(*) AS count FROM shopping_items WHERE checked_at IS NULL GROUP BY list_id")
     fun observeToBuyCounts(): Flow<List<ShoppingListCount>>
 
+    @Transaction
+    @Query("SELECT * FROM shopping_items ORDER BY id")
+    suspend fun getAllItems(): List<PopulatedShoppingItem>
+
+    @Transaction
+    @Query("SELECT * FROM shopping_history ORDER BY product_key")
+    suspend fun getAllHistory(): List<PopulatedShoppingHistory>
+
+    @Insert
+    suspend fun insertLists(lists: List<ShoppingListEntity>)
+
+    @Insert
+    suspend fun insertItems(items: List<ShoppingItemEntity>)
+
+    @Insert
+    suspend fun insertHistory(entries: List<ShoppingHistoryEntity>)
+
+    /** Deletes every list, and what's on them with it. */
+    @Query("DELETE FROM shopping_lists")
+    suspend fun deleteAllLists()
+
+    @Query("DELETE FROM shopping_history")
+    suspend fun deleteAllHistory()
+
     @Query("SELECT COUNT(*) FROM shopping_lists")
     suspend fun countLists(): Int
 

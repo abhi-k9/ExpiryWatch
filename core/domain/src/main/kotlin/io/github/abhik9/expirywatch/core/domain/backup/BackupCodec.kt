@@ -1,5 +1,6 @@
 package io.github.abhik9.expirywatch.core.domain.backup
 
+import io.github.abhik9.expirywatch.core.domain.productKey
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemValidator
 import io.github.abhik9.expirywatch.core.model.Category
 import io.github.abhik9.expirywatch.core.model.Item
@@ -7,6 +8,9 @@ import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.ProductInfo
 import io.github.abhik9.expirywatch.core.model.ProductSource
 import io.github.abhik9.expirywatch.core.model.QuantityUnit
+import io.github.abhik9.expirywatch.core.model.ShoppingHistoryEntry
+import io.github.abhik9.expirywatch.core.model.ShoppingItem
+import io.github.abhik9.expirywatch.core.model.ShoppingList
 import io.github.abhik9.expirywatch.core.model.StorageLocation
 import java.time.Instant
 import java.time.LocalDate
@@ -22,11 +26,12 @@ import kotlinx.serialization.json.Json
  *
  * The file has its own DTOs rather than serializing the domain models directly, so a refactor
  * of the models can't silently change the file format. Bump [CURRENT_VERSION] and add a
- * migration in [decode] when the format changes.
+ * migration in [decode] when the format changes. Version 2 added the shopping lists, so a
+ * version 1 file reads as having none at all, rather than none left.
  */
 object BackupCodec {
     const val FORMAT = "expirywatch-backup"
-    const val CURRENT_VERSION = 1
+    const val CURRENT_VERSION = 2
     const val MIME_TYPE = "application/json"
 
     private val json = Json {
@@ -46,6 +51,7 @@ object BackupCodec {
             locations = snapshot.locations.map { LocationDto(it.id, it.name, it.emoji) },
             items = snapshot.items.map { it.toDto() },
             products = snapshot.products.map { it.toDto() },
+            shopping = snapshot.shopping?.toDto(),
         ),
     )
 
@@ -137,6 +143,57 @@ object BackupCodec {
                         source = ProductSource.HISTORY,
                     )
                 },
+            shopping = shopping?.toBackup(categoriesById, locationsById),
+        )
+    }
+
+    private fun ShoppingDto.toBackup(
+        categoriesById: Map<Long, Category>,
+        locationsById: Map<Long, StorageLocation>,
+    ): ShoppingBackup {
+        requireValidIds(lists.map { it.id }, "shopping lists")
+        requireValidIds(items.map { it.id }, "shopping items")
+        val listIds = lists.map { it.id }.toSet()
+        return ShoppingBackup(
+            lists = lists.map { dto ->
+                if (dto.name.isBlank()) throw BackupFormatException("Backup contains a shopping list without a name")
+                ShoppingList(
+                    id = dto.id,
+                    name = dto.name.trim(),
+                    createdAt = dto.createdAt?.let(::parseInstant) ?: Instant.EPOCH,
+                )
+            },
+            // Items on a list missing from the file have nowhere to go.
+            items = items.filter { it.listId in listIds }.map { dto ->
+                if (dto.name.isBlank()) throw BackupFormatException("Backup contains a shopping item without a name")
+                ShoppingItem(
+                    id = dto.id,
+                    listId = dto.listId,
+                    name = dto.name.trim(),
+                    brand = dto.brand,
+                    barcode = dto.barcode,
+                    category = dto.categoryId?.let(categoriesById::get),
+                    location = dto.locationId?.let(locationsById::get),
+                    quantity = dto.quantity.takeIf(::isValidQuantity) ?: 1.0,
+                    unit = enumValueOrDefault(dto.unit, QuantityUnit.PIECES),
+                    note = dto.note,
+                    checkedAt = dto.checkedAt?.let(::parseInstant),
+                    createdAt = dto.createdAt?.let(::parseInstant) ?: Instant.EPOCH,
+                )
+            },
+            // Products are remembered by name, so the first of each name is kept.
+            history = history
+                .filter { productKey(it.name).isNotEmpty() }
+                .distinctBy { productKey(it.name) }
+                .map { dto ->
+                    ShoppingHistoryEntry(
+                        name = dto.name.trim(),
+                        category = dto.categoryId?.let(categoriesById::get),
+                        timesAdded = dto.timesAdded.coerceAtLeast(1),
+                        lastAddedAt = dto.lastAddedAt?.let(::parseInstant) ?: Instant.EPOCH,
+                    )
+                },
+            aisleOrder = aisleOrder.filter(categoriesById::containsKey).distinct(),
         )
     }
 
@@ -180,6 +237,35 @@ object BackupCodec {
         updatedAt = updatedAt.toString(),
     )
 
+    private fun ShoppingBackup.toDto() = ShoppingDto(
+        lists = lists.map { ShoppingListDto(id = it.id, name = it.name, createdAt = it.createdAt.toString()) },
+        items = items.map { it.toDto() },
+        history = history.map {
+            ShoppingHistoryDto(
+                name = it.name,
+                categoryId = it.category?.id,
+                timesAdded = it.timesAdded,
+                lastAddedAt = it.lastAddedAt.toString(),
+            )
+        },
+        aisleOrder = aisleOrder,
+    )
+
+    private fun ShoppingItem.toDto() = ShoppingItemDto(
+        id = id,
+        listId = listId,
+        name = name,
+        brand = brand,
+        barcode = barcode,
+        categoryId = category?.id,
+        locationId = location?.id,
+        quantity = quantity,
+        unit = unit.name,
+        note = note,
+        checkedAt = checkedAt?.toString(),
+        createdAt = createdAt.toString(),
+    )
+
     private fun ProductInfo.toDto() = ProductDto(
         barcode = barcode,
         name = name,
@@ -202,6 +288,7 @@ private data class BackupFileDto(
     val locations: List<LocationDto> = emptyList(),
     val items: List<ItemDto> = emptyList(),
     val products: List<ProductDto> = emptyList(),
+    val shopping: ShoppingDto? = null,
 )
 
 @Serializable
@@ -244,4 +331,39 @@ private data class ProductDto(
     val unit: String? = null,
     @SerialName("useWithinDays")
     val useWithinDaysAfterOpening: Int? = null,
+)
+
+@Serializable
+private data class ShoppingDto(
+    val lists: List<ShoppingListDto> = emptyList(),
+    val items: List<ShoppingItemDto> = emptyList(),
+    val history: List<ShoppingHistoryDto> = emptyList(),
+    val aisleOrder: List<Long> = emptyList(),
+)
+
+@Serializable
+private data class ShoppingListDto(val id: Long, val name: String, val createdAt: String? = null)
+
+@Serializable
+private data class ShoppingItemDto(
+    val id: Long,
+    val listId: Long,
+    val name: String,
+    val brand: String? = null,
+    val barcode: String? = null,
+    val categoryId: Long? = null,
+    val locationId: Long? = null,
+    val quantity: Double = 1.0,
+    val unit: String = QuantityUnit.PIECES.name,
+    val note: String? = null,
+    val checkedAt: String? = null,
+    val createdAt: String? = null,
+)
+
+@Serializable
+private data class ShoppingHistoryDto(
+    val name: String,
+    val categoryId: Long? = null,
+    val timesAdded: Int = 1,
+    val lastAddedAt: String? = null,
 )

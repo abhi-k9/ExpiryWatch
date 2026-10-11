@@ -11,6 +11,7 @@ import io.github.abhik9.expirywatch.core.data.repository.RoomProductHistoryRepos
 import io.github.abhik9.expirywatch.core.data.repository.RoomShoppingRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomStorageLocationRepository
 import io.github.abhik9.expirywatch.core.database.ExpiryWatchDatabase
+import io.github.abhik9.expirywatch.core.domain.backup.BackupSnapshot
 import io.github.abhik9.expirywatch.core.model.Category
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.ProductInfo
@@ -202,11 +203,25 @@ class RoomRepositoriesTest {
         RoomProductHistoryRepository(source.productDao()).remember(
             ProductInfo(barcode = "123", name = "Milk", categoryId = categoryId, source = ProductSource.HISTORY),
         )
+        val sourceShopping = RoomShoppingRepository(source, EventLog.NONE)
+        val groceries = sourceShopping.createList("Groceries", TestTime.now)
+        sourceShopping.upsertItem(
+            ShoppingItem(
+                listId = groceries,
+                name = "Butter",
+                category = dairy,
+                location = fridge,
+                note = "unsalted",
+                createdAt = TestTime.now,
+            ),
+        )
+        sourceShopping.rememberAdded("Butter", dairy, TestTime.now)
 
         val snapshot = RoomBackupRepository(source).createSnapshot()
         val target = newDatabase()
         // Pre-existing data in the target is replaced, not merged.
         RoomCategoryRepository(target.categoryDao()).upsert(Category(name = "Stale", emoji = "❓"))
+        RoomShoppingRepository(target, EventLog.NONE).createList("Stale list", TestTime.now)
         RoomBackupRepository(target).restore(snapshot)
 
         assertEquals(snapshot, RoomBackupRepository(target).createSnapshot())
@@ -214,9 +229,45 @@ class RoomRepositoriesTest {
             listOf("Dairy"),
             RoomCategoryRepository(target.categoryDao()).observeCategories().first().map { it.name },
         )
+        val targetShopping = RoomShoppingRepository(target, EventLog.NONE)
+        assertEquals(listOf("Groceries"), targetShopping.getLists().map { it.name })
+        val butter = targetShopping.getItems(groceries).single()
+        assertEquals(Triple("Butter", dairy, fridge), Triple(butter.name, butter.category, butter.location))
+        assertEquals(dairy, targetShopping.findInHistory("butter")?.category)
         val restoredMilk = RoomItemRepository(target, EventLog.NONE).getActiveItems().single()
         assertEquals(dairy, restoredMilk.category)
         assertEquals(fridge, restoredMilk.location)
         assertEquals("Milk", RoomProductHistoryRepository(target.productDao()).find("123")?.name)
+    }
+
+    @Test
+    fun restoringABackupFromBeforeShoppingListsKeepsTheCurrentOnes() = runTest {
+        val database = newDatabase()
+        val categories = RoomCategoryRepository(database.categoryDao())
+        val oldDairy = Category(categories.upsert(Category(name = "Dairy", emoji = "🧀")), "Dairy", "🧀")
+        val snacks = Category(categories.upsert(Category(name = "Snacks", emoji = "🍫")), "Snacks", "🍫")
+        val shopping = RoomShoppingRepository(database, EventLog.NONE)
+        val list = shopping.createList("Groceries", TestTime.now)
+        shopping.upsertItem(ShoppingItem(listId = list, name = "Milk", category = oldDairy, createdAt = TestTime.now))
+        shopping.upsertItem(ShoppingItem(listId = list, name = "Crisps", category = snacks, createdAt = TestTime.now))
+        shopping.rememberAdded("Milk", oldDairy, TestTime.now)
+
+        // The backup has its own Dairy, under another id, and no Snacks.
+        val dairy = Category(id = 40, name = "Dairy", emoji = "🥛")
+        RoomBackupRepository(database).restore(
+            BackupSnapshot(
+                categories = listOf(dairy),
+                locations = emptyList(),
+                items = emptyList(),
+                products = emptyList(),
+            ),
+        )
+
+        assertEquals(listOf("Groceries"), shopping.getLists().map { it.name })
+        assertEquals(
+            mapOf("Milk" to dairy, "Crisps" to null),
+            shopping.getItems(list).associate { it.name to it.category },
+        )
+        assertEquals(dairy, shopping.findInHistory("milk")?.category)
     }
 }
