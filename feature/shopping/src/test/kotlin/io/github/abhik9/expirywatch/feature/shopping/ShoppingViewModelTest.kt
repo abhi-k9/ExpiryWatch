@@ -38,14 +38,17 @@ class ShoppingViewModelTest {
     private val getShoppingList = GetShoppingListUseCase(shopping, "Shopping list", TestTime.clock)
     private val observeKnownProducts = ObserveKnownProductsUseCase(shopping, items, TestTime.clock)
 
-    private val viewModel = ShoppingViewModel(
-        observeShoppingList = ObserveShoppingListUseCase(shopping, getShoppingList),
-        observeKnownProducts = observeKnownProducts,
-        getShoppingList = getShoppingList,
-        addToShoppingList = AddToShoppingListUseCase(shopping, observeKnownProducts, TestTime.clock),
-        shoppingRepository = shopping,
-        clock = TestTime.clock,
-    )
+    // Made on first use in a test, once the rule has set the main dispatcher its scope runs on.
+    private val viewModel by lazy {
+        ShoppingViewModel(
+            observeShoppingList = ObserveShoppingListUseCase(shopping, getShoppingList),
+            observeKnownProducts = observeKnownProducts,
+            getShoppingList = getShoppingList,
+            addToShoppingList = AddToShoppingListUseCase(shopping, observeKnownProducts, TestTime.clock),
+            shoppingRepository = shopping,
+            clock = TestTime.clock,
+        )
+    }
 
     /** Waits (in virtual time) for a state matching [predicate]. */
     private suspend fun awaitState(predicate: (ShoppingUiState.Success) -> Boolean): ShoppingUiState.Success =
