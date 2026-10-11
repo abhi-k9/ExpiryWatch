@@ -119,6 +119,24 @@ class RoomRepositoriesTest {
     }
 
     @Test
+    fun itemsPutBackOnADeletedListStayDeleted() = runTest {
+        val shopping = RoomShoppingRepository(newDatabase(), EventLog.NONE)
+        val groceries = shopping.createList("Groceries", TestTime.now)
+        val pharmacy = shopping.createList("Pharmacy", TestTime.now)
+        shopping.upsertItem(ShoppingItem(listId = groceries, name = "Milk", createdAt = TestTime.now))
+        shopping.upsertItem(ShoppingItem(listId = pharmacy, name = "Plasters", createdAt = TestTime.now))
+        val removed = shopping.getItems(groceries) + shopping.getItems(pharmacy)
+        shopping.deleteItems(removed.map { it.id })
+
+        // Undoing the removal after the list itself was deleted.
+        shopping.deleteList(groceries)
+        shopping.restoreItems(removed)
+
+        assertEquals(listOf("Plasters"), shopping.getItems(pharmacy).map { it.name })
+        assertEquals(emptyList(), shopping.getItems(groceries))
+    }
+
+    @Test
     fun shoppingChangesAreRecordedByIdOnly() = runTest {
         val log = RecordingEventLog()
         val shopping = RoomShoppingRepository(newDatabase(), log)

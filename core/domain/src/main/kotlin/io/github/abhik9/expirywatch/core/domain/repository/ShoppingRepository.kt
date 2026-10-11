@@ -43,7 +43,10 @@ interface ShoppingRepository {
 
     suspend fun deleteItems(ids: Collection<Long>)
 
-    /** Puts back items removed with [deleteItems], with the same ids, to undo it. */
+    /**
+     * Puts back items removed with [deleteItems], with the same ids, to undo it. Items on a list
+     * deleted since stay deleted.
+     */
     suspend fun restoreItems(items: List<ShoppingItem>)
 
     /** What was added to shopping lists before, most often added first. */

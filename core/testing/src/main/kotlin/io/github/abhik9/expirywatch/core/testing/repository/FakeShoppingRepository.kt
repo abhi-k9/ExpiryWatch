@@ -66,8 +66,10 @@ class FakeShoppingRepository : ShoppingRepository {
     override suspend fun deleteItems(ids: Collection<Long>) = items.update { it - ids.toSet() }
 
     override suspend fun restoreItems(items: List<ShoppingItem>) {
-        this.items.update { all -> all + items.associateBy { it.id } }
-        nextItemId = maxOf(nextItemId, (items.maxOfOrNull { it.id } ?: 0) + 1)
+        val listIds = lists.value.map { it.id }.toSet()
+        val kept = items.filter { it.listId in listIds }
+        this.items.update { all -> all + kept.associateBy { it.id } }
+        nextItemId = maxOf(nextItemId, (kept.maxOfOrNull { it.id } ?: 0) + 1)
     }
 
     override fun observeHistory(): Flow<List<ShoppingHistoryEntry>> = history.map { all ->

@@ -81,9 +81,14 @@ internal class RoomShoppingRepository @Inject constructor(
     }
 
     override suspend fun restoreItems(items: List<ShoppingItem>) {
-        if (items.isEmpty()) return
-        dao.insertOrReplaceItems(items.map { it.asEntity() })
-        log.record { "shopping: put back ${items.joinToString { "#${it.id}" }}" }
+        val restored = database.withTransaction {
+            // Items on a list deleted since went with it.
+            val listIds = dao.getLists().map { it.id }.toSet()
+            items.filter { it.listId in listIds }
+                .also { kept -> if (kept.isNotEmpty()) dao.insertOrReplaceItems(kept.map { it.asEntity() }) }
+        }
+        if (restored.isEmpty()) return
+        log.record { "shopping: put back ${restored.joinToString { "#${it.id}" }}" }
     }
 
     override fun observeHistory(): Flow<List<ShoppingHistoryEntry>> =
