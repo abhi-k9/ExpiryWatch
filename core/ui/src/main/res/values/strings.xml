@@ -17,4 +17,6 @@
     <string name="core_ui_quantity_kilograms">%s kg</string>
     <string name="core_ui_quantity_milliliters">%s ml</string>
     <string name="core_ui_quantity_liters">%s L</string>
+    <string name="core_ui_ok">OK</string>
+    <string name="core_ui_cancel">Cancel</string>
 </resources>

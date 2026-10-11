@@ -1,9 +1,7 @@
 package io.github.abhik9.expirywatch.feature.editor
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,23 +13,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.RemoveCircleOutline
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -45,15 +36,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.github.abhik9.expirywatch.core.model.ProductSource
+import io.github.abhik9.expirywatch.core.ui.DateField
+import io.github.abhik9.expirywatch.core.ui.PickDateDialog
 import io.github.abhik9.expirywatch.core.ui.formatMedium
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
 
 @Composable
 internal fun ProductSection(
@@ -121,89 +111,6 @@ private fun LookupStatus(lookup: LookupState) {
                 MaterialTheme.colorScheme.onSurfaceVariant
             },
         )
-    }
-}
-
-/** A read-only field that opens a date picker when tapped. */
-@Composable
-internal fun DateField(
-    label: String,
-    date: LocalDate?,
-    onDateChange: (LocalDate) -> Unit,
-    modifier: Modifier = Modifier,
-    isError: Boolean = false,
-    errorText: String? = null,
-    latestSelectableDate: LocalDate? = null,
-) {
-    var showPicker by rememberSaveable { mutableStateOf(false) }
-    Box(modifier = modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = date?.formatMedium().orEmpty(),
-            onValueChange = {},
-            modifier = Modifier.fillMaxWidth(),
-            readOnly = true,
-            label = { Text(label) },
-            trailingIcon = { Icon(Icons.Outlined.CalendarToday, contentDescription = null) },
-            isError = isError,
-            supportingText = if (isError && errorText != null) {
-                { Text(errorText) }
-            } else {
-                null
-            },
-            singleLine = true,
-        )
-        // The read-only text field would swallow taps, so an invisible layer on top opens the picker.
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clickable(role = Role.Button, onClickLabel = label) { showPicker = true },
-        )
-    }
-
-    if (showPicker) {
-        PickDateDialog(
-            initialDate = date,
-            latestSelectableDate = latestSelectableDate,
-            onConfirm = { picked ->
-                onDateChange(picked)
-                showPicker = false
-            },
-            onDismiss = { showPicker = false },
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PickDateDialog(
-    initialDate: LocalDate?,
-    onConfirm: (LocalDate) -> Unit,
-    onDismiss: () -> Unit,
-    latestSelectableDate: LocalDate? = null,
-) {
-    val latestMillis = latestSelectableDate?.toUtcMillis()
-    val pickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initialDate?.toUtcMillis(),
-        selectableDates = object : SelectableDates {
-            override fun isSelectableDate(utcTimeMillis: Long): Boolean =
-                latestMillis == null || utcTimeMillis <= latestMillis
-        },
-    )
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = { pickerState.selectedDateMillis?.let { onConfirm(it.utcMillisToLocalDate()) } },
-                enabled = pickerState.selectedDateMillis != null,
-            ) {
-                Text(stringResource(R.string.feature_editor_ok))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.feature_editor_cancel)) }
-        },
-    ) {
-        DatePicker(state = pickerState)
     }
 }
 
@@ -323,8 +230,3 @@ private enum class QuickPick(val days: Long = 0, val weeks: Long = 0, val months
         else -> pluralStringResource(R.plurals.feature_editor_quick_days, days.toInt(), days.toInt())
     }
 }
-
-// The Material date picker works in UTC milliseconds at midnight.
-private fun LocalDate.toUtcMillis(): Long = atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-
-private fun Long.utcMillisToLocalDate(): LocalDate = Instant.ofEpochMilli(this).atZone(ZoneOffset.UTC).toLocalDate()
