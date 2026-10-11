@@ -31,6 +31,18 @@
     <string name="feature_items_marked_consumed">%s marked as used up</string>
     <string name="feature_items_marked_wasted">%s marked as thrown away</string>
     <string name="feature_items_undo">Undo</string>
+    <string name="feature_items_show_actions">Show actions</string>
+    <string name="feature_items_add_to_shopping_list">Add to shopping list</string>
+    <!-- On the header of the expired items, puts all of them on the shopping list. -->
+    <string name="feature_items_add_expired_to_list">Add to list</string>
+    <!-- E.g. "Added Milk to Groceries". -->
+    <string name="feature_items_added_to_list">Added %1$s to %2$s</string>
+    <plurals name="feature_items_added_many_to_list">
+        <item quantity="one">Added %1$d item to %2$s</item>
+        <item quantity="other">Added %1$d items to %2$s</item>
+    </plurals>
+    <!-- Opens the shopping list something was just added to. -->
+    <string name="feature_items_show_list">Show</string>
     <string name="feature_items_empty_title">Nothing tracked yet</string>
     <string name="feature_items_empty_message">Add the groceries, medicine or anything else that expires, and ExpiryWatch will remind you before it goes off. Scanning a barcode fills in the details for you.</string>
     <string name="feature_items_no_results_title">No matching items</string>

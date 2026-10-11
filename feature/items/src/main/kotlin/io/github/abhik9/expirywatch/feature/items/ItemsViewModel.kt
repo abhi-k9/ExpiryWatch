@@ -13,6 +13,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.abhik9.expirywatch.core.domain.repository.CategoryRepository
 import io.github.abhik9.expirywatch.core.domain.repository.StorageLocationRepository
 import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
+import io.github.abhik9.expirywatch.core.domain.shopping.AddItemsToShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.AddedToShoppingList
 import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemQuery
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemsOverview
@@ -49,6 +51,8 @@ sealed interface ItemsUiState {
 /** One-off messages for the screen, such as the undo snackbar. */
 sealed interface ItemsEvent {
     data class ItemFinished(val item: Item, val outcome: ItemStatus) : ItemsEvent
+
+    data class AddedToShoppingList(val added: AddedToShoppingList) : ItemsEvent
 }
 
 @HiltViewModel(assistedFactory = ItemsViewModel.Factory::class)
@@ -60,6 +64,7 @@ class ItemsViewModel @AssistedInject constructor(
     private val settingsRepository: UserSettingsRepository,
     private val finishItem: FinishItemUseCase,
     private val restoreItem: RestoreItemUseCase,
+    private val addItemsToShoppingList: AddItemsToShoppingListUseCase,
 ) : ViewModel() {
     /** Held as Compose state so the search field updates synchronously while typing. */
     var searchText by mutableStateOf("")
@@ -123,6 +128,14 @@ class ItemsViewModel @AssistedInject constructor(
 
     fun undoFinish(item: Item) {
         viewModelScope.launch { restoreItem(item.id) }
+    }
+
+    /** Puts the products of [items] on the shopping list in use. */
+    fun addToShoppingList(items: List<Item>) {
+        viewModelScope.launch {
+            val added = addItemsToShoppingList(items)
+            if (added.names.isNotEmpty()) _events.send(ItemsEvent.AddedToShoppingList(added))
+        }
     }
 
     @AssistedFactory

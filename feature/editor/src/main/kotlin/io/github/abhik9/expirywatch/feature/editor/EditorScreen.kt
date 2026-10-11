@@ -15,6 +15,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.AddShoppingCart
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.QrCodeScanner
@@ -32,6 +33,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -41,12 +44,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -71,11 +76,23 @@ internal fun EditorRoute(
 ) {
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val locations by viewModel.locations.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    // Updated on configuration changes without restarting the effect, which would drop a shown snackbar.
+    val resources by rememberUpdatedState(LocalResources.current)
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
                 EditorEvent.Done -> onDone()
+
+                is EditorEvent.AddedToShoppingList -> snackbarHostState.showSnackbar(
+                    message = resources.getString(
+                        R.string.feature_editor_added_to_list,
+                        event.added.names.first(),
+                        event.added.list.name,
+                    ),
+                    withDismissAction = true,
+                )
             }
         }
     }
@@ -98,8 +115,10 @@ internal fun EditorRoute(
         onLookUpBarcode = viewModel::lookUpBarcode,
         onSave = viewModel::save,
         onFinish = viewModel::finish,
+        onAddToShoppingList = viewModel::addToShoppingList,
         onDelete = viewModel::delete,
         onClose = onDone,
+        snackbarHostState = snackbarHostState,
     )
 }
 
@@ -123,9 +142,11 @@ internal fun EditorScreen(
     onLookUpBarcode: () -> Unit,
     onSave: () -> Unit,
     onFinish: (ItemStatus) -> Unit,
+    onAddToShoppingList: () -> Unit,
     onDelete: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     var showScanner by rememberSaveable { mutableStateOf(openScannerInitially) }
     var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
@@ -137,6 +158,7 @@ internal fun EditorScreen(
 
     Scaffold(
         modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -304,7 +326,11 @@ internal fun EditorScreen(
 
             if (!isNewItem) {
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                ExistingItemActions(onFinish = onFinish, onDeleteClick = { showDeleteDialog = true })
+                ExistingItemActions(
+                    onFinish = onFinish,
+                    onAddToShoppingList = onAddToShoppingList,
+                    onDeleteClick = { showDeleteDialog = true },
+                )
             }
         }
     }
@@ -405,7 +431,11 @@ private fun OpenedSection(
 }
 
 @Composable
-private fun ExistingItemActions(onFinish: (ItemStatus) -> Unit, onDeleteClick: () -> Unit) {
+private fun ExistingItemActions(
+    onFinish: (ItemStatus) -> Unit,
+    onAddToShoppingList: () -> Unit,
+    onDeleteClick: () -> Unit,
+) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         FilledTonalButton(onClick = { onFinish(ItemStatus.CONSUMED) }, modifier = Modifier.weight(1f)) {
             Icon(Icons.Outlined.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -414,6 +444,10 @@ private fun ExistingItemActions(onFinish: (ItemStatus) -> Unit, onDeleteClick: (
         OutlinedButton(onClick = { onFinish(ItemStatus.WASTED) }, modifier = Modifier.weight(1f)) {
             Text(stringResource(R.string.feature_editor_mark_wasted))
         }
+    }
+    OutlinedButton(onClick = onAddToShoppingList, modifier = Modifier.fillMaxWidth()) {
+        Icon(Icons.Outlined.AddShoppingCart, contentDescription = null, modifier = Modifier.size(18.dp))
+        Text(stringResource(R.string.feature_editor_add_to_shopping_list), modifier = Modifier.padding(start = 8.dp))
     }
     TextButton(
         onClick = onDeleteClick,

@@ -4,14 +4,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.AddShoppingCart
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,6 +40,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.abhik9.expirywatch.core.designsystem.component.EmptyState
@@ -54,6 +60,7 @@ internal fun ItemsRoute(
     onItemClick: (Item) -> Unit,
     onAddItem: () -> Unit,
     onScanItem: () -> Unit,
+    onOpenShoppingList: () -> Unit,
     viewModel: ItemsViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -77,6 +84,25 @@ internal fun ItemsRoute(
                     )
                     if (result == SnackbarResult.ActionPerformed) viewModel.undoFinish(event.item)
                 }
+
+                is ItemsEvent.AddedToShoppingList -> {
+                    val names = event.added.names
+                    val listName = event.added.list.name
+                    val message = names.singleOrNull()
+                        ?.let { resources.getString(R.string.feature_items_added_to_list, it, listName) }
+                        ?: resources.getQuantityString(
+                            R.plurals.feature_items_added_many_to_list,
+                            names.size,
+                            names.size,
+                            listName,
+                        )
+                    val result = snackbarHostState.showSnackbar(
+                        message = message,
+                        actionLabel = resources.getString(R.string.feature_items_show_list),
+                        withDismissAction = true,
+                    )
+                    if (result == SnackbarResult.ActionPerformed) onOpenShoppingList()
+                }
             }
         }
     }
@@ -95,6 +121,7 @@ internal fun ItemsRoute(
         onGroupClick = viewModel::onGroupClick,
         onItemClick = onItemClick,
         onFinish = viewModel::finish,
+        onAddToShoppingList = viewModel::addToShoppingList,
         onAddItem = onAddItem,
         onScanItem = onScanItem,
     )
@@ -116,6 +143,7 @@ internal fun ItemsScreen(
     onGroupClick: (String) -> Unit,
     onItemClick: (Item) -> Unit,
     onFinish: (Item, ItemStatus) -> Unit,
+    onAddToShoppingList: (List<Item>) -> Unit,
     onAddItem: () -> Unit,
     onScanItem: () -> Unit,
     modifier: Modifier = Modifier,
@@ -172,6 +200,7 @@ internal fun ItemsScreen(
                 onGroupClick = onGroupClick,
                 onItemClick = onItemClick,
                 onFinish = onFinish,
+                onAddToShoppingList = onAddToShoppingList,
                 onAddItem = onAddItem,
             )
         }
@@ -190,6 +219,7 @@ private fun ItemsContent(
     onGroupClick: (String) -> Unit,
     onItemClick: (Item) -> Unit,
     onFinish: (Item, ItemStatus) -> Unit,
+    onAddToShoppingList: (List<Item>) -> Unit,
     onAddItem: () -> Unit,
 ) {
     val overview = state.overview
@@ -238,21 +268,44 @@ private fun ItemsContent(
                 NoMatchingItems(query = state.query, onClearFilters = onClearFilters)
             }
         } else {
+            val expired = overview.items.filter { it.status == ExpiryStatus.EXPIRED }.map { it.item }
+            // Filtered to what's expired, the list has no header to offer adding it all on.
+            if (state.query.status == ExpiryStatus.EXPIRED && expired.isNotEmpty()) {
+                item(key = "add-expired", contentType = "add-expired") {
+                    AddExpiredToListButton(
+                        onClick = { onAddToShoppingList(expired) },
+                        modifier = Modifier
+                            .animateItem()
+                            .padding(start = 8.dp),
+                    )
+                }
+            }
             overview.sections.forEach { section ->
                 section.status?.let { status ->
                     item(key = "header-$status", contentType = "header") {
-                        SectionHeader(
-                            text = stringResource(
-                                R.string.feature_items_section_header,
-                                status.label(),
-                                section.itemCount,
-                            ),
-                            color = status.headerColor(),
-                            modifier = Modifier.animateItem(),
-                        )
+                        Row(
+                            modifier = Modifier
+                                .animateItem()
+                                .fillMaxWidth()
+                                .padding(end = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            SectionHeader(
+                                text = stringResource(
+                                    R.string.feature_items_section_header,
+                                    status.label(),
+                                    section.itemCount,
+                                ),
+                                color = status.headerColor(),
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (status == ExpiryStatus.EXPIRED) {
+                                AddExpiredToListButton(onClick = { onAddToShoppingList(expired) })
+                            }
+                        }
                     }
                 }
-                itemGroups(section.groups, expandedGroups, onGroupClick, onItemClick, onFinish)
+                itemGroups(section.groups, expandedGroups, onGroupClick, onItemClick, onFinish, onAddToShoppingList)
             }
         }
     }
@@ -268,18 +321,23 @@ private fun LazyListScope.itemGroups(
     onGroupClick: (String) -> Unit,
     onItemClick: (Item) -> Unit,
     onFinish: (Item, ItemStatus) -> Unit,
+    onAddToShoppingList: (List<Item>) -> Unit,
 ) {
     groups.forEach { group ->
         val single = group.entries.singleOrNull()
         if (single != null) {
             item(key = single.item.id, contentType = "item") {
+                val addToShoppingList = { onAddToShoppingList(listOf(single.item)) }
                 SwipeableItemRow(
                     onFinish = { outcome -> onFinish(single.item, outcome) },
+                    onAddToShoppingList = addToShoppingList,
                     modifier = Modifier
                         .animateItem()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                 ) {
-                    ItemRow(entry = single, onClick = { onItemClick(single.item) })
+                    ItemMenuBox(onAddToShoppingList = addToShoppingList) { openMenu ->
+                        ItemRow(entry = single, onClick = { onItemClick(single.item) }, onLongClick = openMenu)
+                    }
                 }
             }
             return@forEach
@@ -287,32 +345,52 @@ private fun LazyListScope.itemGroups(
 
         val expanded = group.key in expandedGroups
         item(key = "group-${group.key}", contentType = "group") {
-            ItemGroupRow(
-                group = group,
-                expanded = expanded,
-                onClick = { onGroupClick(group.key) },
+            val addToShoppingList = { onAddToShoppingList(group.entries.map { it.item }) }
+            val shoppingLabel = stringResource(R.string.feature_items_add_to_shopping_list)
+            ItemMenuBox(
+                onAddToShoppingList = addToShoppingList,
                 modifier = Modifier
                     .animateItem()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
-            )
+            ) { openMenu ->
+                ItemGroupRow(
+                    group = group,
+                    expanded = expanded,
+                    onClick = { onGroupClick(group.key) },
+                    onLongClick = openMenu,
+                    modifier = Modifier.semantics {
+                        customActions = listOf(
+                            CustomAccessibilityAction(shoppingLabel) {
+                                addToShoppingList()
+                                true
+                            },
+                        )
+                    },
+                )
+            }
         }
         if (expanded) {
             // Only what tells the items apart: shared details are on the group's row.
             val showBrand = group.entries.distinctBy { it.item.brand }.size > 1
             val showLocation = group.entries.distinctBy { it.item.location }.size > 1
             items(group.entries, key = { it.item.id }, contentType = { "group-item" }) { entry ->
+                val addToShoppingList = { onAddToShoppingList(listOf(entry.item)) }
                 SwipeableItemRow(
                     onFinish = { outcome -> onFinish(entry.item, outcome) },
+                    onAddToShoppingList = addToShoppingList,
                     modifier = Modifier
                         .animateItem()
                         .padding(start = 40.dp, end = 16.dp, top = 2.dp, bottom = 2.dp),
                 ) {
-                    GroupEntryRow(
-                        entry = entry,
-                        showBrand = showBrand,
-                        showLocation = showLocation,
-                        onClick = { onItemClick(entry.item) },
-                    )
+                    ItemMenuBox(onAddToShoppingList = addToShoppingList) { openMenu ->
+                        GroupEntryRow(
+                            entry = entry,
+                            showBrand = showBrand,
+                            showLocation = showLocation,
+                            onClick = { onItemClick(entry.item) },
+                            onLongClick = openMenu,
+                        )
+                    }
                 }
             }
         }
@@ -338,3 +416,12 @@ private fun NoMatchingItems(query: ItemQuery, onClearFilters: () -> Unit) {
 }
 
 private val FAB_CLEARANCE = 152.dp
+
+/** Puts the products of everything expired on the shopping list. */
+@Composable
+private fun AddExpiredToListButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    TextButton(onClick = onClick, modifier = modifier) {
+        Icon(Icons.Outlined.AddShoppingCart, contentDescription = null, modifier = Modifier.size(18.dp))
+        Text(stringResource(R.string.feature_items_add_expired_to_list), modifier = Modifier.padding(start = 8.dp))
+    }
+}

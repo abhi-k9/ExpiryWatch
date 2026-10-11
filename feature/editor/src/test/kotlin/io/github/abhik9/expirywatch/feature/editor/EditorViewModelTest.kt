@@ -2,6 +2,10 @@ package io.github.abhik9.expirywatch.feature.editor
 
 import app.cash.turbine.test
 import io.github.abhik9.expirywatch.core.common.diagnostics.EventLog
+import io.github.abhik9.expirywatch.core.domain.shopping.AddItemsToShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.GetShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.ObserveKnownProductsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.LookupProductUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.SaveItemUseCase
@@ -17,6 +21,7 @@ import io.github.abhik9.expirywatch.core.testing.repository.FakeCategoryReposito
 import io.github.abhik9.expirywatch.core.testing.repository.FakeItemRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeProductCatalog
 import io.github.abhik9.expirywatch.core.testing.repository.FakeProductHistoryRepository
+import io.github.abhik9.expirywatch.core.testing.repository.FakeShoppingRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeStorageLocationRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepository
 import io.github.abhik9.expirywatch.core.ui.parseQuantity
@@ -24,6 +29,7 @@ import io.github.abhik9.expirywatch.core.ui.toQuantityText
 import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
@@ -38,6 +44,7 @@ class EditorViewModelTest {
     private val history = FakeProductHistoryRepository()
     private val catalog = FakeProductCatalog()
     private val settings = FakeUserSettingsRepository()
+    private val shopping = FakeShoppingRepository()
 
     private fun viewModel(key: EditorNavKey = EditorNavKey()) = EditorViewModel(
         key = key,
@@ -47,6 +54,14 @@ class EditorViewModelTest {
         saveItem = SaveItemUseCase(items, history, TestTime.clock),
         finishItem = FinishItemUseCase(items, TestTime.clock),
         lookupProduct = LookupProductUseCase(history, catalog, settings, EventLog.NONE),
+        addItemsToShoppingList = AddItemsToShoppingListUseCase(
+            GetShoppingListUseCase(shopping, settings, "Shopping list", TestTime.clock),
+            AddToShoppingListUseCase(
+                shopping,
+                ObserveKnownProductsUseCase(shopping, items, TestTime.clock),
+                TestTime.clock,
+            ),
+        ),
         clock = TestTime.clock,
     )
 
@@ -189,6 +204,20 @@ class EditorViewModelTest {
             assertEquals(EditorEvent.Done, awaitItem())
         }
         assertEquals(ItemStatus.WASTED, items.currentItems.single().status)
+    }
+
+    @Test
+    fun putsTheItemOnTheShoppingList() = runTest {
+        items.upsert(TestData.item(id = 5, name = "Milk"))
+        val viewModel = viewModel(EditorNavKey(itemId = 5))
+
+        viewModel.events.test {
+            viewModel.addToShoppingList()
+
+            val added = assertIs<EditorEvent.AddedToShoppingList>(awaitItem()).added
+            assertEquals(listOf("Milk"), added.names)
+        }
+        assertEquals(listOf("Milk"), shopping.currentItems.map { it.name })
     }
 
     @Test

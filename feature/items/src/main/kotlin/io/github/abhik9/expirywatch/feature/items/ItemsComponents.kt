@@ -3,6 +3,7 @@ package io.github.abhik9.expirywatch.feature.items
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.outlined.AddShoppingCart
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Search
@@ -56,9 +58,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -346,6 +350,7 @@ private fun DropdownFilterChip(
 @Composable
 internal fun SwipeableItemRow(
     onFinish: (ItemStatus) -> Unit,
+    onAddToShoppingList: () -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -376,6 +381,7 @@ internal fun SwipeableItemRow(
     )
     val consumedLabel = stringResource(R.string.feature_items_action_consumed)
     val wastedLabel = stringResource(R.string.feature_items_action_wasted)
+    val shoppingLabel = stringResource(R.string.feature_items_add_to_shopping_list)
 
     SwipeToDismissBox(
         state = dismissState,
@@ -387,6 +393,10 @@ internal fun SwipeableItemRow(
                 },
                 CustomAccessibilityAction(wastedLabel) {
                     finishOnce(ItemStatus.WASTED)
+                    true
+                },
+                CustomAccessibilityAction(shoppingLabel) {
+                    onAddToShoppingList()
                     true
                 },
             )
@@ -439,11 +449,18 @@ internal fun ItemRow(
     entry: ItemWithExpiry,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val item = entry.item
     Surface(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .itemClickable(
+                MaterialTheme.shapes.medium,
+                onClick,
+                onLongClick,
+                stringResource(R.string.feature_items_show_actions),
+            ),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
@@ -495,6 +512,7 @@ internal fun ItemGroupRow(
     expanded: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val next = group.next
     val items = group.entries.map { it.item }
@@ -502,10 +520,15 @@ internal fun ItemGroupRow(
         if (expanded) R.string.feature_items_group_expanded else R.string.feature_items_group_collapsed,
     )
     Surface(
-        onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .semantics { stateDescription = state },
+            .semantics { stateDescription = state }
+            .itemClickable(
+                MaterialTheme.shapes.medium,
+                onClick,
+                onLongClick,
+                stringResource(R.string.feature_items_show_actions),
+            ),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
@@ -557,11 +580,18 @@ internal fun GroupEntryRow(
     showLocation: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val item = entry.item
     Surface(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .itemClickable(
+                MaterialTheme.shapes.medium,
+                onClick,
+                onLongClick,
+                stringResource(R.string.feature_items_show_actions),
+            ),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
@@ -587,6 +617,48 @@ internal fun GroupEntryRow(
                 )
             }
             ExpiryBadge(status = entry.status, daysUntilExpiry = entry.daysUntilExpiry)
+        }
+    }
+}
+
+/** Opens the item on a click and, when there's [onLongClick], its menu on a long press. */
+private fun Modifier.itemClickable(
+    shape: Shape,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?,
+    longClickLabel: String,
+): Modifier =
+    this
+        .clip(shape)
+        .combinedClickable(
+            role = Role.Button,
+            onLongClickLabel = longClickLabel.takeIf { onLongClick != null },
+            onLongClick = onLongClick,
+            onClick = onClick,
+        )
+
+/**
+ * Shows [content] with a menu that opens when it's touched and held, offering to put the item's
+ * product on the shopping list. [content] gets the function that opens the menu.
+ */
+@Composable
+internal fun ItemMenuBox(
+    onAddToShoppingList: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable (openMenu: () -> Unit) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(modifier = modifier) {
+        content { expanded = true }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.feature_items_add_to_shopping_list)) },
+                onClick = {
+                    expanded = false
+                    onAddToShoppingList()
+                },
+                leadingIcon = { Icon(Icons.Outlined.AddShoppingCart, contentDescription = null) },
+            )
         }
     }
 }

@@ -2,6 +2,10 @@ package io.github.abhik9.expirywatch.feature.items
 
 import androidx.compose.runtime.snapshots.Snapshot
 import app.cash.turbine.test
+import io.github.abhik9.expirywatch.core.domain.shopping.AddItemsToShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.GetShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.ObserveKnownProductsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveItemsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveTodayUseCase
@@ -14,6 +18,7 @@ import io.github.abhik9.expirywatch.core.testing.TestData
 import io.github.abhik9.expirywatch.core.testing.TestTime
 import io.github.abhik9.expirywatch.core.testing.repository.FakeCategoryRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeItemRepository
+import io.github.abhik9.expirywatch.core.testing.repository.FakeShoppingRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeStorageLocationRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepository
 import kotlin.test.assertEquals
@@ -39,6 +44,7 @@ class ItemsViewModelTest {
         ),
     )
     private val settings = FakeUserSettingsRepository()
+    private val shopping = FakeShoppingRepository()
 
     private fun viewModel(initialStatus: ExpiryStatus? = null) = ItemsViewModel(
         initialStatus = initialStatus,
@@ -48,6 +54,14 @@ class ItemsViewModelTest {
         settingsRepository = settings,
         finishItem = FinishItemUseCase(items, TestTime.clock),
         restoreItem = RestoreItemUseCase(items),
+        addItemsToShoppingList = AddItemsToShoppingListUseCase(
+            GetShoppingListUseCase(shopping, settings, "Shopping list", TestTime.clock),
+            AddToShoppingListUseCase(
+                shopping,
+                ObserveKnownProductsUseCase(shopping, items, TestTime.clock),
+                TestTime.clock,
+            ),
+        ),
     )
 
     private suspend fun ItemsViewModel.successState(): ItemsUiState.Success =
@@ -130,5 +144,20 @@ class ItemsViewModelTest {
 
         viewModel.onGroupClick(milk.key)
         assertEquals(emptySet(), viewModel.expandedGroups)
+    }
+
+    @Test
+    fun putsItemsOnTheShoppingList() = runTest {
+        val viewModel = viewModel()
+        val (milk, yogurt) = listOf(1L, 2L).map { id -> items.currentItems.single { it.id == id } }
+
+        viewModel.events.test {
+            viewModel.addToShoppingList(listOf(yogurt, milk))
+
+            val added = assertIs<ItemsEvent.AddedToShoppingList>(awaitItem()).added
+            assertEquals("Shopping list", added.list.name)
+            assertEquals(listOf("Yogurt", "Milk"), added.names)
+        }
+        assertEquals(setOf("Yogurt", "Milk"), shopping.currentItems.map { it.name }.toSet())
     }
 }

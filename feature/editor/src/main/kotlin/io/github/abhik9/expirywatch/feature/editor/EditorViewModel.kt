@@ -12,6 +12,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.abhik9.expirywatch.core.domain.repository.CategoryRepository
 import io.github.abhik9.expirywatch.core.domain.repository.ItemRepository
 import io.github.abhik9.expirywatch.core.domain.repository.StorageLocationRepository
+import io.github.abhik9.expirywatch.core.domain.shopping.AddItemsToShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.AddedToShoppingList
 import io.github.abhik9.expirywatch.core.domain.usecase.AdditionalDate
 import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemValidationError
@@ -108,6 +110,9 @@ sealed interface LookupState {
 sealed interface EditorEvent {
     /** The item was saved, deleted or finished: the editor should close. */
     data object Done : EditorEvent
+
+    /** The item's product was put on a shopping list. */
+    data class AddedToShoppingList(val added: AddedToShoppingList) : EditorEvent
 }
 
 @HiltViewModel(assistedFactory = EditorViewModel.Factory::class)
@@ -119,6 +124,7 @@ class EditorViewModel @AssistedInject constructor(
     private val saveItem: SaveItemUseCase,
     private val finishItem: FinishItemUseCase,
     private val lookupProduct: LookupProductUseCase,
+    private val addItemsToShoppingList: AddItemsToShoppingListUseCase,
     private val clock: Clock,
 ) : ViewModel() {
     // Form state is Compose state, so text fields update synchronously as the user types.
@@ -227,6 +233,15 @@ class EditorViewModel @AssistedInject constructor(
         viewModelScope.launch {
             finishItem(id, outcome)
             _events.send(EditorEvent.Done)
+        }
+    }
+
+    /** Puts the item's product on the shopping list in use, as it was last saved. */
+    fun addToShoppingList() {
+        val item = existingItem ?: return
+        viewModelScope.launch {
+            val added = addItemsToShoppingList(listOf(item))
+            if (added.names.isNotEmpty()) _events.send(EditorEvent.AddedToShoppingList(added))
         }
     }
 

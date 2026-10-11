@@ -65,4 +65,7 @@
     <string name="feature_editor_discard_title">Discard changes?</string>
     <string name="feature_editor_discard_message">Your changes to this item haven\'t been saved.</string>
     <string name="feature_editor_discard">Discard</string>
+    <string name="feature_editor_add_to_shopping_list">Add to shopping list</string>
+    <!-- E.g. "Added Milk to Groceries". -->
+    <string name="feature_editor_added_to_list">Added %1$s to %2$s</string>
 </resources>
