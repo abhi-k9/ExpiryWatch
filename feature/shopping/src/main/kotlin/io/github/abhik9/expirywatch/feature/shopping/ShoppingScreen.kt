@@ -38,6 +38,7 @@ import io.github.abhik9.expirywatch.core.designsystem.component.EmptyState
 import io.github.abhik9.expirywatch.core.designsystem.component.SectionHeader
 import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListResult
 import io.github.abhik9.expirywatch.core.domain.shopping.KnownProduct
+import io.github.abhik9.expirywatch.core.domain.shopping.RestockSuggestion
 import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingListOverview
 import io.github.abhik9.expirywatch.core.model.ShoppingItem
 
@@ -89,6 +90,9 @@ internal fun ShoppingRoute(viewModel: ShoppingViewModel) {
         onCreateList = viewModel::createList,
         onRenameList = viewModel::renameList,
         onDeleteList = viewModel::deleteList,
+        onAddRestock = viewModel::addRestock,
+        onAddAllRestock = viewModel::addAllRestock,
+        onDismissRestock = viewModel::dismissRestock,
     )
 
     val editing = viewModel.editing
@@ -125,6 +129,9 @@ internal fun ShoppingScreen(
     onCreateList: (String) -> Unit,
     onRenameList: (Long, String) -> Unit,
     onDeleteList: (Long) -> Unit,
+    onAddRestock: (RestockSuggestion) -> Unit,
+    onAddAllRestock: (List<RestockSuggestion>) -> Unit,
+    onDismissRestock: (RestockSuggestion) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var listDialog by rememberSaveable { mutableStateOf<ListDialog?>(null) }
@@ -180,7 +187,7 @@ internal fun ShoppingScreen(
                         .padding(horizontal = 16.dp),
                 )
                 SuggestionRow(suggestions = uiState.suggestions, onClick = onAddSuggestion)
-                if (uiState.overview.isEmpty) {
+                if (uiState.overview.isEmpty && uiState.restock.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -196,11 +203,15 @@ internal fun ShoppingScreen(
                 } else {
                     ShoppingItems(
                         overview = uiState.overview,
+                        restock = uiState.restock,
                         bottomPadding = innerPadding.calculateBottomPadding(),
                         onCheckedChange = onCheckedChange,
                         onEdit = onEdit,
                         onRemove = onRemove,
                         onClearCart = onClearCart,
+                        onAddRestock = onAddRestock,
+                        onAddAllRestock = { onAddAllRestock(uiState.restock) },
+                        onDismissRestock = onDismissRestock,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -250,23 +261,39 @@ internal fun ShoppingScreen(
 /** A dialog about the open list. */
 private enum class ListDialog { NEW, RENAME, DELETE }
 
-/** What's still to buy under a header per category, then what's in the cart. */
+/**
+ * What to buy again, then what's still to buy under a header per category, then what's in the
+ * cart.
+ */
 @Composable
 private fun ShoppingItems(
     overview: ShoppingListOverview,
+    restock: List<RestockSuggestion>,
     bottomPadding: Dp,
     onCheckedChange: (ShoppingItem, Boolean) -> Unit,
     onEdit: (ShoppingItem) -> Unit,
     onRemove: (ShoppingItem) -> Unit,
     onClearCart: () -> Unit,
+    onAddRestock: (RestockSuggestion) -> Unit,
+    onAddAllRestock: () -> Unit,
+    onDismissRestock: (RestockSuggestion) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var restockExpanded by rememberSaveable { mutableStateOf(false) }
     // A single "No category" header would only take up room.
     val showAisleHeaders = overview.aisles.any { it.category != null }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 8.dp, bottom = bottomPadding + 16.dp),
     ) {
+        restockSection(
+            suggestions = restock,
+            expanded = restockExpanded,
+            onExpandedChange = { restockExpanded = it },
+            onAdd = onAddRestock,
+            onAddAll = onAddAllRestock,
+            onDismiss = onDismissRestock,
+        )
         overview.aisles.forEach { aisle ->
             if (showAisleHeaders) {
                 item(key = "aisle-${aisle.category?.id}", contentType = "aisle") {

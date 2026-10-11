@@ -33,4 +33,6 @@ interface UserSettingsRepository {
     suspend fun setOnlineProductLookup(enabled: Boolean)
 
     suspend fun setShoppingListId(id: Long)
+
+    suspend fun setDismissedRestockSuggestions(keys: Set<String>)
 }

@@ -15,12 +15,15 @@ import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListResult
 import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.CreateShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.DeleteShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.DismissRestockSuggestionUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.GetShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.KnownProduct
 import io.github.abhik9.expirywatch.core.domain.shopping.ObserveKnownProductsUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.ObserveRestockSuggestionsUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ObserveShoppingListSummariesUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ObserveShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.RenameShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.RestockSuggestion
 import io.github.abhik9.expirywatch.core.domain.shopping.SaveShoppingItemUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingEntry
 import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingListOverview
@@ -54,6 +57,8 @@ sealed interface ShoppingUiState {
         val categories: List<Category>,
         /** Every list, to switch between them. */
         val lists: List<ShoppingListSummary>,
+        /** Products to buy again, because what the user had expired or is gone. */
+        val restock: List<RestockSuggestion>,
     ) : ShoppingUiState
 }
 
@@ -69,6 +74,7 @@ class ShoppingViewModel @Inject constructor(
     observeShoppingList: ObserveShoppingListUseCase,
     observeShoppingListSummaries: ObserveShoppingListSummariesUseCase,
     observeKnownProducts: ObserveKnownProductsUseCase,
+    observeRestockSuggestions: ObserveRestockSuggestionsUseCase,
     categoryRepository: CategoryRepository,
     private val getShoppingList: GetShoppingListUseCase,
     private val addToShoppingList: AddToShoppingListUseCase,
@@ -76,6 +82,7 @@ class ShoppingViewModel @Inject constructor(
     private val createShoppingList: CreateShoppingListUseCase,
     private val renameShoppingList: RenameShoppingListUseCase,
     private val deleteShoppingList: DeleteShoppingListUseCase,
+    private val dismissRestockSuggestion: DismissRestockSuggestionUseCase,
     private val shoppingRepository: ShoppingRepository,
     private val settingsRepository: UserSettingsRepository,
     private val clock: Clock,
@@ -97,19 +104,26 @@ class ShoppingViewModel @Inject constructor(
         shoppingRepository.observeItems(list.id).map { items -> buildShoppingOverview(list, items) }
     }
 
-    val uiState: StateFlow<ShoppingUiState> = combine(
+    private val content: Flow<ListContent> = combine(
         overview,
+        observeShoppingListSummaries(),
+        categoryRepository.observeCategories(),
+        observeRestockSuggestions(),
+    ) { currentOverview, lists, categories, restock -> ListContent(currentOverview, lists, categories, restock) }
+
+    val uiState: StateFlow<ShoppingUiState> = combine(
+        content,
         observeKnownProducts(),
         snapshotFlow { input },
-        categoryRepository.observeCategories(),
-        observeShoppingListSummaries(),
-    ) { currentOverview, known, text, categories, lists ->
-        val onList = currentOverview.aisles.flatMap { aisle -> aisle.items.map { productKey(it.name) } }.toSet()
+    ) { currentContent, known, text ->
+        val listOverview = currentContent.overview
+        val onList = listOverview.aisles.flatMap { aisle -> aisle.items.map { productKey(it.name) } }.toSet()
         ShoppingUiState.Success(
-            overview = currentOverview,
+            overview = listOverview,
             suggestions = suggestProducts(ShoppingEntry.parse(text)?.name.orEmpty(), known, exclude = onList),
-            categories = categories,
-            lists = lists,
+            categories = currentContent.categories,
+            lists = currentContent.lists,
+            restock = currentContent.restock,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -144,6 +158,26 @@ class ShoppingViewModel @Inject constructor(
             lastAdded = addToShoppingList(getShoppingList().id, entry)
         }
     }
+
+    /** Adds a product suggested to buy again, leaving what's typed as it is. */
+    fun addRestock(suggestion: RestockSuggestion) {
+        viewModelScope.launch {
+            lastAdded = addToShoppingList(getShoppingList().id, suggestion.toEntry())
+        }
+    }
+
+    fun addAllRestock(suggestions: List<RestockSuggestion>) {
+        viewModelScope.launch {
+            val listId = getShoppingList().id
+            suggestions.forEach { addToShoppingList(listId, it.toEntry()) }
+        }
+    }
+
+    fun dismissRestock(suggestion: RestockSuggestion) {
+        viewModelScope.launch { dismissRestockSuggestion(suggestion) }
+    }
+
+    private fun RestockSuggestion.toEntry() = ShoppingEntry(name = name, category = category)
 
     fun onCheckedChange(item: ShoppingItem, checked: Boolean) {
         viewModelScope.launch {
@@ -215,3 +249,11 @@ class ShoppingViewModel @Inject constructor(
         const val STOP_TIMEOUT_MILLIS = 5_000L
     }
 }
+
+/** What the list shows, apart from the suggestions for what's typed. */
+private data class ListContent(
+    val overview: ShoppingListOverview,
+    val lists: List<ShoppingListSummary>,
+    val categories: List<Category>,
+    val restock: List<RestockSuggestion>,
+)

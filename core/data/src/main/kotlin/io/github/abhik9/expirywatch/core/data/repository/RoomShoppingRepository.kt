@@ -46,6 +46,8 @@ internal class RoomShoppingRepository @Inject constructor(
         log.record { "shopping: deleted list #$id" }
     }
 
+    override fun observeItemNames(): Flow<List<String>> = dao.observeItemNames()
+
     override fun observeToBuyCounts(): Flow<Map<Long, Int>> =
         dao.observeToBuyCounts().map { counts -> counts.associate { it.listId to it.count } }
 

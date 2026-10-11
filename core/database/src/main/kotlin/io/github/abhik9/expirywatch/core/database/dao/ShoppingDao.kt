@@ -67,6 +67,10 @@ interface ShoppingDao {
     @Upsert
     suspend fun upsertHistory(entry: ShoppingHistoryEntity)
 
+    /** The names of everything on any list, to buy or in the cart. */
+    @Query("SELECT name FROM shopping_items")
+    fun observeItemNames(): Flow<List<String>>
+
     /** How many items are still to buy on each list that has any. */
     @Query("SELECT list_id, COUNT(*) AS count FROM shopping_items WHERE checked_at IS NULL GROUP BY list_id")
     fun observeToBuyCounts(): Flow<List<ShoppingListCount>>

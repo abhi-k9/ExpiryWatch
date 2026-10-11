@@ -41,6 +41,8 @@ class FakeShoppingRepository : ShoppingRepository {
         items.update { all -> all.filterValues { it.listId != id } }
     }
 
+    override fun observeItemNames(): Flow<List<String>> = items.map { all -> all.values.map { it.name } }
+
     override fun observeToBuyCounts(): Flow<Map<Long, Int>> =
         items.map { all -> all.values.filter { !it.isChecked }.groupingBy { it.listId }.eachCount() }
 

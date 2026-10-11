@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
 import io.github.abhik9.expirywatch.core.model.ProductGrouping
 import io.github.abhik9.expirywatch.core.model.ThemeMode
@@ -58,6 +59,9 @@ class UserSettingsDataSource @Inject constructor(
 
     suspend fun setShoppingListId(id: Long) = dataStore.edit { it[Keys.SHOPPING_LIST_ID] = id }
 
+    suspend fun setDismissedRestockSuggestions(keys: Set<String>) =
+        dataStore.edit { it[Keys.DISMISSED_RESTOCK_SUGGESTIONS] = keys }
+
     private fun Preferences.toUserSettings(): UserSettings {
         val defaults = UserSettings()
         return UserSettings(
@@ -77,6 +81,8 @@ class UserSettingsDataSource @Inject constructor(
             remindAboutExpired = this[Keys.REMIND_ABOUT_EXPIRED] ?: defaults.remindAboutExpired,
             onlineProductLookup = this[Keys.ONLINE_PRODUCT_LOOKUP] ?: defaults.onlineProductLookup,
             shoppingListId = this[Keys.SHOPPING_LIST_ID] ?: defaults.shoppingListId,
+            dismissedRestockSuggestions = this[Keys.DISMISSED_RESTOCK_SUGGESTIONS]
+                ?: defaults.dismissedRestockSuggestions,
         )
     }
 
@@ -96,6 +102,7 @@ class UserSettingsDataSource @Inject constructor(
         val REMIND_ABOUT_EXPIRED = booleanPreferencesKey("remind_about_expired")
         val ONLINE_PRODUCT_LOOKUP = booleanPreferencesKey("online_product_lookup")
         val SHOPPING_LIST_ID = longPreferencesKey("shopping_list_id")
+        val DISMISSED_RESTOCK_SUGGESTIONS = stringSetPreferencesKey("dismissed_restock_suggestions")
     }
 
     private companion object {

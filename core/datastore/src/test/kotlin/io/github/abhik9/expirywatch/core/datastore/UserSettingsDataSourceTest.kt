@@ -48,6 +48,7 @@ class UserSettingsDataSourceTest {
         dataSource.setRemindAboutExpired(false)
         dataSource.setOnlineProductLookup(false)
         dataSource.setShoppingListId(7)
+        dataSource.setDismissedRestockSuggestions(setOf("milk|2026-03-08"))
 
         assertEquals(
             UserSettings(
@@ -63,6 +64,7 @@ class UserSettingsDataSourceTest {
                 remindAboutExpired = false,
                 onlineProductLookup = false,
                 shoppingListId = 7,
+                dismissedRestockSuggestions = setOf("milk|2026-03-08"),
             ),
             dataSource.settings.first(),
         )

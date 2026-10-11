@@ -6,12 +6,16 @@ import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListResult
 import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.CreateShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.DeleteShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.DismissRestockSuggestionUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.GetShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ObserveKnownProductsUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.ObserveRestockSuggestionsUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ObserveShoppingListSummariesUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ObserveShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.RenameShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.RestockReason
 import io.github.abhik9.expirywatch.core.domain.shopping.SaveShoppingItemUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.ObserveTodayUseCase
 import io.github.abhik9.expirywatch.core.model.QuantityUnit
 import io.github.abhik9.expirywatch.core.testing.MainDispatcherRule
 import io.github.abhik9.expirywatch.core.testing.TestData
@@ -52,6 +56,13 @@ class ShoppingViewModelTest {
             observeShoppingList = ObserveShoppingListUseCase(shopping, settings, getShoppingList),
             observeShoppingListSummaries = ObserveShoppingListSummariesUseCase(shopping),
             observeKnownProducts = observeKnownProducts,
+            observeRestockSuggestions = ObserveRestockSuggestionsUseCase(
+                items,
+                shopping,
+                settings,
+                ObserveTodayUseCase(TestTime.clock),
+                TestTime.clock,
+            ),
             categoryRepository = FakeCategoryRepository(listOf(TestData.dairy, TestData.produce)),
             getShoppingList = getShoppingList,
             addToShoppingList = AddToShoppingListUseCase(shopping, observeKnownProducts, TestTime.clock),
@@ -59,6 +70,7 @@ class ShoppingViewModelTest {
             createShoppingList = CreateShoppingListUseCase(shopping, settings, TestTime.clock),
             renameShoppingList = RenameShoppingListUseCase(shopping),
             deleteShoppingList = DeleteShoppingListUseCase(shopping, settings),
+            dismissRestockSuggestion = DismissRestockSuggestionUseCase(settings, TestTime.clock),
             shoppingRepository = shopping,
             settingsRepository = settings,
             clock = TestTime.clock,
@@ -229,5 +241,38 @@ class ShoppingViewModelTest {
 
         viewModel.deleteList(pharmacy.overview.list.id)
         assertEquals(listOf("Shopping list"), awaitState { it.lists.size == 1 }.lists.map { it.list.name })
+    }
+
+    @Test
+    fun suggestsExpiredItemsToBuyAgain() = runTest {
+        items.upsert(TestData.item(id = 3, name = "Yogurt", expiresInDays = -1))
+        items.upsert(TestData.item(id = 4, name = "Cream", expiresInDays = -3))
+        backgroundScope.launch { viewModel.uiState.collect {} }
+
+        val restock = awaitState { it.restock.size == 2 }.restock
+        assertEquals(listOf("Yogurt", "Cream"), restock.map { it.name })
+        assertEquals(RestockReason.EXPIRED, restock.first().reason)
+
+        type("2 eg")
+        viewModel.addRestock(restock.first())
+        val added = awaitState { it.restock.size == 1 }
+        assertEquals(listOf("Yogurt"), added.overview.aisles.single().items.map { it.name })
+        // What's typed is left as it is.
+        assertEquals("2 eg", viewModel.input)
+
+        viewModel.dismissRestock(restock.last())
+        awaitState { it.restock.isEmpty() }
+    }
+
+    @Test
+    fun addsEverythingSuggestedAtOnce() = runTest {
+        items.upsert(TestData.item(id = 3, name = "Yogurt", expiresInDays = -1))
+        items.upsert(TestData.item(id = 4, name = "Cream", expiresInDays = -3))
+        backgroundScope.launch { viewModel.uiState.collect {} }
+
+        viewModel.addAllRestock(awaitState { it.restock.size == 2 }.restock)
+
+        val state = awaitState { it.restock.isEmpty() }
+        assertEquals(setOf("Yogurt", "Cream"), state.overview.aisles.flatMap { it.items }.map { it.name }.toSet())
     }
 }

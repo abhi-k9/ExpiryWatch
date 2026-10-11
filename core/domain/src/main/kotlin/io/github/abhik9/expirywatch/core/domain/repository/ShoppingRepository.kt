@@ -21,6 +21,9 @@ interface ShoppingRepository {
     /** Deletes the list together with everything on it. */
     suspend fun deleteList(id: Long)
 
+    /** The names of everything on any list, to buy or in the cart. */
+    fun observeItemNames(): Flow<List<String>>
+
     /** How many items are still to buy on each list, by list id. Lists with none are left out. */
     fun observeToBuyCounts(): Flow<Map<Long, Int>>
 

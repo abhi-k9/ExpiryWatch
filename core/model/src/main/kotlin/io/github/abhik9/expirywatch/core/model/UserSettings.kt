@@ -25,6 +25,8 @@ data class UserSettings(
     val onlineProductLookup: Boolean = true,
     /** The shopping list last opened; `null` for the first one. */
     val shoppingListId: Long? = null,
+    /** The suggestions to buy something again that the user dismissed. */
+    val dismissedRestockSuggestions: Set<String> = emptySet(),
 ) {
     companion object {
         const val DEFAULT_EXPIRING_SOON_DAYS = 3

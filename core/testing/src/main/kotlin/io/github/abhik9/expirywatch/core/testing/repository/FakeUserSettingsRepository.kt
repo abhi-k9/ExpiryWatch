@@ -44,4 +44,7 @@ class FakeUserSettingsRepository(initial: UserSettings = UserSettings()) : UserS
         state.update { it.copy(onlineProductLookup = enabled) }
 
     override suspend fun setShoppingListId(id: Long) = state.update { it.copy(shoppingListId = id) }
+
+    override suspend fun setDismissedRestockSuggestions(keys: Set<String>) =
+        state.update { it.copy(dismissedRestockSuggestions = keys) }
 }

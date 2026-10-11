@@ -56,4 +56,27 @@
         <item quantity="other">The %d items on it are deleted too.</item>
     </plurals>
     <string name="feature_shopping_delete_list_empty">There\'s nothing on it.</string>
+
+    <!-- Products that expired, or were used up or thrown away, to buy again. -->
+    <string name="feature_shopping_restock">Buy again · %d</string>
+    <string name="feature_shopping_add_all">Add all</string>
+    <plurals name="feature_shopping_show_more">
+        <item quantity="one">Show %d more</item>
+        <item quantity="other">Show %d more</item>
+    </plurals>
+    <string name="feature_shopping_show_less">Show less</string>
+    <string name="feature_shopping_add_to_list">Add %s to the list</string>
+    <string name="feature_shopping_dismiss">Dismiss %s</string>
+    <string name="feature_shopping_used_up_today">Used up today</string>
+    <string name="feature_shopping_used_up_yesterday">Used up yesterday</string>
+    <plurals name="feature_shopping_used_up_days_ago">
+        <item quantity="one">Used up %d day ago</item>
+        <item quantity="other">Used up %d days ago</item>
+    </plurals>
+    <string name="feature_shopping_thrown_away_today">Thrown away today</string>
+    <string name="feature_shopping_thrown_away_yesterday">Thrown away yesterday</string>
+    <plurals name="feature_shopping_thrown_away_days_ago">
+        <item quantity="one">Thrown away %d day ago</item>
+        <item quantity="other">Thrown away %d days ago</item>
+    </plurals>
 </resources>

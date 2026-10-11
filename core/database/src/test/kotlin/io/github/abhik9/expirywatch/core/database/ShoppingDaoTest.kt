@@ -100,6 +100,7 @@ class ShoppingDaoTest {
             listOf(ShoppingListCount(groceries, 2)),
             dao.observeToBuyCounts().first(),
         )
+        assertEquals(setOf("Milk", "Bread", "Plasters"), dao.observeItemNames().first().toSet())
     }
 
     @Test
