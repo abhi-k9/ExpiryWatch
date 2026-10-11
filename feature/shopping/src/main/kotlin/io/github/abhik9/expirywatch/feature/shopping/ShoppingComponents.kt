@@ -305,6 +305,7 @@ private fun ShoppingItemContent(item: ShoppingItem, modifier: Modifier = Modifie
 @Composable
 internal fun CartHeader(
     count: Int,
+    onPutAway: () -> Unit,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -319,6 +320,9 @@ internal fun CartHeader(
             modifier = Modifier.weight(1f),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        TextButton(onClick = onPutAway) {
+            Text(stringResource(R.string.feature_shopping_put_away))
+        }
         TextButton(onClick = onClear) {
             Text(stringResource(R.string.feature_shopping_clear_cart))
         }

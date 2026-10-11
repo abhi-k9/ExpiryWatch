@@ -43,7 +43,10 @@ import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingListOverview
 import io.github.abhik9.expirywatch.core.model.ShoppingItem
 
 @Composable
-internal fun ShoppingRoute(viewModel: ShoppingViewModel) {
+internal fun ShoppingRoute(
+    onPutAway: (listId: Long) -> Unit,
+    viewModel: ShoppingViewModel,
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     // Updated on configuration changes without restarting the effect, which would drop a shown snackbar.
@@ -86,6 +89,7 @@ internal fun ShoppingRoute(viewModel: ShoppingViewModel) {
         onEdit = viewModel::onEdit,
         onRemove = viewModel::remove,
         onClearCart = viewModel::clearCart,
+        onPutAway = onPutAway,
         onSwitchList = viewModel::switchToList,
         onCreateList = viewModel::createList,
         onRenameList = viewModel::renameList,
@@ -125,6 +129,7 @@ internal fun ShoppingScreen(
     onEdit: (ShoppingItem) -> Unit,
     onRemove: (ShoppingItem) -> Unit,
     onClearCart: () -> Unit,
+    onPutAway: (listId: Long) -> Unit,
     onSwitchList: (Long) -> Unit,
     onCreateList: (String) -> Unit,
     onRenameList: (Long, String) -> Unit,
@@ -209,6 +214,7 @@ internal fun ShoppingScreen(
                         onEdit = onEdit,
                         onRemove = onRemove,
                         onClearCart = onClearCart,
+                        onPutAway = { onPutAway(uiState.overview.list.id) },
                         onAddRestock = onAddRestock,
                         onAddAllRestock = { onAddAllRestock(uiState.restock) },
                         onDismissRestock = onDismissRestock,
@@ -274,6 +280,7 @@ private fun ShoppingItems(
     onEdit: (ShoppingItem) -> Unit,
     onRemove: (ShoppingItem) -> Unit,
     onClearCart: () -> Unit,
+    onPutAway: () -> Unit,
     onAddRestock: (RestockSuggestion) -> Unit,
     onAddAllRestock: () -> Unit,
     onDismissRestock: (RestockSuggestion) -> Unit,
@@ -315,7 +322,12 @@ private fun ShoppingItems(
         }
         if (overview.inCart.isNotEmpty()) {
             item(key = "cart", contentType = "cart") {
-                CartHeader(count = overview.inCart.size, onClear = onClearCart, modifier = Modifier.animateItem())
+                CartHeader(
+                    count = overview.inCart.size,
+                    onPutAway = onPutAway,
+                    onClear = onClearCart,
+                    modifier = Modifier.animateItem(),
+                )
             }
             items(overview.inCart, key = { it.id }, contentType = { "item" }) { item ->
                 ShoppingItemRow(

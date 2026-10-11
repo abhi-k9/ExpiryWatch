@@ -11,6 +11,10 @@ data class ItemsNavKey(val status: ExpiryStatus? = null) : NavKey
 @Serializable
 data object ShoppingNavKey : NavKey
 
+/** Turns what's in the cart of a shopping list into tracked items. */
+@Serializable
+data class PutAwayNavKey(val listId: Long) : NavKey
+
 @Serializable
 data object InsightsNavKey : NavKey
 

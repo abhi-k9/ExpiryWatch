@@ -79,4 +79,21 @@
         <item quantity="one">Thrown away %d day ago</item>
         <item quantity="other">Thrown away %d days ago</item>
     </plurals>
+
+    <!-- Turning what was bought into tracked items. -->
+    <string name="feature_shopping_put_away">Put away</string>
+    <string name="feature_shopping_put_away_help">Set when each expires and where it goes, to be reminded before it does. Dates are guessed from last time.</string>
+    <string name="feature_shopping_close">Close</string>
+    <string name="feature_shopping_expires">Expires</string>
+    <string name="feature_shopping_location">Location</string>
+    <string name="feature_shopping_expiry_required">Set a date</string>
+    <string name="feature_shopping_put_away_empty_title">Nothing in the cart</string>
+    <string name="feature_shopping_put_away_empty_message">Tick things off the list as you shop, then put them away here.</string>
+    <string name="feature_shopping_put_away_done_title">All put away</string>
+    <plurals name="feature_shopping_put_away_done_message">
+        <item quantity="one">%d item is now tracked, and you\'ll be reminded before it expires.</item>
+        <item quantity="other">%d items are now tracked, and you\'ll be reminded before they expire.</item>
+    </plurals>
+    <string name="feature_shopping_show_items">Show items</string>
+    <string name="feature_shopping_done">Done</string>
 </resources>

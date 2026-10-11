@@ -33,7 +33,7 @@ import io.github.abhik9.expirywatch.feature.editor.navigation.editorEntry
 import io.github.abhik9.expirywatch.feature.insights.navigation.insightsEntry
 import io.github.abhik9.expirywatch.feature.items.navigation.itemsEntry
 import io.github.abhik9.expirywatch.feature.settings.navigation.settingsEntries
-import io.github.abhik9.expirywatch.feature.shopping.navigation.shoppingEntry
+import io.github.abhik9.expirywatch.feature.shopping.navigation.shoppingEntries
 import io.github.abhik9.expirywatch.navigation.TopLevelDestination
 
 /**
@@ -94,7 +94,7 @@ fun ExpiryWatchApp(
             entryProvider = entryProvider {
                 itemsEntry(navigator)
                 editorEntry(navigator)
-                shoppingEntry()
+                shoppingEntries(navigator)
                 insightsEntry()
                 settingsEntries(navigator)
             },
