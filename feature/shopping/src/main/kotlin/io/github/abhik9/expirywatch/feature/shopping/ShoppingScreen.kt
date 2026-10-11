@@ -94,6 +94,7 @@ internal fun ShoppingRoute(
         onCreateList = viewModel::createList,
         onRenameList = viewModel::renameList,
         onDeleteList = viewModel::deleteList,
+        onArrangeAisles = viewModel::arrangeAisles,
         onAddRestock = viewModel::addRestock,
         onAddAllRestock = viewModel::addAllRestock,
         onDismissRestock = viewModel::dismissRestock,
@@ -134,6 +135,7 @@ internal fun ShoppingScreen(
     onCreateList: (String) -> Unit,
     onRenameList: (Long, String) -> Unit,
     onDeleteList: (Long) -> Unit,
+    onArrangeAisles: (List<Long>) -> Unit,
     onAddRestock: (RestockSuggestion) -> Unit,
     onAddAllRestock: (List<RestockSuggestion>) -> Unit,
     onDismissRestock: (RestockSuggestion) -> Unit,
@@ -158,6 +160,7 @@ internal fun ShoppingScreen(
                     if (uiState is ShoppingUiState.Success) {
                         ListMenu(
                             canDelete = uiState.lists.size > 1,
+                            onArrangeAisles = { listDialog = ListDialog.AISLES },
                             onRename = { listDialog = ListDialog.RENAME },
                             onDelete = { listDialog = ListDialog.DELETE },
                         )
@@ -225,7 +228,8 @@ internal fun ShoppingScreen(
         }
     }
 
-    val overview = (uiState as? ShoppingUiState.Success)?.overview ?: return
+    val success = uiState as? ShoppingUiState.Success ?: return
+    val overview = success.overview
     val close = { listDialog = null }
     when (listDialog) {
         ListDialog.NEW -> ListNameDialog(
@@ -250,6 +254,15 @@ internal fun ShoppingScreen(
             onDismiss = close,
         )
 
+        ListDialog.AISLES -> ArrangeAislesDialog(
+            categories = success.categories,
+            onSave = { order ->
+                onArrangeAisles(order)
+                close()
+            },
+            onDismiss = close,
+        )
+
         ListDialog.DELETE -> DeleteListDialog(
             list = overview.list,
             itemCount = overview.toBuyCount + overview.inCart.size,
@@ -265,7 +278,7 @@ internal fun ShoppingScreen(
 }
 
 /** A dialog about the open list. */
-private enum class ListDialog { NEW, RENAME, DELETE }
+private enum class ListDialog { NEW, RENAME, AISLES, DELETE }
 
 /**
  * What to buy again, then what's still to buy under a header per category, then what's in the

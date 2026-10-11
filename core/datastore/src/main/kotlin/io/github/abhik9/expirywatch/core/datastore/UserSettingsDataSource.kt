@@ -62,6 +62,9 @@ class UserSettingsDataSource @Inject constructor(
     suspend fun setDismissedRestockSuggestions(keys: Set<String>) =
         dataStore.edit { it[Keys.DISMISSED_RESTOCK_SUGGESTIONS] = keys }
 
+    suspend fun setShoppingAisleOrder(categoryIds: List<Long>) =
+        dataStore.edit { it[Keys.SHOPPING_AISLE_ORDER] = categoryIds.joinToString(",") }
+
     private fun Preferences.toUserSettings(): UserSettings {
         val defaults = UserSettings()
         return UserSettings(
@@ -83,6 +86,10 @@ class UserSettingsDataSource @Inject constructor(
             shoppingListId = this[Keys.SHOPPING_LIST_ID] ?: defaults.shoppingListId,
             dismissedRestockSuggestions = this[Keys.DISMISSED_RESTOCK_SUGGESTIONS]
                 ?: defaults.dismissedRestockSuggestions,
+            shoppingAisleOrder = this[Keys.SHOPPING_AISLE_ORDER]
+                ?.split(',')
+                ?.mapNotNull { it.trim().toLongOrNull() }
+                ?: defaults.shoppingAisleOrder,
         )
     }
 
@@ -103,6 +110,7 @@ class UserSettingsDataSource @Inject constructor(
         val ONLINE_PRODUCT_LOOKUP = booleanPreferencesKey("online_product_lookup")
         val SHOPPING_LIST_ID = longPreferencesKey("shopping_list_id")
         val DISMISSED_RESTOCK_SUGGESTIONS = stringSetPreferencesKey("dismissed_restock_suggestions")
+        val SHOPPING_AISLE_ORDER = stringPreferencesKey("shopping_aisle_order")
     }
 
     private companion object {

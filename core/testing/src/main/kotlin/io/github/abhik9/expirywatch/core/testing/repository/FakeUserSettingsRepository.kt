@@ -47,4 +47,7 @@ class FakeUserSettingsRepository(initial: UserSettings = UserSettings()) : UserS
 
     override suspend fun setDismissedRestockSuggestions(keys: Set<String>) =
         state.update { it.copy(dismissedRestockSuggestions = keys) }
+
+    override suspend fun setShoppingAisleOrder(categoryIds: List<Long>) =
+        state.update { it.copy(shoppingAisleOrder = categoryIds) }
 }

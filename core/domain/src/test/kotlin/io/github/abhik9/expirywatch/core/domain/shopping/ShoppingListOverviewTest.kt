@@ -1,5 +1,6 @@
 package io.github.abhik9.expirywatch.core.domain.shopping
 
+import io.github.abhik9.expirywatch.core.model.Category
 import io.github.abhik9.expirywatch.core.model.ShoppingList
 import io.github.abhik9.expirywatch.core.testing.TestData
 import io.github.abhik9.expirywatch.core.testing.TestTime
@@ -33,6 +34,26 @@ class ShoppingListOverviewTest {
         )
         assertEquals(5, overview.toBuyCount)
         assertEquals(emptyList(), overview.inCart)
+    }
+
+    @Test
+    fun followsTheOrderOfTheShop() {
+        val bakery = Category(id = 3, name = "Bakery", emoji = "🍞")
+        val items = listOf(
+            TestData.shoppingItem(id = 1, name = "Milk"),
+            TestData.shoppingItem(id = 2, name = "Bread", category = bakery),
+            TestData.shoppingItem(id = 3, name = "Apples", category = TestData.produce),
+            TestData.shoppingItem(id = 4, name = "Pasta", category = null),
+        )
+
+        // Produce first, then dairy; bakery isn't placed, so it comes after them.
+        val overview =
+            buildShoppingOverview(list, items, aisleOrder = listOf(TestData.produce.id, 99, TestData.dairy.id))
+
+        assertEquals(
+            listOf(TestData.produce, TestData.dairy, bakery, null),
+            overview.aisles.map { it.category },
+        )
     }
 
     @Test

@@ -14,7 +14,8 @@ data class ShoppingAisle(
 /**
  * A shopping list as it's shown.
  *
- * @property aisles what's still to buy, by category, with the items without a category last.
+ * @property aisles what's still to buy, by category in the order of the shop, with the items
+ * without a category last.
  * @property inCart what's in the cart, the last thing put in first, so a mistap is easy to undo.
  */
 data class ShoppingListOverview(
@@ -27,7 +28,15 @@ data class ShoppingListOverview(
     val isEmpty: Boolean get() = aisles.isEmpty() && inCart.isEmpty()
 }
 
-fun buildShoppingOverview(list: ShoppingList, items: List<ShoppingItem>): ShoppingListOverview {
+/**
+ * Groups what's still to buy into aisles: categories in [aisleOrder] first, in that order, then the
+ * others by name, and the items without a category last.
+ */
+fun buildShoppingOverview(
+    list: ShoppingList,
+    items: List<ShoppingItem>,
+    aisleOrder: List<Long> = emptyList(),
+): ShoppingListOverview {
     val (inCart, toBuy) = items.partition { it.isChecked }
     val byName = compareBy<ShoppingItem> { productKey(it.name) }.thenBy { it.id }
     val aisles = toBuy
@@ -35,12 +44,19 @@ fun buildShoppingOverview(list: ShoppingList, items: List<ShoppingItem>): Shoppi
         .map { (_, inCategory) -> ShoppingAisle(inCategory.first().category, inCategory.sortedWith(byName)) }
         .sortedWith(
             compareBy<ShoppingAisle> { it.category == null }
-                .thenBy { it.category?.let { category -> productKey(category.name) } }
-                .thenBy { it.category?.id },
+                .thenBy(aisleComparator(aisleOrder)) { it.category },
         )
     return ShoppingListOverview(
         list = list,
         aisles = aisles,
         inCart = inCart.sortedWith(compareByDescending<ShoppingItem> { it.checkedAt }.thenByDescending { it.id }),
     )
+}
+
+/** Puts categories in the order of the shop: those in [aisleOrder] first, in that order, then the rest by name. */
+fun aisleComparator(aisleOrder: List<Long>): Comparator<Category?> {
+    val positions = aisleOrder.withIndex().associate { (index, id) -> id to index }
+    return compareBy<Category?> { category -> category?.let { positions[it.id] } ?: Int.MAX_VALUE }
+        .thenBy { category -> category?.let { productKey(it.name) } }
+        .thenBy { category -> category?.id }
 }

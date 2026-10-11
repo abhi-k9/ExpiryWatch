@@ -1,17 +1,25 @@
 package io.github.abhik9.expirywatch.feature.shopping
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Delete
@@ -45,6 +53,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingListSummary
+import io.github.abhik9.expirywatch.core.model.Category
 import io.github.abhik9.expirywatch.core.model.ShoppingList
 
 /** The open list's name, which opens a menu to switch to another list or make a new one. */
@@ -119,6 +128,7 @@ internal fun ListSwitcher(
 @Composable
 internal fun ListMenu(
     canDelete: Boolean,
+    onArrangeAisles: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -128,6 +138,14 @@ internal fun ListMenu(
             Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.feature_shopping_more))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.feature_shopping_arrange_aisles)) },
+                onClick = {
+                    expanded = false
+                    onArrangeAisles()
+                },
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) },
+            )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.feature_shopping_rename_list)) },
                 onClick = {
@@ -215,3 +233,73 @@ internal fun DeleteListDialog(
         },
     )
 }
+
+/** Puts the categories in the order the user walks through the shop, one step at a time. */
+@Composable
+internal fun ArrangeAislesDialog(
+    categories: List<Category>,
+    onSave: (List<Long>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var order by rememberSaveable { mutableStateOf(categories.map { it.id }) }
+    val byId = remember(categories) { categories.associateBy { it.id } }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.feature_shopping_arrange_aisles)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.feature_shopping_arrange_aisles_help),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
+                    itemsIndexed(order, key = { _, id -> id }) { index, id ->
+                        val category = byId[id] ?: return@itemsIndexed
+                        Row(
+                            modifier = Modifier
+                                .animateItem()
+                                .fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = category.label(),
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            IconButton(onClick = { order = order.moved(index, index - 1) }, enabled = index > 0) {
+                                Icon(
+                                    Icons.Filled.ArrowUpward,
+                                    contentDescription = stringResource(
+                                        R.string.feature_shopping_move_up,
+                                        category.name,
+                                    ),
+                                )
+                            }
+                            IconButton(
+                                onClick = { order = order.moved(index, index + 1) },
+                                enabled = index < order.lastIndex,
+                            ) {
+                                Icon(
+                                    Icons.Filled.ArrowDownward,
+                                    contentDescription = stringResource(
+                                        R.string.feature_shopping_move_down,
+                                        category.name,
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(order) }) { Text(stringResource(R.string.feature_shopping_save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.feature_shopping_cancel)) }
+        },
+    )
+}
+
+private fun List<Long>.moved(from: Int, to: Int): List<Long> = toMutableList().apply { add(to, removeAt(from)) }

@@ -27,6 +27,8 @@ data class UserSettings(
     val shoppingListId: Long? = null,
     /** The suggestions to buy something again that the user dismissed. */
     val dismissedRestockSuggestions: Set<String> = emptySet(),
+    /** Category ids in the order the user walks through the shop; categories left out come after, by name. */
+    val shoppingAisleOrder: List<Long> = emptyList(),
 ) {
     companion object {
         const val DEFAULT_EXPIRING_SOON_DAYS = 3

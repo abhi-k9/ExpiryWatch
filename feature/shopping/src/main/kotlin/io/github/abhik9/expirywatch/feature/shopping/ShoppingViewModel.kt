@@ -28,6 +28,7 @@ import io.github.abhik9.expirywatch.core.domain.shopping.SaveShoppingItemUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingEntry
 import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingListOverview
 import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingListSummary
+import io.github.abhik9.expirywatch.core.domain.shopping.aisleComparator
 import io.github.abhik9.expirywatch.core.domain.shopping.buildShoppingOverview
 import io.github.abhik9.expirywatch.core.domain.shopping.suggestProducts
 import io.github.abhik9.expirywatch.core.model.Category
@@ -41,6 +42,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -99,17 +101,31 @@ class ShoppingViewModel @Inject constructor(
     var editing by mutableStateOf<ShoppingItem?>(null)
         private set
 
+    private val aisleOrder: Flow<List<Long>> = settingsRepository.settings
+        .map { it.shoppingAisleOrder }
+        .distinctUntilChanged()
+
     @OptIn(ExperimentalCoroutinesApi::class)
     private val overview: Flow<ShoppingListOverview> = observeShoppingList().flatMapLatest { list ->
-        shoppingRepository.observeItems(list.id).map { items -> buildShoppingOverview(list, items) }
+        combine(shoppingRepository.observeItems(list.id), aisleOrder) { items, order ->
+            buildShoppingOverview(list, items, order)
+        }
     }
+
+    /** The categories in the order of the shop. */
+    private val categories: Flow<List<Category>> = combine(
+        categoryRepository.observeCategories(),
+        aisleOrder,
+    ) { all, order -> all.sortedWith(aisleComparator(order)) }
 
     private val content: Flow<ListContent> = combine(
         overview,
         observeShoppingListSummaries(),
-        categoryRepository.observeCategories(),
+        categories,
         observeRestockSuggestions(),
-    ) { currentOverview, lists, categories, restock -> ListContent(currentOverview, lists, categories, restock) }
+    ) { currentOverview, lists, orderedCategories, restock ->
+        ListContent(currentOverview, lists, orderedCategories, restock)
+    }
 
     val uiState: StateFlow<ShoppingUiState> = combine(
         content,
@@ -224,6 +240,11 @@ class ShoppingViewModel @Inject constructor(
 
     fun renameList(listId: Long, name: String) {
         viewModelScope.launch { renameShoppingList(listId, name) }
+    }
+
+    /** Puts the categories in the order the user walks through the shop. */
+    fun arrangeAisles(categoryIds: List<Long>) {
+        viewModelScope.launch { settingsRepository.setShoppingAisleOrder(categoryIds) }
     }
 
     fun deleteList(listId: Long) {

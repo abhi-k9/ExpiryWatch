@@ -66,4 +66,8 @@ internal class DataStoreUserSettingsRepository @Inject constructor(
     override suspend fun setDismissedRestockSuggestions(keys: Set<String>) {
         dataSource.setDismissedRestockSuggestions(keys)
     }
+
+    override suspend fun setShoppingAisleOrder(categoryIds: List<Long>) {
+        dataSource.setShoppingAisleOrder(categoryIds)
+    }
 }

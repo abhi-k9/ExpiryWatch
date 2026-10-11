@@ -275,4 +275,20 @@ class ShoppingViewModelTest {
         val state = awaitState { it.restock.isEmpty() }
         assertEquals(setOf("Yogurt", "Cream"), state.overview.aisles.flatMap { it.items }.map { it.name }.toSet())
     }
+
+    @Test
+    fun followsTheOrderOfTheShop() = runTest {
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        type("Milk")
+        viewModel.add()
+        shopping.upsertItem(TestData.shoppingItem(name = "Apples", category = TestData.produce))
+        val byName = awaitState { it.overview.aisles.size == 2 }
+        assertEquals(listOf(TestData.dairy, TestData.produce), byName.overview.aisles.map { it.category })
+
+        viewModel.arrangeAisles(listOf(TestData.produce.id, TestData.dairy.id))
+
+        val arranged = awaitState { it.overview.aisles.first().category == TestData.produce }
+        assertEquals(listOf(TestData.produce, TestData.dairy), arranged.categories)
+        assertEquals(listOf(TestData.produce.id, TestData.dairy.id), settings.current.shoppingAisleOrder)
+    }
 }
