@@ -10,15 +10,21 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.abhik9.expirywatch.core.domain.productKey
 import io.github.abhik9.expirywatch.core.domain.repository.CategoryRepository
 import io.github.abhik9.expirywatch.core.domain.repository.ShoppingRepository
+import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
 import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListResult
 import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.CreateShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.DeleteShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.GetShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.KnownProduct
 import io.github.abhik9.expirywatch.core.domain.shopping.ObserveKnownProductsUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.ObserveShoppingListSummariesUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ObserveShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.RenameShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.SaveShoppingItemUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingEntry
 import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingListOverview
+import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingListSummary
 import io.github.abhik9.expirywatch.core.domain.shopping.buildShoppingOverview
 import io.github.abhik9.expirywatch.core.domain.shopping.suggestProducts
 import io.github.abhik9.expirywatch.core.model.Category
@@ -46,6 +52,8 @@ sealed interface ShoppingUiState {
         /** Products to offer under the add field for what's typed so far. */
         val suggestions: List<KnownProduct>,
         val categories: List<Category>,
+        /** Every list, to switch between them. */
+        val lists: List<ShoppingListSummary>,
     ) : ShoppingUiState
 }
 
@@ -59,12 +67,17 @@ sealed interface ShoppingEvent {
 @HiltViewModel
 class ShoppingViewModel @Inject constructor(
     observeShoppingList: ObserveShoppingListUseCase,
+    observeShoppingListSummaries: ObserveShoppingListSummariesUseCase,
     observeKnownProducts: ObserveKnownProductsUseCase,
     categoryRepository: CategoryRepository,
     private val getShoppingList: GetShoppingListUseCase,
     private val addToShoppingList: AddToShoppingListUseCase,
     private val saveShoppingItem: SaveShoppingItemUseCase,
+    private val createShoppingList: CreateShoppingListUseCase,
+    private val renameShoppingList: RenameShoppingListUseCase,
+    private val deleteShoppingList: DeleteShoppingListUseCase,
     private val shoppingRepository: ShoppingRepository,
+    private val settingsRepository: UserSettingsRepository,
     private val clock: Clock,
 ) : ViewModel() {
     /** What's typed into the add field, held as Compose state so it updates synchronously. */
@@ -89,12 +102,14 @@ class ShoppingViewModel @Inject constructor(
         observeKnownProducts(),
         snapshotFlow { input },
         categoryRepository.observeCategories(),
-    ) { currentOverview, known, text, categories ->
+        observeShoppingListSummaries(),
+    ) { currentOverview, known, text, categories, lists ->
         val onList = currentOverview.aisles.flatMap { aisle -> aisle.items.map { productKey(it.name) } }.toSet()
         ShoppingUiState.Success(
             overview = currentOverview,
             suggestions = suggestProducts(ShoppingEntry.parse(text)?.name.orEmpty(), known, exclude = onList),
             categories = categories,
+            lists = lists,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -161,6 +176,25 @@ class ShoppingViewModel @Inject constructor(
 
     fun undoRemove(item: ShoppingItem) {
         viewModelScope.launch { shoppingRepository.restoreItems(listOf(item)) }
+    }
+
+    fun switchToList(listId: Long) {
+        lastAdded = null
+        viewModelScope.launch { settingsRepository.setShoppingListId(listId) }
+    }
+
+    fun createList(name: String) {
+        lastAdded = null
+        viewModelScope.launch { createShoppingList(name) }
+    }
+
+    fun renameList(listId: Long, name: String) {
+        viewModelScope.launch { renameShoppingList(listId, name) }
+    }
+
+    fun deleteList(listId: Long) {
+        lastAdded = null
+        viewModelScope.launch { deleteShoppingList(listId) }
     }
 
     /** Removes everything in the cart from the list. */

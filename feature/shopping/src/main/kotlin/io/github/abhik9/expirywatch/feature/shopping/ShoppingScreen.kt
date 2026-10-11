@@ -22,8 +22,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
@@ -82,6 +85,10 @@ internal fun ShoppingRoute(viewModel: ShoppingViewModel) {
         onEdit = viewModel::onEdit,
         onRemove = viewModel::remove,
         onClearCart = viewModel::clearCart,
+        onSwitchList = viewModel::switchToList,
+        onCreateList = viewModel::createList,
+        onRenameList = viewModel::renameList,
+        onDeleteList = viewModel::deleteList,
     )
 
     val editing = viewModel.editing
@@ -114,12 +121,37 @@ internal fun ShoppingScreen(
     onEdit: (ShoppingItem) -> Unit,
     onRemove: (ShoppingItem) -> Unit,
     onClearCart: () -> Unit,
+    onSwitchList: (Long) -> Unit,
+    onCreateList: (String) -> Unit,
+    onRenameList: (Long, String) -> Unit,
+    onDeleteList: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var listDialog by rememberSaveable { mutableStateOf<ListDialog?>(null) }
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopAppBar(title = { Text((uiState as? ShoppingUiState.Success)?.overview?.list?.name.orEmpty()) })
+            TopAppBar(
+                title = {
+                    if (uiState is ShoppingUiState.Success) {
+                        ListSwitcher(
+                            current = uiState.overview.list,
+                            lists = uiState.lists,
+                            onSwitch = onSwitchList,
+                            onNewList = { listDialog = ListDialog.NEW },
+                        )
+                    }
+                },
+                actions = {
+                    if (uiState is ShoppingUiState.Success) {
+                        ListMenu(
+                            canDelete = uiState.lists.size > 1,
+                            onRename = { listDialog = ListDialog.RENAME },
+                            onDelete = { listDialog = ListDialog.DELETE },
+                        )
+                    }
+                },
+            )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
@@ -175,7 +207,48 @@ internal fun ShoppingScreen(
             }
         }
     }
+
+    val overview = (uiState as? ShoppingUiState.Success)?.overview ?: return
+    val close = { listDialog = null }
+    when (listDialog) {
+        ListDialog.NEW -> ListNameDialog(
+            title = stringResource(R.string.feature_shopping_new_list),
+            confirmLabel = stringResource(R.string.feature_shopping_create),
+            initialName = "",
+            onConfirm = { name ->
+                onCreateList(name)
+                close()
+            },
+            onDismiss = close,
+        )
+
+        ListDialog.RENAME -> ListNameDialog(
+            title = stringResource(R.string.feature_shopping_rename_list),
+            confirmLabel = stringResource(R.string.feature_shopping_rename),
+            initialName = overview.list.name,
+            onConfirm = { name ->
+                onRenameList(overview.list.id, name)
+                close()
+            },
+            onDismiss = close,
+        )
+
+        ListDialog.DELETE -> DeleteListDialog(
+            list = overview.list,
+            itemCount = overview.toBuyCount + overview.inCart.size,
+            onConfirm = {
+                onDeleteList(overview.list.id)
+                close()
+            },
+            onDismiss = close,
+        )
+
+        null -> Unit
+    }
 }
+
+/** A dialog about the open list. */
+private enum class ListDialog { NEW, RENAME, DELETE }
 
 /** What's still to buy under a header per category, then what's in the cart. */
 @Composable

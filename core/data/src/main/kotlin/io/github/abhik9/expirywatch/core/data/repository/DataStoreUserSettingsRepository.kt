@@ -58,4 +58,8 @@ internal class DataStoreUserSettingsRepository @Inject constructor(
     override suspend fun setOnlineProductLookup(enabled: Boolean) {
         dataSource.setOnlineProductLookup(enabled)
     }
+
+    override suspend fun setShoppingListId(id: Long) {
+        dataSource.setShoppingListId(id)
+    }
 }

@@ -4,9 +4,13 @@ import androidx.compose.runtime.snapshots.Snapshot
 import app.cash.turbine.test
 import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListResult
 import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.CreateShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.DeleteShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.GetShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ObserveKnownProductsUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.ObserveShoppingListSummariesUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ObserveShoppingListUseCase
+import io.github.abhik9.expirywatch.core.domain.shopping.RenameShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.SaveShoppingItemUseCase
 import io.github.abhik9.expirywatch.core.model.QuantityUnit
 import io.github.abhik9.expirywatch.core.testing.MainDispatcherRule
@@ -15,6 +19,7 @@ import io.github.abhik9.expirywatch.core.testing.TestTime
 import io.github.abhik9.expirywatch.core.testing.repository.FakeCategoryRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeItemRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeShoppingRepository
+import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepository
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
@@ -37,19 +42,25 @@ class ShoppingViewModelTest {
     private val items = FakeItemRepository(
         listOf(TestData.item(id = 1, name = "Milk"), TestData.item(id = 2, name = "Mint tea", category = null)),
     )
-    private val getShoppingList = GetShoppingListUseCase(shopping, "Shopping list", TestTime.clock)
+    private val settings = FakeUserSettingsRepository()
+    private val getShoppingList = GetShoppingListUseCase(shopping, settings, "Shopping list", TestTime.clock)
     private val observeKnownProducts = ObserveKnownProductsUseCase(shopping, items, TestTime.clock)
 
     // Made on first use in a test, once the rule has set the main dispatcher its scope runs on.
     private val viewModel by lazy {
         ShoppingViewModel(
-            observeShoppingList = ObserveShoppingListUseCase(shopping, getShoppingList),
+            observeShoppingList = ObserveShoppingListUseCase(shopping, settings, getShoppingList),
+            observeShoppingListSummaries = ObserveShoppingListSummariesUseCase(shopping),
             observeKnownProducts = observeKnownProducts,
             categoryRepository = FakeCategoryRepository(listOf(TestData.dairy, TestData.produce)),
             getShoppingList = getShoppingList,
             addToShoppingList = AddToShoppingListUseCase(shopping, observeKnownProducts, TestTime.clock),
             saveShoppingItem = SaveShoppingItemUseCase(shopping, TestTime.clock),
+            createShoppingList = CreateShoppingListUseCase(shopping, settings, TestTime.clock),
+            renameShoppingList = RenameShoppingListUseCase(shopping),
+            deleteShoppingList = DeleteShoppingListUseCase(shopping, settings),
             shoppingRepository = shopping,
+            settingsRepository = settings,
             clock = TestTime.clock,
         )
     }
@@ -189,5 +200,34 @@ class ShoppingViewModelTest {
             viewModel.undoRemove(bread)
             assertEquals(listOf(bread), awaitState { it.overview.toBuyCount == 1 }.overview.aisles.single().items)
         }
+    }
+
+    @Test
+    fun switchesBetweenListsAndManagesThem() = runTest {
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        type("Milk")
+        viewModel.add()
+        awaitState { it.overview.toBuyCount == 1 }
+
+        viewModel.createList("Pharmacy")
+        val pharmacy = awaitState { it.overview.list.name == "Pharmacy" }
+        assertTrue(pharmacy.overview.isEmpty)
+        assertEquals(
+            listOf("Shopping list" to 1, "Pharmacy" to 0),
+            pharmacy.lists.map { it.list.name to it.toBuyCount },
+        )
+        type("Plasters")
+        viewModel.add()
+        awaitState { it.overview.list.name == "Pharmacy" && it.overview.toBuyCount == 1 }
+
+        viewModel.renameList(pharmacy.overview.list.id, "Chemist")
+        awaitState { it.overview.list.name == "Chemist" }
+
+        viewModel.switchToList(pharmacy.lists.first().list.id)
+        val groceries = awaitState { it.overview.list.name == "Shopping list" }
+        assertEquals("Milk", groceries.overview.aisles.single().items.single().name)
+
+        viewModel.deleteList(pharmacy.overview.list.id)
+        assertEquals(listOf("Shopping list"), awaitState { it.lists.size == 1 }.lists.map { it.list.name })
     }
 }

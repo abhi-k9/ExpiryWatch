@@ -38,4 +38,22 @@
     <string name="feature_shopping_note_hint">Like “the large pack” or “lactose-free”</string>
     <string name="feature_shopping_save">Save</string>
     <string name="feature_shopping_remove">Remove</string>
+
+    <!-- Managing several lists, such as one for groceries and one for the pharmacy. -->
+    <string name="feature_shopping_switch_list">Switch list</string>
+    <string name="feature_shopping_more">More options</string>
+    <string name="feature_shopping_new_list">New list</string>
+    <string name="feature_shopping_rename_list">Rename list</string>
+    <string name="feature_shopping_delete_list">Delete list</string>
+    <string name="feature_shopping_list_name_hint">Like “Groceries” or “Pharmacy”</string>
+    <string name="feature_shopping_create">Create</string>
+    <string name="feature_shopping_rename">Rename</string>
+    <string name="feature_shopping_cancel">Cancel</string>
+    <string name="feature_shopping_delete">Delete</string>
+    <string name="feature_shopping_delete_list_title">Delete “%s”?</string>
+    <plurals name="feature_shopping_delete_list_items">
+        <item quantity="one">The %d item on it is deleted too.</item>
+        <item quantity="other">The %d items on it are deleted too.</item>
+    </plurals>
+    <string name="feature_shopping_delete_list_empty">There\'s nothing on it.</string>
 </resources>

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
 import io.github.abhik9.expirywatch.core.model.ProductGrouping
@@ -55,6 +56,8 @@ class UserSettingsDataSource @Inject constructor(
 
     suspend fun setOnlineProductLookup(enabled: Boolean) = dataStore.edit { it[Keys.ONLINE_PRODUCT_LOOKUP] = enabled }
 
+    suspend fun setShoppingListId(id: Long) = dataStore.edit { it[Keys.SHOPPING_LIST_ID] = id }
+
     private fun Preferences.toUserSettings(): UserSettings {
         val defaults = UserSettings()
         return UserSettings(
@@ -73,6 +76,7 @@ class UserSettingsDataSource @Inject constructor(
             keepProductsTogether = this[Keys.KEEP_PRODUCTS_TOGETHER] ?: defaults.keepProductsTogether,
             remindAboutExpired = this[Keys.REMIND_ABOUT_EXPIRED] ?: defaults.remindAboutExpired,
             onlineProductLookup = this[Keys.ONLINE_PRODUCT_LOOKUP] ?: defaults.onlineProductLookup,
+            shoppingListId = this[Keys.SHOPPING_LIST_ID] ?: defaults.shoppingListId,
         )
     }
 
@@ -91,6 +95,7 @@ class UserSettingsDataSource @Inject constructor(
         val KEEP_PRODUCTS_TOGETHER = booleanPreferencesKey("keep_products_together")
         val REMIND_ABOUT_EXPIRED = booleanPreferencesKey("remind_about_expired")
         val ONLINE_PRODUCT_LOOKUP = booleanPreferencesKey("online_product_lookup")
+        val SHOPPING_LIST_ID = longPreferencesKey("shopping_list_id")
     }
 
     private companion object {

@@ -3,6 +3,7 @@ package io.github.abhik9.expirywatch.core.database
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import io.github.abhik9.expirywatch.core.database.dao.ShoppingListCount
 import io.github.abhik9.expirywatch.core.database.model.CategoryEntity
 import io.github.abhik9.expirywatch.core.database.model.LocationEntity
 import io.github.abhik9.expirywatch.core.database.model.ShoppingHistoryEntity
@@ -84,6 +85,21 @@ class ShoppingDaoTest {
         assertEquals(listOf("Pharmacy"), dao.getLists().map { it.name })
         assertTrue(dao.getItems(groceries).isEmpty())
         assertEquals(listOf("Plasters"), dao.getItems(pharmacy).map { it.item.name })
+    }
+
+    @Test
+    fun countsWhatIsLeftToBuyOnEachList() = runTest {
+        val groceries = dao.insertList(ShoppingListEntity(name = "Groceries", createdAt = now))
+        val pharmacy = dao.insertList(ShoppingListEntity(name = "Pharmacy", createdAt = now))
+        dao.insertList(ShoppingListEntity(name = "Hardware", createdAt = now))
+        dao.insertItem(item(groceries, "Milk"))
+        dao.insertItem(item(groceries, "Bread"))
+        dao.insertItem(item(pharmacy, "Plasters").copy(checkedAt = now))
+
+        assertEquals(
+            listOf(ShoppingListCount(groceries, 2)),
+            dao.observeToBuyCounts().first(),
+        )
     }
 
     @Test

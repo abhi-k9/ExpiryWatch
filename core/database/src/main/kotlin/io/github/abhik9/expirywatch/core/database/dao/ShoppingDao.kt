@@ -1,5 +1,6 @@
 package io.github.abhik9.expirywatch.core.database.dao
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -66,9 +67,18 @@ interface ShoppingDao {
     @Upsert
     suspend fun upsertHistory(entry: ShoppingHistoryEntity)
 
+    /** How many items are still to buy on each list that has any. */
+    @Query("SELECT list_id, COUNT(*) AS count FROM shopping_items WHERE checked_at IS NULL GROUP BY list_id")
+    fun observeToBuyCounts(): Flow<List<ShoppingListCount>>
+
     @Query("SELECT COUNT(*) FROM shopping_lists")
     suspend fun countLists(): Int
 
     @Query("SELECT COUNT(*) FROM shopping_items")
     suspend fun countItems(): Int
 }
+
+data class ShoppingListCount(
+    @ColumnInfo(name = "list_id") val listId: Long,
+    val count: Int,
+)

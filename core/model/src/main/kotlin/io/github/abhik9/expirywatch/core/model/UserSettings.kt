@@ -23,6 +23,8 @@ data class UserSettings(
     val remindAboutExpired: Boolean = true,
     /** Look up unknown barcodes in the online product catalog. */
     val onlineProductLookup: Boolean = true,
+    /** The shopping list last opened; `null` for the first one. */
+    val shoppingListId: Long? = null,
 ) {
     companion object {
         const val DEFAULT_EXPIRING_SOON_DAYS = 3

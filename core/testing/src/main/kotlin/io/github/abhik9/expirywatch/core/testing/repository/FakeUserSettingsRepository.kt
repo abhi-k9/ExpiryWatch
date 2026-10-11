@@ -42,4 +42,6 @@ class FakeUserSettingsRepository(initial: UserSettings = UserSettings()) : UserS
 
     override suspend fun setOnlineProductLookup(enabled: Boolean) =
         state.update { it.copy(onlineProductLookup = enabled) }
+
+    override suspend fun setShoppingListId(id: Long) = state.update { it.copy(shoppingListId = id) }
 }

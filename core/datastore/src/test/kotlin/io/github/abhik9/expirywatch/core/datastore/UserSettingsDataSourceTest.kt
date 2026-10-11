@@ -47,6 +47,7 @@ class UserSettingsDataSourceTest {
         dataSource.setKeepProductsTogether(true)
         dataSource.setRemindAboutExpired(false)
         dataSource.setOnlineProductLookup(false)
+        dataSource.setShoppingListId(7)
 
         assertEquals(
             UserSettings(
@@ -61,6 +62,7 @@ class UserSettingsDataSourceTest {
                 keepProductsTogether = true,
                 remindAboutExpired = false,
                 onlineProductLookup = false,
+                shoppingListId = 7,
             ),
             dataSource.settings.first(),
         )
