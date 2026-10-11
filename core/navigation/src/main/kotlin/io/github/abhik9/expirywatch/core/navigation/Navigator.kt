@@ -5,8 +5,8 @@ import io.github.abhik9.expirywatch.core.common.navigation.DeepLink
 
 /**
  * Moves around a single back stack whose bottom entry is always the item list. The other
- * top-level screens (insights, settings) sit directly on top of it, so Back from them returns to
- * the list, as users expect.
+ * top-level screens (shopping list, insights, settings) sit directly on top of it, so Back from
+ * them returns to the item list, as users expect.
  */
 class Navigator(private val backStack: MutableList<NavKey>) {
     init {
@@ -15,7 +15,7 @@ class Navigator(private val backStack: MutableList<NavKey>) {
 
     val currentKey: NavKey get() = backStack.last()
 
-    /** The top-level screen the user is in: the last list, insights or settings key on the stack. */
+    /** The top-level screen the user is in: the last top-level key on the stack. */
     val currentTopLevelKey: NavKey get() = backStack.last { isTopLevel(it) }
 
     fun navigate(key: NavKey) {
@@ -56,6 +56,7 @@ class Navigator(private val backStack: MutableList<NavKey>) {
     }
 
     companion object {
-        fun isTopLevel(key: NavKey): Boolean = key is ItemsNavKey || key == InsightsNavKey || key == SettingsNavKey
+        fun isTopLevel(key: NavKey): Boolean =
+            key is ItemsNavKey || key == ShoppingNavKey || key == InsightsNavKey || key == SettingsNavKey
     }
 }

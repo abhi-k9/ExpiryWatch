@@ -54,6 +54,7 @@ include(":feature:editor")
 include(":feature:insights")
 include(":feature:items")
 include(":feature:settings")
+include(":feature:shopping")
 include(":feature:widget")
 
 check(JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17)) {

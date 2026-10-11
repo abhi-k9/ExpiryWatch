@@ -99,6 +99,7 @@ dependencies {
     implementation(projects.feature.insights)
     implementation(projects.feature.items)
     implementation(projects.feature.settings)
+    implementation(projects.feature.shopping)
     implementation(projects.feature.widget)
 
     "playImplementation"(projects.core.scannerMlkit)

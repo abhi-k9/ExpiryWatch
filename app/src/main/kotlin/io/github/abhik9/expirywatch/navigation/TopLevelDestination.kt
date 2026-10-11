@@ -5,15 +5,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.NavKey
 import io.github.abhik9.expirywatch.R
 import io.github.abhik9.expirywatch.core.navigation.InsightsNavKey
 import io.github.abhik9.expirywatch.core.navigation.ItemsNavKey
 import io.github.abhik9.expirywatch.core.navigation.SettingsNavKey
+import io.github.abhik9.expirywatch.core.navigation.ShoppingNavKey
 
 /** The screens reachable from the navigation bar. */
 enum class TopLevelDestination(
@@ -23,6 +26,7 @@ enum class TopLevelDestination(
     @param:StringRes val label: Int,
 ) {
     ITEMS(ItemsNavKey(), Icons.Filled.Inventory2, Icons.Outlined.Inventory2, R.string.nav_items),
+    SHOPPING(ShoppingNavKey, Icons.Filled.ShoppingCart, Icons.Outlined.ShoppingCart, R.string.nav_shopping),
     INSIGHTS(InsightsNavKey, Icons.Filled.Insights, Icons.Outlined.Insights, R.string.nav_insights),
     SETTINGS(SettingsNavKey, Icons.Filled.Settings, Icons.Outlined.Settings, R.string.nav_settings),
     ;

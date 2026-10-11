@@ -9,6 +9,9 @@ import kotlinx.serialization.Serializable
 data class ItemsNavKey(val status: ExpiryStatus? = null) : NavKey
 
 @Serializable
+data object ShoppingNavKey : NavKey
+
+@Serializable
 data object InsightsNavKey : NavKey
 
 @Serializable

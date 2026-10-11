@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The name of the list made the first time the shopping list is opened. -->
+    <string name="feature_shopping_default_list_name">Shopping list</string>
+    <string name="feature_shopping_add_hint">Add an item</string>
+    <string name="feature_shopping_add">Add</string>
+    <string name="feature_shopping_amount_tip">Start with an amount, like “2 milk” or “500 g flour”</string>
+    <!-- Under the add field while typing, what will be added, e.g. "flour · 2 kg". -->
+    <string name="feature_shopping_preview">%1$s · %2$s</string>
+    <!-- Shown under the add field once something is added, e.g. "Added Milk to 🧀 Dairy & eggs". -->
+    <string name="feature_shopping_added">Added %1$s</string>
+    <string name="feature_shopping_added_to">Added %1$s to %2$s</string>
+    <!-- E.g. "Eggs was already on the list, now 8 pcs". -->
+    <string name="feature_shopping_already_on_list">%1$s was already on the list, now %2$s</string>
+    <string name="feature_shopping_back_on_list">%1$s is back on the list</string>
+    <string name="feature_shopping_no_category">No category</string>
+    <!-- Section header for the items already picked up, e.g. "In the cart · 3". -->
+    <string name="feature_shopping_in_cart">In the cart · %d</string>
+    <string name="feature_shopping_clear_cart">Clear</string>
+    <plurals name="feature_shopping_cart_cleared">
+        <item quantity="one">Removed %d item from the cart</item>
+        <item quantity="other">Removed %d items from the cart</item>
+    </plurals>
+    <string name="feature_shopping_undo">Undo</string>
+    <string name="feature_shopping_empty_title">Nothing to buy yet</string>
+    <string name="feature_shopping_empty_message">Type what you need above. Everything you add is remembered and sorted by category, so next time a few letters are enough.</string>
+</resources>

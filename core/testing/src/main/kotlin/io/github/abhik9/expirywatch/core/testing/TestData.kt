@@ -2,6 +2,8 @@ package io.github.abhik9.expirywatch.core.testing
 
 import io.github.abhik9.expirywatch.core.model.Category
 import io.github.abhik9.expirywatch.core.model.Item
+import io.github.abhik9.expirywatch.core.model.QuantityUnit
+import io.github.abhik9.expirywatch.core.model.ShoppingItem
 import io.github.abhik9.expirywatch.core.model.StorageLocation
 import java.time.Clock
 import java.time.Instant
@@ -36,5 +38,24 @@ object TestData {
         expiryDate = today.plusDays(expiresInDays),
         createdAt = TestTime.now,
         updatedAt = TestTime.now,
+    )
+
+    fun shoppingItem(
+        id: Long = 0,
+        name: String = "Milk",
+        listId: Long = 1,
+        category: Category? = dairy,
+        quantity: Double = 1.0,
+        unit: QuantityUnit = QuantityUnit.PIECES,
+        checkedAt: Instant? = null,
+    ) = ShoppingItem(
+        id = id,
+        listId = listId,
+        name = name,
+        category = category,
+        quantity = quantity,
+        unit = unit,
+        checkedAt = checkedAt,
+        createdAt = TestTime.now,
     )
 }

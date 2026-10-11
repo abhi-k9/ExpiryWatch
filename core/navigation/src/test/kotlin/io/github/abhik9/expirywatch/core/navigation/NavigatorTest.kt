@@ -20,6 +20,8 @@ class NavigatorTest {
 
     @Test
     fun topLevelScreensSitOnTopOfTheList() {
+        navigator.navigate(ShoppingNavKey)
+        assertEquals(listOf(ItemsNavKey(), ShoppingNavKey), backStack)
         navigator.navigate(InsightsNavKey)
         navigator.navigate(SettingsNavKey)
 
