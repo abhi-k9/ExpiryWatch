@@ -72,7 +72,16 @@ class MainActivity : ComponentActivity() {
         AppShortcuts.reportUsage(this, intent)
     }
 
-    private fun Intent?.deepLink(): DeepLink? = this?.dataString?.let(DeepLink::parse)
+    private fun Intent?.deepLink(): DeepLink? = when {
+        this == null -> null
+
+        // Text shared from another app, such as a shopping list or a recipe's ingredients.
+        action == Intent.ACTION_SEND -> getStringExtra(Intent.EXTRA_TEXT)
+            ?.takeIf { it.isNotBlank() }
+            ?.let { DeepLink.AddToShoppingList(it) }
+
+        else -> dataString?.let(DeepLink::parse)
+    }
 
     private companion object {
         // The default scrims used by enableEdgeToEdge for three-button navigation.

@@ -24,6 +24,12 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Text shared from other apps goes on the shopping list. -->
+            <intent-filter android:label="@string/share_to_shopping_list">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
             <!-- Deep links from notifications, the widget and launcher shortcuts. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

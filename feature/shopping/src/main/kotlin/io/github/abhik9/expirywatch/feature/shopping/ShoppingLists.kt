@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -124,10 +126,15 @@ internal fun ListSwitcher(
     }
 }
 
-/** More things to do with the open list. Deleting is left out when it's the only list. */
+/**
+ * More things to do with the open list. Sharing is left out when there's nothing to buy, and
+ * deleting when it's the only list.
+ */
 @Composable
 internal fun ListMenu(
     canDelete: Boolean,
+    onShare: (() -> Unit)?,
+    onAddFromText: () -> Unit,
     onArrangeAisles: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
@@ -138,6 +145,24 @@ internal fun ListMenu(
             Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.feature_shopping_more))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            if (onShare != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.feature_shopping_share_list)) },
+                    onClick = {
+                        expanded = false
+                        onShare()
+                    },
+                    leadingIcon = { Icon(Icons.Outlined.Share, contentDescription = null) },
+                )
+            }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.feature_shopping_add_from_text)) },
+                onClick = {
+                    expanded = false
+                    onAddFromText()
+                },
+                leadingIcon = { Icon(Icons.AutoMirrored.Outlined.PlaylistAdd, contentDescription = null) },
+            )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.feature_shopping_arrange_aisles)) },
                 onClick = {

@@ -100,4 +100,16 @@
     </plurals>
     <string name="feature_shopping_show_items">Show items</string>
     <string name="feature_shopping_done">Done</string>
+
+    <!-- Sharing a list as text, and adding items written as text, such as a list shared from another app. -->
+    <string name="feature_shopping_share_list">Share list</string>
+    <string name="feature_shopping_add_from_text">Add from text</string>
+    <string name="feature_shopping_text">Text</string>
+    <string name="feature_shopping_text_hint">One item per line, like “2 milk”</string>
+    <string name="feature_shopping_add_to_label">Add to</string>
+    <plurals name="feature_shopping_items_to_add">
+        <item quantity="one">%d item to add</item>
+        <item quantity="other">%d items to add</item>
+    </plurals>
+    <string name="feature_shopping_nothing_to_add">Nothing to add yet</string>
 </resources>

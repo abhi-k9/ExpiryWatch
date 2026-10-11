@@ -38,6 +38,8 @@ class Navigator(private val backStack: MutableList<NavKey>) {
             is DeepLink.Items -> resetTo(ItemsNavKey(deepLink.status))
             is DeepLink.EditItem -> resetTo(ItemsNavKey(), EditorNavKey(itemId = deepLink.itemId))
             is DeepLink.AddItem -> resetTo(ItemsNavKey(), EditorNavKey(scanBarcode = deepLink.scanBarcode))
+            DeepLink.Shopping -> resetTo(ItemsNavKey(), ShoppingNavKey)
+            is DeepLink.AddToShoppingList -> resetTo(ItemsNavKey(), ShoppingNavKey, AddFromTextNavKey(deepLink.text))
         }
     }
 

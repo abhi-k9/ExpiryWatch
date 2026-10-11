@@ -1,5 +1,7 @@
 package io.github.abhik9.expirywatch.feature.shopping
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,6 +31,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
@@ -40,11 +43,13 @@ import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListResult
 import io.github.abhik9.expirywatch.core.domain.shopping.KnownProduct
 import io.github.abhik9.expirywatch.core.domain.shopping.RestockSuggestion
 import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingListOverview
+import io.github.abhik9.expirywatch.core.domain.shopping.ShoppingListText
 import io.github.abhik9.expirywatch.core.model.ShoppingItem
 
 @Composable
 internal fun ShoppingRoute(
     onPutAway: (listId: Long) -> Unit,
+    onAddFromText: () -> Unit,
     viewModel: ShoppingViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -90,6 +95,7 @@ internal fun ShoppingRoute(
         onRemove = viewModel::remove,
         onClearCart = viewModel::clearCart,
         onPutAway = onPutAway,
+        onAddFromText = onAddFromText,
         onSwitchList = viewModel::switchToList,
         onCreateList = viewModel::createList,
         onRenameList = viewModel::renameList,
@@ -131,6 +137,7 @@ internal fun ShoppingScreen(
     onRemove: (ShoppingItem) -> Unit,
     onClearCart: () -> Unit,
     onPutAway: (listId: Long) -> Unit,
+    onAddFromText: () -> Unit,
     onSwitchList: (Long) -> Unit,
     onCreateList: (String) -> Unit,
     onRenameList: (Long, String) -> Unit,
@@ -142,6 +149,8 @@ internal fun ShoppingScreen(
     modifier: Modifier = Modifier,
 ) {
     var listDialog by rememberSaveable { mutableStateOf<ListDialog?>(null) }
+    val context = LocalContext.current
+    val noCategory = stringResource(R.string.feature_shopping_no_category)
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -160,6 +169,17 @@ internal fun ShoppingScreen(
                     if (uiState is ShoppingUiState.Success) {
                         ListMenu(
                             canDelete = uiState.lists.size > 1,
+                            onShare = if (uiState.overview.toBuyCount > 0) {
+                                {
+                                    context.shareText(
+                                        uiState.overview.list.name,
+                                        ShoppingListText.format(uiState.overview, noCategory),
+                                    )
+                                }
+                            } else {
+                                null
+                            },
+                            onAddFromText = onAddFromText,
                             onArrangeAisles = { listDialog = ListDialog.AISLES },
                             onRename = { listDialog = ListDialog.RENAME },
                             onDelete = { listDialog = ListDialog.DELETE },
@@ -353,4 +373,13 @@ private fun ShoppingItems(
             }
         }
     }
+}
+
+/** Offers [text] to other apps, such as a messenger, through the system's share sheet. */
+private fun Context.shareText(subject: String, text: String) {
+    val send = Intent(Intent.ACTION_SEND)
+        .setType("text/plain")
+        .putExtra(Intent.EXTRA_SUBJECT, subject)
+        .putExtra(Intent.EXTRA_TEXT, text)
+    startActivity(Intent.createChooser(send, null))
 }

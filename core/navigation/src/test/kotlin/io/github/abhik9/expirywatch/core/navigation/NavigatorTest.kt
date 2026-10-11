@@ -63,5 +63,12 @@ class NavigatorTest {
 
         navigator.handleDeepLink(DeepLink.AddItem(scanBarcode = true))
         assertEquals(listOf(ItemsNavKey(), EditorNavKey(scanBarcode = true)), backStack)
+
+        navigator.handleDeepLink(DeepLink.Shopping)
+        assertEquals(listOf(ItemsNavKey(), ShoppingNavKey), backStack)
+
+        navigator.handleDeepLink(DeepLink.AddToShoppingList("2 milk"))
+        assertEquals(listOf(ItemsNavKey(), ShoppingNavKey, AddFromTextNavKey("2 milk")), backStack)
+        assertEquals(ShoppingNavKey, navigator.currentTopLevelKey)
     }
 }

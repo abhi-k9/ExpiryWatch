@@ -15,6 +15,10 @@ data object ShoppingNavKey : NavKey
 @Serializable
 data class PutAwayNavKey(val listId: Long) : NavKey
 
+/** Adds the items written in [text] to a shopping list, such as a list shared from another app. */
+@Serializable
+data class AddFromTextNavKey(val text: String = "") : NavKey
+
 @Serializable
 data object InsightsNavKey : NavKey
 
