@@ -1,9 +1,15 @@
 name: CI
 
+# One job checks formatting, runs the unit tests, lints and builds the release APKs, so the
+# project is set up and compiled once per run rather than once per check. Changes to
+# documentation alone don't run it, and neither does a commit that already passed, as when main
+# is fast-forwarded to a branch that was checked.
 on:
   push:
     branches: [ main, "claude/**" ]
+    paths-ignore: [ "**.md" ]
   pull_request:
+    paths-ignore: [ "**.md" ]
   workflow_dispatch:
 
 concurrency:
@@ -12,12 +18,46 @@ concurrency:
 
 permissions:
   contents: read
+  # To look up earlier runs of the same commit.
+  actions: read
 
 jobs:
-  test:
-    name: Format and unit tests
+  gate:
+    name: Decide whether to check
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 5
+    outputs:
+      check: ${{ steps.decide.outputs.check }}
+    steps:
+      - id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          check=true
+          # Pushes to main and claude/** branches are checked; pull requests from those aren't again.
+          if [ "$EVENT" = pull_request ] && [ "$HEAD_REPO" = "$GITHUB_REPOSITORY" ] &&
+            [[ "$HEAD_REF" == claude/* ]]; then
+            echo "::notice::The push to this pull request's branch is checked already."
+            check=false
+          elif [ "$EVENT" = push ]; then
+            runs="repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs"
+            passed=$(gh api "$runs?head_sha=$GITHUB_SHA&status=success" --jq '.total_count' || echo 0)
+            if [ "$passed" -gt 0 ]; then
+              echo "::notice::$GITHUB_SHA already passed CI on another branch."
+              check=false
+            fi
+          fi
+          echo "check=$check" >> "$GITHUB_OUTPUT"
+
+  check:
+    name: Check and build
+    needs: gate
+    if: needs.gate.outputs.check == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -28,20 +68,17 @@ jobs:
           ./gradlew --continue
           :core:model:test :core:common:test :core:domain:test :core:network:test
           testDebugUnitTest testPlayDebugUnitTest testFossDebugUnitTest
-      - name: Upload test reports
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-reports
-          path: "**/build/reports/tests"
-
-  build:
-    name: Build APKs
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
+      - name: Check that the Room schema is committed
+        run: |
+          ./gradlew :core:database:kspDebugKotlin
+          if [ -n "$(git status --porcelain core/database/schemas)" ]; then
+            echo "::error::The Room schema changed. Commit the files below."
+            git status --porcelain core/database/schemas
+            find core/database/schemas -name '*.json' -print -exec cat {} \;
+            exit 1
+          fi
+      - name: Lint both flavors
+        run: ./gradlew --continue :app:lintPlayDebug :app:lintFossDebug
       - name: Set up release signing
         uses: ./.github/actions/release-signing
         with:
@@ -49,8 +86,8 @@ jobs:
           keystore-password: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           key-alias: ${{ secrets.RELEASE_KEY_ALIAS }}
           key-password: ${{ secrets.RELEASE_KEY_PASSWORD }}
-      - name: Build debug and release APKs of both flavors
-        run: ./gradlew --continue assemblePlayDebug assembleFossDebug assemblePlayRelease assembleFossRelease
+      - name: Build release APKs of both flavors
+        run: ./gradlew --continue assemblePlayRelease assembleFossRelease
       - name: Check that R8 kept ML Kit's components
         run: |
           # ML Kit finds its components by class name in manifest metadata and creates them by
@@ -79,37 +116,13 @@ jobs:
         with:
           name: apks
           path: app/build/outputs/apk/**/*.apk
-
-  lint:
-    name: Android Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - name: Lint both flavors
-        run: ./gradlew --continue :app:lintPlayDebug :app:lintFossDebug
-      - name: Upload lint reports
-        if: always()
+          retention-days: 7
+      - name: Upload test and lint reports
+        if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: lint-reports
-          path: app/build/reports/lint-results-*
-
-  room-schema:
-    name: Room schema is committed
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - name: Generate the database schema
-        run: ./gradlew :core:database:kspDebugKotlin
-      - name: Verify it matches the committed schema
-        run: |
-          if [ -n "$(git status --porcelain core/database/schemas)" ]; then
-            echo "::error::The Room schema changed. Commit the files below."
-            git status --porcelain core/database/schemas
-            find core/database/schemas -name '*.json' -print -exec cat {} \;
-            exit 1
-          fi
+          name: reports
+          path: |
+            **/build/reports/tests
+            app/build/reports/lint-results-*
+          retention-days: 7

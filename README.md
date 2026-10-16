@@ -141,7 +141,7 @@ build. Signing release builds and publishing releases are described in [RELEASIN
 Domain, network and navigation logic has plain JVM unit tests. Room DAOs and repositories are
 tested against an in-memory database with Robolectric, and ViewModels are tested with fakes from
 `core:testing`. The [CI workflow](.github/workflows/ci.yml) runs formatting checks, all unit
-tests, both flavors' builds and lint on every push.
+tests, lint and both flavors' release builds on every push that changes more than documentation.
 
 ## Backup file format
 
