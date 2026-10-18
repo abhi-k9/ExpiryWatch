@@ -75,7 +75,10 @@ fun DateField(
     }
 }
 
-/** Asks for a date, starting at [initialDate], up to [latestSelectableDate] when there is one. */
+/**
+ * Asks for a date, starting at [initialDate], from [earliestSelectableDate] and up to
+ * [latestSelectableDate] when there are such limits.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PickDateDialog(
@@ -83,13 +86,20 @@ fun PickDateDialog(
     onConfirm: (LocalDate) -> Unit,
     onDismiss: () -> Unit,
     latestSelectableDate: LocalDate? = null,
+    earliestSelectableDate: LocalDate? = null,
 ) {
+    val earliestMillis = earliestSelectableDate?.toUtcMillis()
     val latestMillis = latestSelectableDate?.toUtcMillis()
     val pickerState = rememberDatePickerState(
         initialSelectedDateMillis = initialDate?.toUtcMillis(),
         selectableDates = object : SelectableDates {
             override fun isSelectableDate(utcTimeMillis: Long): Boolean =
-                latestMillis == null || utcTimeMillis <= latestMillis
+                (earliestMillis == null || utcTimeMillis >= earliestMillis) &&
+                    (latestMillis == null || utcTimeMillis <= latestMillis)
+
+            override fun isSelectableYear(year: Int): Boolean =
+                (earliestSelectableDate == null || year >= earliestSelectableDate.year) &&
+                    (latestSelectableDate == null || year <= latestSelectableDate.year)
         },
     )
     DatePickerDialog(

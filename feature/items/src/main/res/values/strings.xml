@@ -31,7 +31,43 @@
     <string name="feature_items_marked_consumed">%s marked as used up</string>
     <string name="feature_items_marked_wasted">%s marked as thrown away</string>
     <string name="feature_items_undo">Undo</string>
-    <string name="feature_items_show_actions">Show actions</string>
+    <string name="feature_items_select">Select</string>
+    <plurals name="feature_items_selected">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+    <string name="feature_items_clear_selection">Clear selection</string>
+    <string name="feature_items_select_all">Select all</string>
+    <string name="feature_items_snooze_reminders">Snooze reminders</string>
+    <string name="feature_items_reminders_snoozed">Reminders snoozed</string>
+    <string name="feature_items_snoozed_until">Reminders snoozed until %1$s</string>
+    <string name="feature_items_snooze_title_one">Snooze reminders for %1$s</string>
+    <plurals name="feature_items_snooze_title_many">
+        <item quantity="one">Snooze reminders for %d item</item>
+        <item quantity="other">Snooze reminders for %d items</item>
+    </plurals>
+    <string name="feature_items_snooze_help">Snoozed items stay in your list, but the daily reminder leaves them out.</string>
+    <string name="feature_items_snooze_week">For a week</string>
+    <string name="feature_items_snooze_month">For a month</string>
+    <string name="feature_items_snooze_back_on">Reminders start again on %1$s</string>
+    <string name="feature_items_snooze_indefinitely">Until I turn them back on</string>
+    <string name="feature_items_snooze_until_date">Until a date…</string>
+    <string name="feature_items_resume_reminders">Turn reminders back on</string>
+    <string name="feature_items_snoozed_one">Reminders for %1$s snoozed until %2$s</string>
+    <plurals name="feature_items_snoozed_many">
+        <item quantity="one">Reminders for %1$d item snoozed until %2$s</item>
+        <item quantity="other">Reminders for %1$d items snoozed until %2$s</item>
+    </plurals>
+    <string name="feature_items_snoozed_one_indefinitely">Reminders for %1$s snoozed until you turn them back on</string>
+    <plurals name="feature_items_snoozed_many_indefinitely">
+        <item quantity="one">Reminders for %d item snoozed until you turn them back on</item>
+        <item quantity="other">Reminders for %d items snoozed until you turn them back on</item>
+    </plurals>
+    <string name="feature_items_resumed_one">Reminders for %1$s are back on</string>
+    <plurals name="feature_items_resumed_many">
+        <item quantity="one">Reminders for %d item are back on</item>
+        <item quantity="other">Reminders for %d items are back on</item>
+    </plurals>
     <string name="feature_items_add_to_shopping_list">Add to shopping list</string>
     <!-- On the header of the expired items, puts all of them on the shopping list. -->
     <string name="feature_items_add_expired_to_list">Add to list</string>

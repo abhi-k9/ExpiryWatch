@@ -20,12 +20,15 @@ import io.github.abhik9.expirywatch.core.domain.usecase.ItemQuery
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemsOverview
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveItemsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.RestoreItemUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeLength
+import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeRemindersUseCase
 import io.github.abhik9.expirywatch.core.model.Category
 import io.github.abhik9.expirywatch.core.model.ExpiryStatus
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.StorageLocation
+import java.time.LocalDate
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,7 +48,11 @@ sealed interface ItemsUiState {
         val query: ItemQuery,
         val categories: List<Category>,
         val locations: List<StorageLocation>,
-    ) : ItemsUiState
+        /** The ids of the listed items picked to act on together; empty when not selecting. */
+        val selection: Set<Long> = emptySet(),
+    ) : ItemsUiState {
+        val isSelecting: Boolean get() = selection.isNotEmpty()
+    }
 }
 
 /** One-off messages for the screen, such as the undo snackbar. */
@@ -53,6 +60,12 @@ sealed interface ItemsEvent {
     data class ItemFinished(val item: Item, val outcome: ItemStatus) : ItemsEvent
 
     data class PutOnShoppingList(val added: AddedToShoppingList) : ItemsEvent
+
+    /**
+     * Reminders about [before] were snoozed until [until], or turned back on when it's `null`.
+     * [before] holds the items as they were, to undo it.
+     */
+    data class RemindersSnoozed(val before: List<Item>, val until: LocalDate?) : ItemsEvent
 }
 
 @HiltViewModel(assistedFactory = ItemsViewModel.Factory::class)
@@ -65,6 +78,7 @@ class ItemsViewModel @AssistedInject constructor(
     private val finishItem: FinishItemUseCase,
     private val restoreItem: RestoreItemUseCase,
     private val addItemsToShoppingList: AddItemsToShoppingListUseCase,
+    private val snoozeReminders: SnoozeRemindersUseCase,
 ) : ViewModel() {
     /** Held as Compose state so the search field updates synchronously while typing. */
     var searchText by mutableStateOf("")
@@ -73,6 +87,9 @@ class ItemsViewModel @AssistedInject constructor(
     /** Keys of the product groups opened to show each of their items. */
     var expandedGroups by mutableStateOf(emptySet<String>())
         private set
+
+    /** The ids of the items picked to act on together; see [ItemsUiState.Success.selection]. */
+    private var selectedIds by mutableStateOf(emptySet<Long>())
 
     private val filters = MutableStateFlow(ItemQuery(status = initialStatus))
 
@@ -85,8 +102,11 @@ class ItemsViewModel @AssistedInject constructor(
         query,
         categoryRepository.observeCategories(),
         locationRepository.observeLocations(),
-    ) { overview, currentQuery, categories, locations ->
-        ItemsUiState.Success(overview, currentQuery, categories, locations)
+        snapshotFlow { selectedIds },
+    ) { overview, currentQuery, categories, locations, selected ->
+        // Items no longer listed, such as ones used up meanwhile, aren't selected any more.
+        val selection = overview.items.mapNotNullTo(mutableSetOf()) { entry -> entry.item.id.takeIf { it in selected } }
+        ItemsUiState.Success(overview, currentQuery, categories, locations, selection)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
@@ -100,16 +120,79 @@ class ItemsViewModel @AssistedInject constructor(
         searchText = text
     }
 
-    fun onStatusFilterChange(status: ExpiryStatus?) = filters.update { it.copy(status = status) }
+    // Changing what's listed starts the selection over.
+    fun onStatusFilterChange(status: ExpiryStatus?) {
+        clearSelection()
+        filters.update { it.copy(status = status) }
+    }
 
-    fun onCategoryFilterChange(categoryId: Long?) = filters.update { it.copy(categoryId = categoryId) }
+    fun onCategoryFilterChange(categoryId: Long?) {
+        clearSelection()
+        filters.update { it.copy(categoryId = categoryId) }
+    }
 
-    fun onLocationFilterChange(locationId: Long?) = filters.update { it.copy(locationId = locationId) }
+    fun onLocationFilterChange(locationId: Long?) {
+        clearSelection()
+        filters.update { it.copy(locationId = locationId) }
+    }
 
     fun clearFilters() {
+        clearSelection()
         searchText = ""
         filters.value = ItemQuery()
     }
+
+    /** Selects [items], such as all of a product group's, or unselects them when they all are. */
+    fun toggleSelection(items: List<Item>) {
+        val ids = items.map { it.id }
+        selectedIds = if (selectedIds.containsAll(ids)) selectedIds - ids.toSet() else selectedIds + ids
+    }
+
+    fun selectAll() {
+        selectedIds = listedItems().mapTo(mutableSetOf()) { it.id }
+    }
+
+    fun clearSelection() {
+        selectedIds = emptySet()
+    }
+
+    /** Leaves the selected items out of reminders for [length]. */
+    fun snoozeSelected(length: SnoozeLength) {
+        val today = (uiState.value as? ItemsUiState.Success)?.overview?.today ?: return
+        snoozeSelectedUntil(length.resumeDate(today))
+    }
+
+    /** Leaves the selected items out of reminders until [date], when they start again. */
+    fun snoozeSelectedUntil(date: LocalDate) = changeSelectedReminders(date)
+
+    /** Includes the selected items in reminders again. */
+    fun resumeSelectedReminders() = changeSelectedReminders(null)
+
+    private fun changeSelectedReminders(until: LocalDate?) {
+        val items = selectedItems()
+        clearSelection()
+        if (items.isEmpty()) return
+        viewModelScope.launch {
+            snoozeReminders(items, until)
+            _events.send(ItemsEvent.RemindersSnoozed(items, until))
+        }
+    }
+
+    fun undoSnooze(before: List<Item>) {
+        viewModelScope.launch { snoozeReminders.restore(before) }
+    }
+
+    /** Puts the products of the selected items on the shopping list in use. */
+    fun addSelectedToShoppingList() {
+        val items = selectedItems()
+        clearSelection()
+        if (items.isNotEmpty()) addToShoppingList(items)
+    }
+
+    private fun listedItems(): List<Item> =
+        (uiState.value as? ItemsUiState.Success)?.overview?.items?.map { it.item }.orEmpty()
+
+    private fun selectedItems(): List<Item> = listedItems().filter { it.id in selectedIds }
 
     fun onGroupClick(key: String) {
         expandedGroups = if (key in expandedGroups) expandedGroups - key else expandedGroups + key

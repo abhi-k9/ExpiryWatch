@@ -1,5 +1,6 @@
 package io.github.abhik9.expirywatch.feature.items
 
+import android.content.res.Resources
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,8 +34,11 @@ import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -43,17 +47,24 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.abhik9.expirywatch.core.designsystem.component.EmptyState
 import io.github.abhik9.expirywatch.core.designsystem.component.SectionHeader
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemGroup
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemQuery
+import io.github.abhik9.expirywatch.core.domain.usecase.ItemWithExpiry
+import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeLength
 import io.github.abhik9.expirywatch.core.model.ExpiryStatus
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
 import io.github.abhik9.expirywatch.core.model.ItemStatus
+import io.github.abhik9.expirywatch.core.ui.PickDateDialog
 import io.github.abhik9.expirywatch.core.ui.label
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 @Composable
 internal fun ItemsRoute(
@@ -103,6 +114,15 @@ internal fun ItemsRoute(
                     )
                     if (result == SnackbarResult.ActionPerformed) onOpenShoppingList()
                 }
+
+                is ItemsEvent.RemindersSnoozed -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = resources.snoozedMessage(event.before, event.until),
+                        actionLabel = resources.getString(R.string.feature_items_undo),
+                        withDismissAction = true,
+                    )
+                    if (result == SnackbarResult.ActionPerformed) viewModel.undoSnooze(event.before)
+                }
             }
         }
     }
@@ -124,8 +144,48 @@ internal fun ItemsRoute(
         onAddToShoppingList = viewModel::addToShoppingList,
         onAddItem = onAddItem,
         onScanItem = onScanItem,
+        onToggleSelection = viewModel::toggleSelection,
+        onSelectAll = viewModel::selectAll,
+        onClearSelection = viewModel::clearSelection,
+        onSnooze = viewModel::snoozeSelected,
+        onSnoozeUntil = viewModel::snoozeSelectedUntil,
+        onResumeReminders = viewModel::resumeSelectedReminders,
+        onAddSelectedToShoppingList = viewModel::addSelectedToShoppingList,
     )
 }
+
+/** E.g. "Reminders for Milk snoozed until 25 Oct 2026", or "Reminders for 3 items are back on". */
+private fun Resources.snoozedMessage(items: List<Item>, until: LocalDate?): String {
+    val name = items.singleOrNull()?.name
+    val count = items.size
+    return when (until) {
+        null -> if (name != null) {
+            getString(R.string.feature_items_resumed_one, name)
+        } else {
+            getQuantityString(R.plurals.feature_items_resumed_many, count, count)
+        }
+
+        Item.SNOOZED_INDEFINITELY -> if (name != null) {
+            getString(R.string.feature_items_snoozed_one_indefinitely, name)
+        } else {
+            getQuantityString(R.plurals.feature_items_snoozed_many_indefinitely, count, count)
+        }
+
+        else -> {
+            val date = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+                .withLocale(configuration.locales[0])
+                .format(until)
+            if (name != null) {
+                getString(R.string.feature_items_snoozed_one, name, date)
+            } else {
+                getQuantityString(R.plurals.feature_items_snoozed_many, count, count, date)
+            }
+        }
+    }
+}
+
+/** What's open for snoozing the selected items' reminders. */
+private enum class SnoozeStep { OPTIONS, DATE }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -146,35 +206,62 @@ internal fun ItemsScreen(
     onAddToShoppingList: (List<Item>) -> Unit,
     onAddItem: () -> Unit,
     onScanItem: () -> Unit,
+    onToggleSelection: (List<Item>) -> Unit,
+    onSelectAll: () -> Unit,
+    onClearSelection: () -> Unit,
+    onSnooze: (SnoozeLength) -> Unit,
+    onSnoozeUntil: (LocalDate) -> Unit,
+    onResumeReminders: () -> Unit,
+    onAddSelectedToShoppingList: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
-    val sortOrder = (uiState as? ItemsUiState.Success)?.overview?.sortOrder ?: ItemSortOrder.EXPIRY_SOONEST
+    val success = uiState as? ItemsUiState.Success
+    val sortOrder = success?.overview?.sortOrder ?: ItemSortOrder.EXPIRY_SOONEST
+    val selection = success?.selection.orEmpty()
+    val selecting = selection.isNotEmpty()
+    var snoozeStep by rememberSaveable { mutableStateOf<SnoozeStep?>(null) }
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            ItemsTopBar(
-                searchText = searchText,
-                onSearchTextChange = onSearchTextChange,
-                sortOrder = sortOrder,
-                onSortOrderChange = onSortOrderChange,
-                scrollBehavior = scrollBehavior,
-            )
+            if (selecting) {
+                SelectionTopBar(
+                    count = selection.size,
+                    onClose = onClearSelection,
+                    onSnooze = { snoozeStep = SnoozeStep.OPTIONS },
+                    onAddToShoppingList = onAddSelectedToShoppingList,
+                    onSelectAll = onSelectAll,
+                    scrollBehavior = scrollBehavior,
+                )
+            } else {
+                ItemsTopBar(
+                    searchText = searchText,
+                    onSearchTextChange = onSearchTextChange,
+                    sortOrder = sortOrder,
+                    onSortOrderChange = onSortOrderChange,
+                    scrollBehavior = scrollBehavior,
+                )
+            }
         },
         floatingActionButton = {
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                SmallFloatingActionButton(onClick = onScanItem) {
-                    Icon(Icons.Outlined.QrCodeScanner, contentDescription = stringResource(R.string.feature_items_scan))
+            if (!selecting) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    SmallFloatingActionButton(onClick = onScanItem) {
+                        Icon(
+                            Icons.Outlined.QrCodeScanner,
+                            contentDescription = stringResource(R.string.feature_items_scan),
+                        )
+                    }
+                    ExtendedFloatingActionButton(
+                        onClick = onAddItem,
+                        icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                        text = { Text(stringResource(R.string.feature_items_add_item)) },
+                    )
                 }
-                ExtendedFloatingActionButton(
-                    onClick = onAddItem,
-                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                    text = { Text(stringResource(R.string.feature_items_add_item)) },
-                )
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -202,8 +289,42 @@ internal fun ItemsScreen(
                 onFinish = onFinish,
                 onAddToShoppingList = onAddToShoppingList,
                 onAddItem = onAddItem,
+                onToggleSelection = onToggleSelection,
             )
         }
+    }
+
+    if (success == null || !selecting) return
+    val today = success.overview.today
+    val selected = success.overview.items.map { it.item }.filter { it.id in selection }
+    val close = { snoozeStep = null }
+    when (snoozeStep) {
+        SnoozeStep.OPTIONS -> SnoozeSheet(
+            items = selected,
+            today = today,
+            onSnooze = { length ->
+                close()
+                onSnooze(length)
+            },
+            onPickDate = { snoozeStep = SnoozeStep.DATE },
+            onResume = {
+                close()
+                onResumeReminders()
+            },
+            onDismiss = close,
+        )
+
+        SnoozeStep.DATE -> PickDateDialog(
+            initialDate = SnoozeLength.ONE_WEEK.resumeDate(today),
+            earliestSelectableDate = today.plusDays(1),
+            onConfirm = { date ->
+                close()
+                onSnoozeUntil(date)
+            },
+            onDismiss = close,
+        )
+
+        null -> Unit
     }
 }
 
@@ -221,6 +342,7 @@ private fun ItemsContent(
     onFinish: (Item, ItemStatus) -> Unit,
     onAddToShoppingList: (List<Item>) -> Unit,
     onAddItem: () -> Unit,
+    onToggleSelection: (List<Item>) -> Unit,
 ) {
     val overview = state.overview
     if (overview.totalActiveCount == 0 && !state.query.hasFilters) {
@@ -305,7 +427,17 @@ private fun ItemsContent(
                         }
                     }
                 }
-                itemGroups(section.groups, expandedGroups, onGroupClick, onItemClick, onFinish, onAddToShoppingList)
+                itemGroups(
+                    groups = section.groups,
+                    expandedGroups = expandedGroups,
+                    selection = state.selection,
+                    today = overview.today,
+                    onGroupClick = onGroupClick,
+                    onItemClick = onItemClick,
+                    onFinish = onFinish,
+                    onAddToShoppingList = onAddToShoppingList,
+                    onToggleSelection = onToggleSelection,
+                )
             }
         }
     }
@@ -313,31 +445,48 @@ private fun ItemsContent(
 
 /**
  * Shows a product with one item as that item, and one with several as a row that opens to show
- * each of them, soonest to expire first.
+ * each of them, soonest to expire first. A long press selects an item, or all of a product's
+ * items; while there's a [selection], tapping selects or unselects them too.
  */
 private fun LazyListScope.itemGroups(
     groups: List<ItemGroup>,
     expandedGroups: Set<String>,
+    selection: Set<Long>,
+    today: LocalDate,
     onGroupClick: (String) -> Unit,
     onItemClick: (Item) -> Unit,
     onFinish: (Item, ItemStatus) -> Unit,
     onAddToShoppingList: (List<Item>) -> Unit,
+    onToggleSelection: (List<Item>) -> Unit,
 ) {
+    val selecting = selection.isNotEmpty()
+    fun ItemWithExpiry.selectionState() = if (selecting) ToggleableState(item.id in selection) else null
+    fun ItemWithExpiry.snoozedUntil() = item.remindersSnoozedUntil?.takeIf { item.isReminderSnoozed(today) }
+
     groups.forEach { group ->
         val single = group.entries.singleOrNull()
         if (single != null) {
             item(key = single.item.id, contentType = "item") {
-                val addToShoppingList = { onAddToShoppingList(listOf(single.item)) }
+                val select = { onToggleSelection(listOf(single.item)) }
                 SwipeableItemRow(
                     onFinish = { outcome -> onFinish(single.item, outcome) },
-                    onAddToShoppingList = addToShoppingList,
+                    onAddToShoppingList = { onAddToShoppingList(listOf(single.item)) },
                     modifier = Modifier
                         .animateItem()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
+                    enabled = !selecting,
                 ) {
-                    ItemMenuBox(onAddToShoppingList = addToShoppingList) { openMenu ->
-                        ItemRow(entry = single, onClick = { onItemClick(single.item) }, onLongClick = openMenu)
-                    }
+                    ItemRow(
+                        entry = single,
+                        onClick = if (selecting) {
+                            select
+                        } else {
+                            { onItemClick(single.item) }
+                        },
+                        onLongClick = select,
+                        selection = single.selectionState(),
+                        snoozedUntil = single.snoozedUntil(),
+                    )
                 }
             }
             return@forEach
@@ -345,52 +494,66 @@ private fun LazyListScope.itemGroups(
 
         val expanded = group.key in expandedGroups
         item(key = "group-${group.key}", contentType = "group") {
-            val addToShoppingList = { onAddToShoppingList(group.entries.map { it.item }) }
+            val items = group.entries.map { it.item }
+            val select = { onToggleSelection(items) }
+            val selectedCount = items.count { it.id in selection }
             val shoppingLabel = stringResource(R.string.feature_items_add_to_shopping_list)
-            ItemMenuBox(
-                onAddToShoppingList = addToShoppingList,
+            ItemGroupRow(
+                group = group,
+                expanded = expanded,
+                onClick = if (selecting) {
+                    select
+                } else {
+                    { onGroupClick(group.key) }
+                },
+                onLongClick = select,
+                selection = when {
+                    !selecting -> null
+                    selectedCount == items.size -> ToggleableState.On
+                    selectedCount > 0 -> ToggleableState.Indeterminate
+                    else -> ToggleableState.Off
+                },
+                snoozed = group.entries.all { it.item.isReminderSnoozed(today) },
                 modifier = Modifier
                     .animateItem()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-            ) { openMenu ->
-                ItemGroupRow(
-                    group = group,
-                    expanded = expanded,
-                    onClick = { onGroupClick(group.key) },
-                    onLongClick = openMenu,
-                    modifier = Modifier.semantics {
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .semantics {
                         customActions = listOf(
                             CustomAccessibilityAction(shoppingLabel) {
-                                addToShoppingList()
+                                onAddToShoppingList(items)
                                 true
                             },
                         )
                     },
-                )
-            }
+            )
         }
         if (expanded) {
             // Only what tells the items apart: shared details are on the group's row.
             val showBrand = group.entries.distinctBy { it.item.brand }.size > 1
             val showLocation = group.entries.distinctBy { it.item.location }.size > 1
             items(group.entries, key = { it.item.id }, contentType = { "group-item" }) { entry ->
-                val addToShoppingList = { onAddToShoppingList(listOf(entry.item)) }
+                val select = { onToggleSelection(listOf(entry.item)) }
                 SwipeableItemRow(
                     onFinish = { outcome -> onFinish(entry.item, outcome) },
-                    onAddToShoppingList = addToShoppingList,
+                    onAddToShoppingList = { onAddToShoppingList(listOf(entry.item)) },
                     modifier = Modifier
                         .animateItem()
                         .padding(start = 40.dp, end = 16.dp, top = 2.dp, bottom = 2.dp),
+                    enabled = !selecting,
                 ) {
-                    ItemMenuBox(onAddToShoppingList = addToShoppingList) { openMenu ->
-                        GroupEntryRow(
-                            entry = entry,
-                            showBrand = showBrand,
-                            showLocation = showLocation,
-                            onClick = { onItemClick(entry.item) },
-                            onLongClick = openMenu,
-                        )
-                    }
+                    GroupEntryRow(
+                        entry = entry,
+                        showBrand = showBrand,
+                        showLocation = showLocation,
+                        onClick = if (selecting) {
+                            select
+                        } else {
+                            { onItemClick(entry.item) }
+                        },
+                        onLongClick = select,
+                        selection = entry.selectionState(),
+                        snoozedUntil = entry.snoozedUntil(),
+                    )
                 }
             }
         }

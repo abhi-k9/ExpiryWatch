@@ -10,7 +10,10 @@ import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveItemsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveTodayUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.RestoreItemUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeLength
+import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeRemindersUseCase
 import io.github.abhik9.expirywatch.core.model.ExpiryStatus
+import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.testing.MainDispatcherRule
@@ -21,8 +24,11 @@ import io.github.abhik9.expirywatch.core.testing.repository.FakeItemRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeShoppingRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeStorageLocationRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepository
+import java.time.LocalDate
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
@@ -62,6 +68,7 @@ class ItemsViewModelTest {
                 TestTime.clock,
             ),
         ),
+        snoozeReminders = SnoozeRemindersUseCase(items),
     )
 
     private suspend fun ItemsViewModel.successState(): ItemsUiState.Success =
@@ -75,6 +82,18 @@ class ItemsViewModelTest {
             }
         }
     }
+
+    /** Selects or unselects the items with [ids] together, as a product group does. */
+    private fun ItemsViewModel.toggle(vararg ids: Long) {
+        toggleSelection(items.currentItems.filter { it.id in ids })
+        Snapshot.sendApplyNotifications()
+    }
+
+    private suspend fun ItemsViewModel.awaitSelection(vararg ids: Long): ItemsUiState.Success = withTimeout(5.seconds) {
+        uiState.filterIsInstance<ItemsUiState.Success>().first { it.selection == ids.toSet() }
+    }
+
+    private fun snoozes(): Map<Long, LocalDate?> = items.currentItems.associate { it.id to it.remindersSnoozedUntil }
 
     @Test
     fun showsActiveItemsSoonestFirst() = runTest {
@@ -159,5 +178,84 @@ class ItemsViewModelTest {
             assertEquals(listOf("Yogurt", "Milk"), added.names)
         }
         assertEquals(setOf("Yogurt", "Milk"), shopping.currentItems.map { it.name }.toSet())
+    }
+
+    @Test
+    fun selectsItemsAndWholeProductGroups() = runTest {
+        items.upsert(TestData.item(name = "Milk", expiresInDays = 3))
+        val viewModel = viewModel()
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        viewModel.awaitItemNames("Yogurt", "Milk", "Milk", "Apples")
+        assertFalse(viewModel.successState().isSelecting)
+
+        // A long press on the Milk group selects both of its items; one of them is then unselected.
+        viewModel.toggle(1, 4)
+        assertTrue(viewModel.awaitSelection(1, 4).isSelecting)
+        viewModel.toggle(1)
+        viewModel.awaitSelection(4)
+
+        viewModel.selectAll()
+        Snapshot.sendApplyNotifications()
+        viewModel.awaitSelection(1, 2, 3, 4)
+
+        // Listing something else starts over.
+        viewModel.onStatusFilterChange(ExpiryStatus.EXPIRED)
+        Snapshot.sendApplyNotifications()
+        viewModel.awaitSelection()
+    }
+
+    @Test
+    fun snoozesTheSelectedItemsRemindersWithUndo() = runTest {
+        val viewModel = viewModel()
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        viewModel.awaitItemNames("Yogurt", "Milk", "Apples")
+        viewModel.toggle(1, 2)
+        viewModel.awaitSelection(1, 2)
+
+        val weekLater = TestTime.today.plusWeeks(1)
+        viewModel.events.test {
+            viewModel.snoozeSelected(SnoozeLength.ONE_WEEK)
+
+            val event = assertIs<ItemsEvent.RemindersSnoozed>(awaitItem())
+            assertEquals(weekLater, event.until)
+            assertEquals(setOf("Yogurt", "Milk"), event.before.map { it.name }.toSet())
+            assertEquals(mapOf(1L to weekLater, 2L to weekLater, 3L to null), snoozes())
+            viewModel.awaitSelection()
+
+            viewModel.undoSnooze(event.before)
+            assertEquals(mapOf(1L to null, 2L to null, 3L to null), snoozes())
+        }
+    }
+
+    @Test
+    fun snoozesUntilADateAndTurnsRemindersBackOn() = runTest {
+        items.snoozeReminders(listOf(2L), Item.SNOOZED_INDEFINITELY)
+        val viewModel = viewModel()
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        viewModel.awaitItemNames("Yogurt", "Milk", "Apples")
+
+        viewModel.toggle(3)
+        viewModel.awaitSelection(3)
+        viewModel.snoozeSelectedUntil(TestTime.today.plusDays(10))
+        assertEquals(TestTime.today.plusDays(10), snoozes()[3L])
+
+        viewModel.toggle(2)
+        viewModel.awaitSelection(2)
+        viewModel.resumeSelectedReminders()
+        assertEquals(null, snoozes()[2L])
+    }
+
+    @Test
+    fun putsTheSelectedItemsOnTheShoppingList() = runTest {
+        val viewModel = viewModel()
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        viewModel.awaitItemNames("Yogurt", "Milk", "Apples")
+        viewModel.toggle(2, 3)
+        viewModel.awaitSelection(2, 3)
+
+        viewModel.addSelectedToShoppingList()
+
+        assertEquals(setOf("Yogurt", "Apples"), shopping.currentItems.map { it.name }.toSet())
+        viewModel.awaitSelection()
     }
 }
