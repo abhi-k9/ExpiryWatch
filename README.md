@@ -10,6 +10,8 @@ Built with Kotlin, Jetpack Compose and Material 3, following Google's recommende
 - **Item list** sorted by expiry, grouped into *Expired*, *Expiring soon* and *Fresh*, with
   search (ignores case and accents), category and location filters, and several sort orders.
 - **Swipe to finish**: swipe right when an item is used up, left when it's thrown away, with undo.
+- **Select several items**: long-press an item, or a product's row for all of its items, then tap
+  others to add them. Snooze their reminders or put them on the shopping list together.
 - **Several of the same product**: give an item more expiry dates in the editor, for example one per
   carton of a multipack. Each date is kept as an item of its own, and the list folds items with
   the same name into one row showing the next to expire; tap it to see, edit or finish each one.
@@ -22,6 +24,9 @@ Built with Kotlin, Jetpack Compose and Material 3, following Google's recommende
   may deliver them late to save battery; turn on **Exact time** to get them on time with an alarm.
   Since Android 12 this needs permission to set alarms; the app opens that system setting when you
   turn it on.
+- **Snooze reminders** about items you know about, such as honey past its date: for a week, a
+  month, until a date or until you turn them back on. Snoozed items stay in the list, marked with
+  when their reminders start again, but the daily reminder leaves them out.
 - **Shopping lists**: keep several, such as groceries and pharmacy, and add to them by typing
   ("2 l milk", "eggs x12", "butter (unsalted)"), from suggestions of what you buy often, or by
   scanning a barcode. Products you've bought before go to the same category with their usual name.
