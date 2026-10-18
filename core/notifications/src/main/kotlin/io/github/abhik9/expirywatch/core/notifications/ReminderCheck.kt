@@ -3,7 +3,6 @@ package io.github.abhik9.expirywatch.core.notifications
 import io.github.abhik9.expirywatch.core.common.diagnostics.EventLog
 import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
 import io.github.abhik9.expirywatch.core.domain.usecase.GetExpirySummaryUseCase
-import io.github.abhik9.expirywatch.core.model.ExpiryStatus
 import java.time.Clock
 import java.time.ZonedDateTime
 import javax.inject.Inject
@@ -36,14 +35,10 @@ internal class ReminderCheck @Inject constructor(
         if (history.markShown(occurrence)) {
             val leftOut = if (settings.remindAboutExpired) "" else " (left out)"
             log.record {
-                "reminder check: ${summary.expired.size} expired$leftOut, ${summary.expiringSoon.size} expiring soon"
+                "reminder check: ${summary.expired.size} expired$leftOut, " +
+                    "${summary.expiringSoon.size} expiring soon, ${summary.snoozed.size} snoozed"
             }
-            val reminded = if (settings.remindAboutExpired) {
-                summary
-            } else {
-                summary.copy(items = summary.items.filterNot { it.status == ExpiryStatus.EXPIRED })
-            }
-            notifier.showExpiryReminder(reminded)
+            notifier.showExpiryReminder(summary.forReminder(settings.remindAboutExpired))
         } else {
             log.record { "reminder check: the reminder due at $occurrence was already shown" }
         }

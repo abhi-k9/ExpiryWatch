@@ -18,6 +18,19 @@ data class ExpirySummary(
 ) {
     val expired: List<ItemWithExpiry> = items.filter { it.status == ExpiryStatus.EXPIRED }
     val expiringSoon: List<ItemWithExpiry> = items.filter { it.status == ExpiryStatus.EXPIRING_SOON }
+
+    /** The expired and soon-to-expire items whose reminders are snoozed today. */
+    val snoozed: List<ItemWithExpiry> = (expired + expiringSoon).filter { it.item.isReminderSnoozed(today) }
+
+    /**
+     * What the day's reminder is about: everything but the snoozed items, and the expired ones too
+     * unless [remindAboutExpired].
+     */
+    fun forReminder(remindAboutExpired: Boolean): ExpirySummary = copy(
+        items = items.filter { entry ->
+            !entry.item.isReminderSnoozed(today) && (remindAboutExpired || entry.status != ExpiryStatus.EXPIRED)
+        },
+    )
 }
 
 class GetExpirySummaryUseCase @Inject constructor(

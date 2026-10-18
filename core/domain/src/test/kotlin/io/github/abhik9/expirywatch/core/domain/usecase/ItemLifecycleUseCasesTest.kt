@@ -1,6 +1,7 @@
 package io.github.abhik9.expirywatch.core.domain.usecase
 
 import app.cash.turbine.test
+import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.UserSettings
 import io.github.abhik9.expirywatch.core.testing.TestData
@@ -65,6 +66,51 @@ class ItemLifecycleUseCasesTest {
         assertEquals(listOf("Old"), summary.expired.map { it.item.name })
         assertEquals(listOf("Soon"), summary.expiringSoon.map { it.item.name })
         assertEquals(listOf("Old", "Soon", "Later"), summary.items.map { it.item.name })
+    }
+
+    @Test
+    fun remindersLeaveOutSnoozedItemsUntilTheSnoozeEnds() = runTest {
+        items.setItems(
+            listOf(
+                TestData.item(id = 1, name = "Honey", expiresInDays = -30)
+                    .copy(remindersSnoozedUntil = Item.SNOOZED_INDEFINITELY),
+                TestData.item(id = 2, name = "Old", expiresInDays = -1)
+                    .copy(remindersSnoozedUntil = TestTime.today.plusDays(1)),
+                TestData.item(id = 3, name = "Soon", expiresInDays = 2),
+                // A snooze that ended today.
+                TestData.item(id = 4, name = "Sooner", expiresInDays = 1).copy(remindersSnoozedUntil = TestTime.today),
+            ),
+        )
+        val settings = FakeUserSettingsRepository(UserSettings(expiringSoonDays = 3))
+
+        val summary = GetExpirySummaryUseCase(items, settings, ObserveTodayUseCase(TestTime.clock))()
+
+        assertEquals(listOf("Honey", "Old"), summary.snoozed.map { it.item.name })
+        val reminder = summary.forReminder(remindAboutExpired = true)
+        assertEquals(emptyList(), reminder.expired)
+        assertEquals(listOf("Sooner", "Soon"), reminder.expiringSoon.map { it.item.name })
+        assertEquals(
+            listOf("Sooner", "Soon"),
+            summary.forReminder(remindAboutExpired = false).expiringSoon.map {
+                it.item.name
+            },
+        )
+    }
+
+    @Test
+    fun remindersCanLeaveOutExpiredItems() = runTest {
+        items.setItems(
+            listOf(
+                TestData.item(id = 1, name = "Old", expiresInDays = -1),
+                TestData.item(id = 2, name = "Soon", expiresInDays = 2),
+            ),
+        )
+        val settings = FakeUserSettingsRepository(UserSettings(expiringSoonDays = 3))
+
+        val summary = GetExpirySummaryUseCase(items, settings, ObserveTodayUseCase(TestTime.clock))()
+
+        assertEquals(listOf("Old", "Soon"), summary.forReminder(remindAboutExpired = true).items.map { it.item.name })
+        assertEquals(listOf("Soon"), summary.forReminder(remindAboutExpired = false).items.map { it.item.name })
     }
 
     @Test

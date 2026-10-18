@@ -146,4 +146,17 @@ class ReminderCheckTest {
         check("the daily work")
         assertTrue("reminder notification: shown for 1 items" in log.messages)
     }
+
+    @Test
+    fun snoozedItemsAreLeftOutUntilTheSnoozeEnds() = runTest {
+        items.snoozeReminders(listOf(1L), LocalDate.now(clock).plusDays(1))
+
+        check("the daily work")
+        assertEquals(0, remindersShown())
+        assertTrue(log.messages.any { it.startsWith("reminder check:") && it.endsWith(", 1 snoozed") })
+
+        daysLater = 1
+        check("the daily work")
+        assertEquals(1, remindersShown())
+    }
 }
