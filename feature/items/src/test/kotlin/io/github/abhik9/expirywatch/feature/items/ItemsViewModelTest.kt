@@ -220,6 +220,7 @@ class ItemsViewModelTest {
             assertEquals(weekLater, event.until)
             assertEquals(setOf("Yogurt", "Milk"), event.before.map { it.name }.toSet())
             assertEquals(mapOf(1L to weekLater, 2L to weekLater, 3L to null), snoozes())
+            Snapshot.sendApplyNotifications()
             viewModel.awaitSelection()
 
             viewModel.undoSnooze(event.before)
@@ -254,6 +255,7 @@ class ItemsViewModelTest {
         viewModel.awaitSelection(2, 3)
 
         viewModel.addSelectedToShoppingList()
+        Snapshot.sendApplyNotifications()
 
         assertEquals(setOf("Yogurt", "Apples"), shopping.currentItems.map { it.name }.toSet())
         viewModel.awaitSelection()
