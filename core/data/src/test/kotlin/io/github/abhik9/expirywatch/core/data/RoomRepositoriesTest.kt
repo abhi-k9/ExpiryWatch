@@ -13,6 +13,7 @@ import io.github.abhik9.expirywatch.core.data.repository.RoomStorageLocationRepo
 import io.github.abhik9.expirywatch.core.database.ExpiryWatchDatabase
 import io.github.abhik9.expirywatch.core.domain.backup.BackupSnapshot
 import io.github.abhik9.expirywatch.core.model.Category
+import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.ProductInfo
 import io.github.abhik9.expirywatch.core.model.ProductSource
@@ -154,6 +155,31 @@ class RoomRepositoriesTest {
                 "shopping: removed #$milk",
             ),
             log.messages,
+        )
+    }
+
+    @Test
+    fun remindersAreSnoozedAndResumed() = runTest {
+        val log = RecordingEventLog()
+        val items = RoomItemRepository(newDatabase(), log)
+        val milk = items.upsert(TestData.item(name = "Milk", category = null, location = null))
+        val bread = items.upsert(TestData.item(name = "Bread", category = null, location = null))
+
+        items.snoozeReminders(listOf(milk, bread), TestTime.today.plusDays(3))
+        items.snoozeReminders(listOf(bread), Item.SNOOZED_INDEFINITELY)
+        items.snoozeReminders(listOf(milk), null)
+
+        assertEquals(
+            mapOf("Milk" to null, "Bread" to Item.SNOOZED_INDEFINITELY),
+            items.getActiveItems().associate { it.name to it.remindersSnoozedUntil },
+        )
+        assertEquals(
+            listOf(
+                "items: reminders for #$milk, #$bread snoozed until 2026-03-13",
+                "items: reminders for #$bread snoozed indefinitely",
+                "items: reminders for #$milk resumed",
+            ),
+            log.messages.drop(2),
         )
     }
 

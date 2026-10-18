@@ -116,6 +116,7 @@ object BackupCodec {
                     finishedDate = dto.finishedDate?.let(LocalDate::parse),
                     createdAt = dto.createdAt?.let(::parseInstant) ?: Instant.EPOCH,
                     updatedAt = dto.updatedAt?.let(::parseInstant) ?: Instant.EPOCH,
+                    remindersSnoozedUntil = dto.remindersSnoozedUntil?.let(LocalDate::parse),
                 ).let { item ->
                     // An active item has no finish date; a finished one needs one for insights.
                     when {
@@ -235,6 +236,7 @@ object BackupCodec {
         finishedDate = finishedDate?.toString(),
         createdAt = createdAt.toString(),
         updatedAt = updatedAt.toString(),
+        remindersSnoozedUntil = remindersSnoozedUntil?.toString(),
     )
 
     private fun ShoppingBackup.toDto() = ShoppingDto(
@@ -317,6 +319,7 @@ private data class ItemDto(
     val finishedDate: String? = null,
     val createdAt: String? = null,
     val updatedAt: String? = null,
+    val remindersSnoozedUntil: String? = null,
 )
 
 @Serializable

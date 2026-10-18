@@ -1,5 +1,6 @@
 package io.github.abhik9.expirywatch.core.domain.backup
 
+import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.ProductInfo
 import io.github.abhik9.expirywatch.core.model.ProductSource
@@ -27,10 +28,12 @@ class BackupCodecTest {
                 openedDate = TestTime.today,
                 useWithinDaysAfterOpening = 4,
                 notes = "Organic",
+                remindersSnoozedUntil = TestTime.today.plusDays(3),
             ),
             TestData.item(id = 2, name = "Spinach", category = TestData.produce, location = null).copy(
                 status = ItemStatus.WASTED,
                 finishedDate = TestTime.today,
+                remindersSnoozedUntil = Item.SNOOZED_INDEFINITELY,
             ),
         ),
         products = listOf(

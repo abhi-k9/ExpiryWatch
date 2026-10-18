@@ -35,6 +35,7 @@ fun PopulatedItem.asExternalModel() = Item(
     finishedDate = item.finishedDate,
     createdAt = item.createdAt,
     updatedAt = item.updatedAt,
+    remindersSnoozedUntil = item.remindersSnoozedUntil,
 )
 
 fun Item.asEntity() = ItemEntity(
@@ -55,6 +56,7 @@ fun Item.asEntity() = ItemEntity(
     finishedDate = finishedDate,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    remindersSnoozedUntil = remindersSnoozedUntil,
 )
 
 fun CategoryEntity.asExternalModel() = Category(id = id, name = name, emoji = emoji)

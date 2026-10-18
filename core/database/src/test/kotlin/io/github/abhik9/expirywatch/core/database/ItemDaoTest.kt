@@ -112,4 +112,17 @@ class ItemDaoTest {
         assertEquals(ItemStatus.CONSUMED, updated.status)
         assertEquals(today, updated.finishedDate)
     }
+
+    @Test
+    fun remindersAreSnoozedForTheChosenItems() = runTest {
+        val milk = database.itemDao().insert(item("Milk"))
+        val bread = database.itemDao().insert(item("Bread"))
+        val eggs = database.itemDao().insert(item("Eggs"))
+
+        database.itemDao().setRemindersSnoozedUntil(listOf(milk, bread), today.plusDays(7))
+        database.itemDao().setRemindersSnoozedUntil(listOf(bread), null)
+
+        val snoozed = database.itemDao().getAll().associate { it.id to it.remindersSnoozedUntil }
+        assertEquals(mapOf(milk to today.plusDays(7), bread to null, eggs to null), snoozed)
+    }
 }

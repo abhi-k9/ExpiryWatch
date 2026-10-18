@@ -10,6 +10,7 @@ import io.github.abhik9.expirywatch.core.model.QuantityUnit
 import java.io.File
 import java.time.Instant
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -83,6 +84,8 @@ class MigrationTest {
         val milk = db.itemDao().observeActive().first().single()
         assertEquals("Milk", milk.item.name)
         assertEquals("Dairy", milk.category?.name)
+        // Version 3 added snoozing an item's reminders, which none are.
+        assertNull(milk.item.remindersSnoozedUntil)
 
         val now = Instant.parse("2026-03-10T12:00:00Z")
         val list = db.shoppingDao().insertList(ShoppingListEntity(name = "Groceries", createdAt = now))

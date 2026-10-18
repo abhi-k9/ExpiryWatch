@@ -13,6 +13,8 @@ import java.time.LocalDate
  * see [effectiveExpiryDate].
  * @property status whether the item is still in stock, or was used up or thrown away.
  * @property finishedDate the day the item left [ItemStatus.ACTIVE]; `null` while it is active.
+ * @property remindersSnoozedUntil the day reminders about the item start again, or
+ * [SNOOZED_INDEFINITELY]; `null` when they aren't snoozed. See [isReminderSnoozed].
  */
 data class Item(
     val id: Long = 0,
@@ -32,7 +34,16 @@ data class Item(
     val finishedDate: LocalDate? = null,
     val createdAt: Instant = Instant.EPOCH,
     val updatedAt: Instant = Instant.EPOCH,
-)
+    val remindersSnoozedUntil: LocalDate? = null,
+) {
+    /** Whether reminders leave the item out on [today]. */
+    fun isReminderSnoozed(today: LocalDate): Boolean = remindersSnoozedUntil?.isAfter(today) == true
+
+    companion object {
+        /** A snooze that lasts until the user ends it. */
+        val SNOOZED_INDEFINITELY: LocalDate = LocalDate.MAX
+    }
+}
 
 enum class ItemStatus {
     /** Still in stock. */

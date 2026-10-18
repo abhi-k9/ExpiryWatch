@@ -24,5 +24,11 @@ interface ItemRepository {
 
     suspend fun updateStatus(id: Long, status: ItemStatus, finishedDate: LocalDate?)
 
+    /**
+     * Leaves the items out of reminders until [until] (see [Item.remindersSnoozedUntil]), or
+     * includes them again when it's `null`.
+     */
+    suspend fun snoozeReminders(ids: Collection<Long>, until: LocalDate?)
+
     suspend fun delete(id: Long)
 }

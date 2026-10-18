@@ -48,6 +48,10 @@ class FakeItemRepository(initialItems: List<Item> = emptyList()) : ItemRepositor
         }
     }
 
+    override suspend fun snoozeReminders(ids: Collection<Long>, until: LocalDate?) = items.update { all ->
+        all.mapValues { (id, item) -> if (id in ids) item.copy(remindersSnoozedUntil = until) else item }
+    }
+
     override suspend fun delete(id: Long) {
         items.update { it - id }
     }

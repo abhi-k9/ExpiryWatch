@@ -32,11 +32,13 @@ import io.github.abhik9.expirywatch.core.database.util.Converters
         ShoppingItemEntity::class,
         ShoppingHistoryEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
     autoMigrations = [
         // Adds the shopping lists.
         AutoMigration(from = 1, to = 2),
+        // Adds snoozing an item's reminders.
+        AutoMigration(from = 2, to = 3),
     ],
 )
 @TypeConverters(Converters::class)

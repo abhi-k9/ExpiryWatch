@@ -47,6 +47,17 @@ internal class RoomItemRepository @Inject constructor(
         log.record { "items: #$id is now $status" }
     }
 
+    override suspend fun snoozeReminders(ids: Collection<Long>, until: LocalDate?) {
+        if (ids.isEmpty()) return
+        itemDao.setRemindersSnoozedUntil(ids.toList(), until)
+        val change = when (until) {
+            null -> "resumed"
+            Item.SNOOZED_INDEFINITELY -> "snoozed indefinitely"
+            else -> "snoozed until $until"
+        }
+        log.record { "items: reminders for ${ids.joinToString { "#$it" }} $change" }
+    }
+
     override suspend fun delete(id: Long) {
         itemDao.delete(id)
         log.record { "items: deleted #$id" }
