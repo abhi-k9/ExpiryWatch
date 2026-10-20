@@ -56,10 +56,13 @@ import io.github.abhik9.expirywatch.core.domain.usecase.ItemGroup
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemQuery
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemWithExpiry
 import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeLength
+import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.ExpiryStatus
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
 import io.github.abhik9.expirywatch.core.model.ItemStatus
+import io.github.abhik9.expirywatch.core.ui.LabelDialog
+import io.github.abhik9.expirywatch.core.ui.LabelEmojis
 import io.github.abhik9.expirywatch.core.ui.PickDateDialog
 import io.github.abhik9.expirywatch.core.ui.label
 import java.time.LocalDate
@@ -75,6 +78,7 @@ internal fun ItemsRoute(
     viewModel: ItemsViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val groups by viewModel.groups.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     // Updated on configuration changes without restarting the effect, which would drop a shown snackbar.
     val resources by rememberUpdatedState(LocalResources.current)
@@ -123,6 +127,15 @@ internal fun ItemsRoute(
                     )
                     if (result == SnackbarResult.ActionPerformed) viewModel.undoSnooze(event.before)
                 }
+
+                is ItemsEvent.MovedToGroup -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = resources.movedMessage(event.before, event.group),
+                        actionLabel = resources.getString(R.string.feature_items_undo),
+                        withDismissAction = true,
+                    )
+                    if (result == SnackbarResult.ActionPerformed) viewModel.undoMove(event.before)
+                }
             }
         }
     }
@@ -151,7 +164,22 @@ internal fun ItemsRoute(
         onSnoozeUntil = viewModel::snoozeSelectedUntil,
         onResumeReminders = viewModel::resumeSelectedReminders,
         onAddSelectedToShoppingList = viewModel::addSelectedToShoppingList,
+        groups = groups,
+        onMoveToGroup = viewModel::moveSelectedToGroup,
+        onMoveToNewGroup = viewModel::moveSelectedToNewGroup,
     )
+}
+
+/** E.g. "Moved Beans to Camping kit", or "Took 3 items out of their groups". */
+private fun Resources.movedMessage(items: List<Item>, group: CustomGroup?): String {
+    val name = items.singleOrNull()?.name
+    val count = items.size
+    return when {
+        group != null && name != null -> getString(R.string.feature_items_moved_one, name, group.name)
+        group != null -> getQuantityString(R.plurals.feature_items_moved_many, count, count, group.name)
+        name != null -> getString(R.string.feature_items_ungrouped_one, name)
+        else -> getQuantityString(R.plurals.feature_items_ungrouped_many, count, count)
+    }
 }
 
 /** E.g. "Reminders for Milk snoozed until 25 Oct 2026", or "Reminders for 3 items are back on". */
@@ -213,6 +241,9 @@ internal fun ItemsScreen(
     onSnoozeUntil: (LocalDate) -> Unit,
     onResumeReminders: () -> Unit,
     onAddSelectedToShoppingList: () -> Unit,
+    groups: List<CustomGroup>,
+    onMoveToGroup: (CustomGroup?) -> Unit,
+    onMoveToNewGroup: (name: String, emoji: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
@@ -221,6 +252,7 @@ internal fun ItemsScreen(
     val selection = success?.selection.orEmpty()
     val selecting = selection.isNotEmpty()
     var snoozeStep by rememberSaveable { mutableStateOf<SnoozeStep?>(null) }
+    var groupStep by rememberSaveable { mutableStateOf<GroupStep?>(null) }
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -231,6 +263,7 @@ internal fun ItemsScreen(
                     onClose = onClearSelection,
                     onSnooze = { snoozeStep = SnoozeStep.OPTIONS },
                     onAddToShoppingList = onAddSelectedToShoppingList,
+                    onMoveToGroup = { groupStep = GroupStep.PICK },
                     onSelectAll = onSelectAll,
                     scrollBehavior = scrollBehavior,
                 )
@@ -326,7 +359,37 @@ internal fun ItemsScreen(
 
         null -> Unit
     }
+
+    val closeGroups = { groupStep = null }
+    when (groupStep) {
+        GroupStep.PICK -> MoveToGroupDialog(
+            groups = groups,
+            canUngroup = selected.any { it.customGroup != null },
+            onPick = { group ->
+                closeGroups()
+                onMoveToGroup(group)
+            },
+            onNewGroup = { groupStep = GroupStep.NEW },
+            onDismiss = closeGroups,
+        )
+
+        GroupStep.NEW -> LabelDialog(
+            title = stringResource(R.string.feature_items_new_group),
+            confirmText = stringResource(R.string.feature_items_create_and_move),
+            suggestions = LabelEmojis.GROUPS,
+            onConfirm = { name, emoji ->
+                closeGroups()
+                onMoveToNewGroup(name, emoji)
+            },
+            onDismiss = closeGroups,
+        )
+
+        null -> Unit
+    }
 }
+
+/** What's open for moving the selected items to a group. */
+private enum class GroupStep { PICK, NEW }
 
 @Composable
 private fun ItemsContent(

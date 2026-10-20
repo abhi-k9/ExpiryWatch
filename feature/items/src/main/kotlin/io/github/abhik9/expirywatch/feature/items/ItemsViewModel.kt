@@ -11,6 +11,7 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.abhik9.expirywatch.core.domain.repository.CategoryRepository
+import io.github.abhik9.expirywatch.core.domain.repository.CustomGroupRepository
 import io.github.abhik9.expirywatch.core.domain.repository.StorageLocationRepository
 import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
 import io.github.abhik9.expirywatch.core.domain.shopping.AddItemsToShoppingListUseCase
@@ -18,11 +19,14 @@ import io.github.abhik9.expirywatch.core.domain.shopping.AddedToShoppingList
 import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemQuery
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemsOverview
+import io.github.abhik9.expirywatch.core.domain.usecase.MoveItemsToGroupUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveItemsUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.ObserveLabelsByUseUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.RestoreItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeLength
 import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeRemindersUseCase
 import io.github.abhik9.expirywatch.core.model.Category
+import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.ExpiryStatus
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
@@ -35,6 +39,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -66,6 +71,12 @@ sealed interface ItemsEvent {
      * [before] holds the items as they were, to undo it.
      */
     data class RemindersSnoozed(val before: List<Item>, val until: LocalDate?) : ItemsEvent
+
+    /**
+     * [before] was moved to [group], or out of any group when it's `null`. [before] holds the items
+     * as they were, to undo it.
+     */
+    data class MovedToGroup(val before: List<Item>, val group: CustomGroup?) : ItemsEvent
 }
 
 @HiltViewModel(assistedFactory = ItemsViewModel.Factory::class)
@@ -79,6 +90,9 @@ class ItemsViewModel @AssistedInject constructor(
     private val restoreItem: RestoreItemUseCase,
     private val addItemsToShoppingList: AddItemsToShoppingListUseCase,
     private val snoozeReminders: SnoozeRemindersUseCase,
+    private val moveItemsToGroup: MoveItemsToGroupUseCase,
+    private val groupRepository: CustomGroupRepository,
+    observeLabelsByUse: ObserveLabelsByUseUseCase,
 ) : ViewModel() {
     /** Held as Compose state so the search field updates synchronously while typing. */
     var searchText by mutableStateOf("")
@@ -112,6 +126,11 @@ class ItemsViewModel @AssistedInject constructor(
         started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
         initialValue = ItemsUiState.Loading,
     )
+
+    /** The user's groups to move items to, the ones used most and lately first. */
+    val groups: StateFlow<List<CustomGroup>> = observeLabelsByUse()
+        .map { it.groups }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
     private val _events = Channel<ItemsEvent>(Channel.BUFFERED)
     val events: Flow<ItemsEvent> = _events.receiveAsFlow()
@@ -182,6 +201,35 @@ class ItemsViewModel @AssistedInject constructor(
         viewModelScope.launch { snoozeReminders.restore(before) }
     }
 
+    /** Moves the selected items to [group], or out of any group when it's `null`. */
+    fun moveSelectedToGroup(group: CustomGroup?) {
+        val items = selectedItems()
+        clearSelection()
+        if (items.isEmpty()) return
+        viewModelScope.launch {
+            moveItemsToGroup(items, group?.id)
+            _events.send(ItemsEvent.MovedToGroup(items, group))
+        }
+    }
+
+    /** Makes a group and moves the selected items to it. */
+    fun moveSelectedToNewGroup(name: String, emoji: String) {
+        val trimmed = name.trim()
+        val items = selectedItems()
+        clearSelection()
+        if (trimmed.isEmpty() || items.isEmpty()) return
+        viewModelScope.launch {
+            val group = CustomGroup(name = trimmed, emoji = emoji.ifBlank { DEFAULT_GROUP_EMOJI })
+            val id = groupRepository.upsert(group)
+            moveItemsToGroup(items, id)
+            _events.send(ItemsEvent.MovedToGroup(items, group.copy(id = id)))
+        }
+    }
+
+    fun undoMove(before: List<Item>) {
+        viewModelScope.launch { moveItemsToGroup.restore(before) }
+    }
+
     /** Puts the products of the selected items on the shopping list in use. */
     fun addSelectedToShoppingList() {
         val items = selectedItems()
@@ -228,5 +276,6 @@ class ItemsViewModel @AssistedInject constructor(
 
     private companion object {
         const val STOP_TIMEOUT_MILLIS = 5_000L
+        const val DEFAULT_GROUP_EMOJI = "🗂️"
     }
 }

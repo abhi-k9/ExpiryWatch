@@ -12,14 +12,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -29,6 +33,7 @@ import androidx.compose.material.icons.filled.RemoveCircle
 import androidx.compose.material.icons.outlined.AddShoppingCart
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.NotificationsActive
@@ -37,6 +42,7 @@ import androidx.compose.material.icons.outlined.NotificationsPaused
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.Snooze
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -95,6 +101,7 @@ import io.github.abhik9.expirywatch.core.domain.usecase.ItemQuery
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemWithExpiry
 import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeLength
 import io.github.abhik9.expirywatch.core.model.Category
+import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.ExpiryStatus
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
@@ -167,6 +174,7 @@ internal fun SelectionTopBar(
     onClose: () -> Unit,
     onSnooze: () -> Unit,
     onAddToShoppingList: () -> Unit,
+    onMoveToGroup: () -> Unit,
     onSelectAll: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
@@ -189,6 +197,12 @@ internal fun SelectionTopBar(
                 Icon(
                     Icons.Outlined.AddShoppingCart,
                     contentDescription = stringResource(R.string.feature_items_add_to_shopping_list),
+                )
+            }
+            IconButton(onClick = onMoveToGroup) {
+                Icon(
+                    Icons.Outlined.CreateNewFolder,
+                    contentDescription = stringResource(R.string.feature_items_move_to_group),
                 )
             }
             IconButton(onClick = onSelectAll) {
@@ -270,6 +284,58 @@ internal fun SnoozeSheet(
             }
         }
     }
+}
+
+/**
+ * Which of the user's [groups] to move the selected items to: one of them, a new one, or no group
+ * when [canUngroup] because some of the items are in one.
+ */
+@Composable
+internal fun MoveToGroupDialog(
+    groups: List<CustomGroup>,
+    canUngroup: Boolean,
+    onPick: (CustomGroup?) -> Unit,
+    onNewGroup: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.feature_items_move_to_group)) },
+        text = {
+            LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                items(groups, key = { it.id }) { group ->
+                    ListItem(
+                        headlineContent = { Text(group.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        modifier = Modifier.clickable { onPick(group) },
+                        leadingContent = { EmojiAvatar(emoji = group.emoji, size = 36.dp) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                }
+                item(key = "new") {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.feature_items_new_group_option)) },
+                        modifier = Modifier.clickable(onClick = onNewGroup),
+                        leadingContent = { Icon(Icons.Filled.Add, contentDescription = null) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                }
+                if (canUngroup) {
+                    item(key = "none") {
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.feature_items_remove_from_group)) },
+                            modifier = Modifier.clickable { onPick(null) },
+                            leadingContent = { Icon(Icons.Filled.Close, contentDescription = null) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.feature_items_cancel)) }
+        },
+    )
 }
 
 @Composable

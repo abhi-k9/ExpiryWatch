@@ -7,11 +7,14 @@ import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListUseCas
 import io.github.abhik9.expirywatch.core.domain.shopping.GetShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ObserveKnownProductsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.MoveItemsToGroupUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveItemsUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.ObserveLabelsByUseUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveTodayUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.RestoreItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeLength
 import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeRemindersUseCase
+import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.ExpiryStatus
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
@@ -20,6 +23,7 @@ import io.github.abhik9.expirywatch.core.testing.MainDispatcherRule
 import io.github.abhik9.expirywatch.core.testing.TestData
 import io.github.abhik9.expirywatch.core.testing.TestTime
 import io.github.abhik9.expirywatch.core.testing.repository.FakeCategoryRepository
+import io.github.abhik9.expirywatch.core.testing.repository.FakeCustomGroupRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeItemRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeShoppingRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeStorageLocationRepository
@@ -42,8 +46,10 @@ class ItemsViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    private val groups = FakeCustomGroupRepository(listOf(CustomGroup(id = 1, name = "Baby", emoji = "🍼")))
     private val items = FakeItemRepository(
-        listOf(
+        groups = groups,
+        initialItems = listOf(
             TestData.item(id = 1, name = "Milk", expiresInDays = 1),
             TestData.item(id = 2, name = "Yogurt", expiresInDays = -1),
             TestData.item(id = 3, name = "Apples", expiresInDays = 12, category = TestData.produce),
@@ -69,6 +75,15 @@ class ItemsViewModelTest {
             ),
         ),
         snoozeReminders = SnoozeRemindersUseCase(items),
+        moveItemsToGroup = MoveItemsToGroupUseCase(items),
+        groupRepository = groups,
+        observeLabelsByUse = ObserveLabelsByUseUseCase(
+            FakeCategoryRepository(),
+            FakeStorageLocationRepository(),
+            groups,
+            items,
+            TestTime.clock,
+        ),
     )
 
     private suspend fun ItemsViewModel.successState(): ItemsUiState.Success =
@@ -260,4 +275,43 @@ class ItemsViewModelTest {
         assertEquals(setOf("Yogurt", "Apples"), shopping.currentItems.map { it.name }.toSet())
         viewModel.awaitSelection()
     }
+
+    @Test
+    fun movesTheSelectedItemsToAGroupWithUndo() = runTest {
+        val viewModel = viewModel()
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        viewModel.awaitItemNames("Yogurt", "Milk", "Apples")
+        val baby = groups.currentGroups.single()
+        viewModel.toggle(1, 2)
+        viewModel.awaitSelection(1, 2)
+
+        viewModel.events.test {
+            viewModel.moveSelectedToGroup(baby)
+
+            val moved = assertIs<ItemsEvent.MovedToGroup>(awaitItem())
+            assertEquals(baby, moved.group)
+            assertEquals(mapOf(1L to "Baby", 2L to "Baby", 3L to null), groupNames())
+
+            viewModel.undoMove(moved.before)
+            assertEquals(mapOf(1L to null, 2L to null, 3L to null), groupNames())
+        }
+    }
+
+    @Test
+    fun movesTheSelectedItemsToANewGroup() = runTest {
+        val viewModel = viewModel()
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        viewModel.awaitItemNames("Yogurt", "Milk", "Apples")
+        viewModel.toggle(3)
+        viewModel.awaitSelection(3)
+
+        viewModel.moveSelectedToNewGroup(" Fruit bowl ", "🍎")
+
+        val fruitBowl = groups.currentGroups.single { it.name == "Fruit bowl" }
+        assertEquals(fruitBowl, items.currentItems.single { it.id == 3L }.customGroup)
+        Snapshot.sendApplyNotifications()
+        viewModel.awaitSelection()
+    }
+
+    private fun groupNames(): Map<Long, String?> = items.currentItems.associate { it.id to it.customGroup?.name }
 }

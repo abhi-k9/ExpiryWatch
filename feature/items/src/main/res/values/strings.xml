@@ -43,6 +43,22 @@
     </plurals>
     <string name="feature_items_clear_selection">Clear selection</string>
     <string name="feature_items_select_all">Select all</string>
+    <string name="feature_items_move_to_group">Move to group</string>
+    <string name="feature_items_new_group_option">New group…</string>
+    <string name="feature_items_new_group">New group</string>
+    <string name="feature_items_create_and_move">Create and move</string>
+    <string name="feature_items_remove_from_group">Remove from group</string>
+    <string name="feature_items_cancel">Cancel</string>
+    <string name="feature_items_moved_one">Moved %1$s to %2$s</string>
+    <plurals name="feature_items_moved_many">
+        <item quantity="one">Moved %1$d item to %2$s</item>
+        <item quantity="other">Moved %1$d items to %2$s</item>
+    </plurals>
+    <string name="feature_items_ungrouped_one">Took %1$s out of its group</string>
+    <plurals name="feature_items_ungrouped_many">
+        <item quantity="one">Took %d item out of its group</item>
+        <item quantity="other">Took %d items out of their groups</item>
+    </plurals>
     <string name="feature_items_snooze_reminders">Snooze reminders</string>
     <string name="feature_items_reminders_snoozed">Reminders snoozed</string>
     <string name="feature_items_snoozed_until">Reminders snoozed until %1$s</string>
