@@ -464,7 +464,8 @@ private fun LazyListScope.itemGroups(
     fun ItemWithExpiry.snoozedUntil() = item.remindersSnoozedUntil?.takeIf { item.isReminderSnoozed(today) }
 
     groups.forEach { group ->
-        val single = group.entries.singleOrNull()
+        // A product with one item shows as that item; the user's groups always show as a group.
+        val single = group.entries.singleOrNull()?.takeIf { group.customGroup == null }
         if (single != null) {
             item(key = single.item.id, contentType = "item") {
                 val select = { onToggleSelection(listOf(single.item)) }
@@ -541,19 +542,27 @@ private fun LazyListScope.itemGroups(
                         .padding(start = 40.dp, end = 16.dp, top = 2.dp, bottom = 2.dp),
                     enabled = !selecting,
                 ) {
-                    GroupEntryRow(
-                        entry = entry,
-                        showBrand = showBrand,
-                        showLocation = showLocation,
-                        onClick = if (selecting) {
-                            select
-                        } else {
-                            { onItemClick(entry.item) }
-                        },
-                        onLongClick = select,
-                        selection = entry.selectionState(),
-                        snoozedUntil = entry.snoozedUntil(),
-                    )
+                    val open = { onItemClick(entry.item) }
+                    if (group.customGroup != null) {
+                        // Items of different products, told apart by everything about them.
+                        ItemRow(
+                            entry = entry,
+                            onClick = if (selecting) select else open,
+                            onLongClick = select,
+                            selection = entry.selectionState(),
+                            snoozedUntil = entry.snoozedUntil(),
+                        )
+                    } else {
+                        GroupEntryRow(
+                            entry = entry,
+                            showBrand = showBrand,
+                            showLocation = showLocation,
+                            onClick = if (selecting) select else open,
+                            onLongClick = select,
+                            selection = entry.selectionState(),
+                            snoozedUntil = entry.snoozedUntil(),
+                        )
+                    }
                 }
             }
         }

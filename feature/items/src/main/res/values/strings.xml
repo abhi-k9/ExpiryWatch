@@ -24,6 +24,11 @@
         <item quantity="one">%d date</item>
         <item quantity="other">%d dates</item>
     </plurals>
+    <plurals name="feature_items_group_items">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <string name="feature_items_group_next">%s next</string>
     <string name="feature_items_group_expanded">Expanded</string>
     <string name="feature_items_group_collapsed">Collapsed</string>
     <string name="feature_items_action_consumed">Used up</string>

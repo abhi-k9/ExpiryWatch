@@ -3,6 +3,7 @@ package io.github.abhik9.expirywatch.core.domain.usecase
 import io.github.abhik9.expirywatch.core.domain.productKey
 import io.github.abhik9.expirywatch.core.domain.repository.ItemRepository
 import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
+import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.ExpiryStatus
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
@@ -37,14 +38,17 @@ data class ItemWithExpiry(
 
 /**
  * Active items of the same product, such as three cartons of milk that expire on different days.
- * What counts as the same product is up to the user; see [ProductGrouping].
+ * What counts as the same product is up to the user; see [ProductGrouping]. Items the user put in
+ * one of their own groups are grouped by that instead, whatever their product.
  *
  * @property key identifies the group within the list.
  * @property entries soonest to expire first, so the first is the one to use next.
+ * @property customGroup the user's group these items are in, if they're grouped by that.
  */
 data class ItemGroup(
     val key: String,
     val entries: List<ItemWithExpiry>,
+    val customGroup: CustomGroup? = null,
 ) {
     val next: ItemWithExpiry get() = entries.first()
 }
@@ -68,7 +72,8 @@ data class ItemsOverview(
     /**
      * The same items to show in the list: under a header per status when sorted by expiry and
      * not filtered by status, and grouped by product. A group goes where its first item sorts, or
-     * when products are kept together, where its item that expires first sorts.
+     * when products are kept together, where its item that expires first sorts. The user's own
+     * groups are always kept together like that.
      */
     val sections: List<ItemSection>,
     /** How many items match the query in each status, ignoring the query's status filter. */
@@ -141,15 +146,27 @@ internal fun buildItemsOverview(
 
     val sections = when {
         !sortOrder.sectionsByStatus || query.status != null ->
-            listOf(ItemSection(status = null, groups = visible.groupedByProduct(grouping, sectionKey = "all")))
+            listOf(ItemSection(status = null, groups = visible.grouped(grouping, sectionKey = "all")))
 
-        keepProductsTogether -> visible.groupedByProduct(grouping, sectionKey = "together")
+        keepProductsTogether -> visible.grouped(grouping, sectionKey = "together")
             .sortedWith { a, b -> sortComparator.compare(a.next, b.next) }
             .groupBy { it.next.status }
             .map { (status, groups) -> ItemSection(status, groups) }
 
-        else -> visible.groupBy { it.status }.map { (status, inStatus) ->
-            ItemSection(status, inStatus.groupedByProduct(grouping, sectionKey = status.name))
+        else -> {
+            val position = visible.withIndex().associate { (index, entry) -> entry.item.id to index }
+            val (inCustomGroups, others) = visible.partition { it.item.customGroup != null }
+            val productGroups = others.groupBy { it.status }.flatMap { (status, inStatus) ->
+                inStatus.grouped(grouping, sectionKey = status.name).map { status to it }
+            }
+            // The user's groups stay whole, in the status of their item that expires first.
+            val customGroups = inCustomGroups.grouped(grouping, sectionKey = "groups").map { it.next.status to it }
+            (productGroups + customGroups)
+                .sortedBy { (status, group) ->
+                    group.entries.filter { it.status == status }.minOf { position.getValue(it.item.id) }
+                }
+                .groupBy({ it.first }, { it.second })
+                .map { (status, groups) -> ItemSection(status, groups) }
         }
     }
 
@@ -166,16 +183,24 @@ internal fun buildItemsOverview(
 private val ItemSortOrder.sectionsByStatus: Boolean
     get() = this == ItemSortOrder.EXPIRY_SOONEST || this == ItemSortOrder.EXPIRY_LATEST
 
-/** Groups sorted items by product, keeping the order in which each product first appears. */
-private fun List<ItemWithExpiry>.groupedByProduct(grouping: ProductGrouping, sectionKey: String): List<ItemGroup> =
-    groupBy { it.item.productKey(grouping) }.map { (product, entries) ->
+/**
+ * Groups sorted items by product, or by the user's group for the items in one, keeping the order in
+ * which each group first appears.
+ */
+private fun List<ItemWithExpiry>.grouped(grouping: ProductGrouping, sectionKey: String): List<ItemGroup> =
+    groupBy { it.item.groupKey(grouping) }.map { (key, entries) ->
         ItemGroup(
-            key = "$sectionKey/$product",
+            key = "$sectionKey/$key",
             entries = entries.sortedWith(
                 compareBy<ItemWithExpiry> { it.item.effectiveExpiryDate }.thenBy { it.item.id },
             ),
+            customGroup = entries.first().item.customGroup,
         )
     }
+
+/** What the item is grouped by: the user's group it's in, or else its product. */
+private fun Item.groupKey(grouping: ProductGrouping): String =
+    customGroup?.let { "\u0001group/${it.id}" } ?: productKey(grouping)
 
 /** What identifies the item's product, as far as [grouping] is concerned. */
 private fun Item.productKey(grouping: ProductGrouping): String = when (grouping) {
@@ -214,6 +239,7 @@ private fun Item.searchableText(): String = listOfNotNull(
     notes,
     category?.name,
     location?.name,
+    customGroup?.name,
 ).joinToString(separator = " ").normalizedForSearch()
 
 private val combiningMarks = "\\p{Mn}+".toRegex()

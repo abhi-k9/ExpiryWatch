@@ -1,5 +1,6 @@
 package io.github.abhik9.expirywatch.core.domain.usecase
 
+import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.ExpiryStatus
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
@@ -235,5 +236,46 @@ class ItemsOverviewTest {
             ),
             overview(items = items, sortOrder = ItemSortOrder.EXPIRY_LATEST, keepProductsTogether = true).layout(),
         )
+    }
+
+    @Test
+    fun theUsersGroupsFoldTheirItemsIntoOneRowUnderTheStatusOfTheFirstToExpire() {
+        val camping = CustomGroup(id = 7, name = "Camping kit", emoji = "⛺")
+        val beans = TestData.item(id = 5, name = "Beans", expiresInDays = 200).copy(customGroup = camping)
+        val oats = TestData.item(id = 6, name = "Oats", expiresInDays = 2).copy(customGroup = camping)
+        val items = all + beans + oats
+
+        val sections = overview(items = items).sections
+
+        assertEquals(
+            listOf(
+                ExpiryStatus.EXPIRED to listOf("Yogurt"),
+                ExpiryStatus.EXPIRING_SOON to listOf("Milk", "Camping kit", "Crème fraîche"),
+                ExpiryStatus.FRESH to listOf("Apples"),
+            ),
+            sections.map { section ->
+                section.status to section.groups.map { it.customGroup?.name ?: it.next.item.name }
+            },
+        )
+        val group = sections[1].groups.single { it.customGroup != null }
+        assertEquals(listOf("Oats", "Beans"), group.entries.map { it.item.name })
+        // Only Oats is expiring soon; Beans is fresh but stays in its group.
+        assertEquals(3, sections[1].itemCount)
+    }
+
+    @Test
+    fun theUsersGroupsFoldWhenFilteredAndAreFoundByName() {
+        val camping = CustomGroup(id = 7, name = "Camping kit", emoji = "⛺")
+        val beans = TestData.item(id = 5, name = "Beans", expiresInDays = 200).copy(customGroup = camping)
+        val oats = TestData.item(id = 6, name = "Oats", expiresInDays = 250).copy(customGroup = camping)
+
+        val fresh = overview(query = ItemQuery(status = ExpiryStatus.FRESH), items = all + beans + oats)
+        assertEquals(
+            listOf("Apples", "Camping kit"),
+            fresh.sections.single().groups.map { it.customGroup?.name ?: it.next.item.name },
+        )
+
+        val found = overview(query = ItemQuery(searchText = "camping"), items = all + beans + oats)
+        assertEquals(listOf("Beans", "Oats"), found.items.map { it.item.name })
     }
 }

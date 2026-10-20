@@ -88,6 +88,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import io.github.abhik9.expirywatch.core.designsystem.component.EmojiAvatar
 import io.github.abhik9.expirywatch.core.designsystem.theme.ExpiryWatchTheme
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemGroup
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemQuery
@@ -715,21 +716,33 @@ internal fun ItemGroupRow(
             if (selection != null) {
                 SelectionMark(selection, Modifier.size(44.dp))
             } else {
-                ItemThumbnail(item = items.firstOrNull { it.imageUrl != null } ?: next.item)
+                val customGroup = group.customGroup
+                if (customGroup != null) {
+                    EmojiAvatar(emoji = customGroup.emoji)
+                } else {
+                    ItemThumbnail(item = items.firstOrNull { it.imageUrl != null } ?: next.item)
+                }
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = next.item.name,
+                    text = group.customGroup?.name ?: next.item.name,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val details = listOfNotNull(
-                    pluralStringResource(R.plurals.feature_items_group_dates, items.size, items.size),
-                    items.totalQuantity(),
-                    items.sharedOrNull { it.brand },
-                    items.sharedOrNull { it.location }?.let { "${it.emoji} ${it.name}" },
-                ).joinToString(separator = " · ")
+                val details = if (group.customGroup != null) {
+                    listOf(
+                        pluralStringResource(R.plurals.feature_items_group_items, items.size, items.size),
+                        stringResource(R.string.feature_items_group_next, next.item.name),
+                    )
+                } else {
+                    listOfNotNull(
+                        pluralStringResource(R.plurals.feature_items_group_dates, items.size, items.size),
+                        items.totalQuantity(),
+                        items.sharedOrNull { it.brand },
+                        items.sharedOrNull { it.location }?.let { "${it.emoji} ${it.name}" },
+                    )
+                }.joinToString(separator = " · ")
                 Text(
                     text = details,
                     style = MaterialTheme.typography.bodyMedium,
