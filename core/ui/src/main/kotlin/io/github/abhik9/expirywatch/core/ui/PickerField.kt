@@ -4,9 +4,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -23,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
  * A read-only field with a dropdown of [options] (id to label).
  *
  * @param noneText when not null, an extra first option that selects `null`.
+ * @param addText when not null, a last option, such as "New category…", that calls [onAdd].
  */
 @Composable
 fun PickerField(
@@ -32,6 +35,8 @@ fun PickerField(
     options: List<Pair<Long, String>>,
     onSelect: (Long?) -> Unit,
     modifier: Modifier = Modifier,
+    addText: String? = null,
+    onAdd: () -> Unit = {},
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier = modifier) {
@@ -66,6 +71,17 @@ fun PickerField(
                         onSelect(id)
                         expanded = false
                     },
+                )
+            }
+            if (addText != null) {
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(addText) },
+                    onClick = {
+                        expanded = false
+                        onAdd()
+                    },
+                    leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
                 )
             }
         }

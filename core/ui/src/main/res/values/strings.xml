@@ -19,4 +19,6 @@
     <string name="core_ui_quantity_liters">%s L</string>
     <string name="core_ui_ok">OK</string>
     <string name="core_ui_cancel">Cancel</string>
+    <string name="core_ui_label_name">Name</string>
+    <string name="core_ui_label_emoji">Emoji</string>
 </resources>

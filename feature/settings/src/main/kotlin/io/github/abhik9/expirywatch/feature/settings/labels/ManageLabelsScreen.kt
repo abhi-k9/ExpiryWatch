@@ -2,20 +2,13 @@ package io.github.abhik9.expirywatch.feature.settings.labels
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -27,7 +20,6 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,13 +32,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.abhik9.expirywatch.core.designsystem.component.EmojiAvatar
 import io.github.abhik9.expirywatch.core.designsystem.component.EmptyState
 import io.github.abhik9.expirywatch.core.navigation.LabelKind
+import io.github.abhik9.expirywatch.core.ui.LabelDialog
+import io.github.abhik9.expirywatch.core.ui.LabelEmojis
 import io.github.abhik9.expirywatch.feature.settings.R
 
 @Composable
@@ -153,14 +145,19 @@ internal fun ManageLabelsScreen(
     }
 
     editing?.let { label ->
-        LabelEditorDialog(
-            initial = label,
-            suggestions = if (isCategories) CATEGORY_EMOJIS else LOCATION_EMOJIS,
-            onSave = {
-                onSave(it)
+        LabelDialog(
+            title = stringResource(
+                if (label.id == 0L) R.string.feature_settings_new_label else R.string.feature_settings_edit_label,
+            ),
+            confirmText = stringResource(R.string.feature_settings_save),
+            suggestions = if (isCategories) LabelEmojis.CATEGORIES else LabelEmojis.LOCATIONS,
+            onConfirm = { name, emoji ->
+                onSave(label.copy(name = name, emoji = emoji))
                 editing = null
             },
             onDismiss = { editing = null },
+            initialName = label.name,
+            initialEmoji = label.emoji,
         )
     }
     deleting?.let { label ->
@@ -187,71 +184,6 @@ internal fun ManageLabelsScreen(
     }
 }
 
-@Composable
-private fun LabelEditorDialog(
-    initial: Label,
-    suggestions: List<String>,
-    onSave: (Label) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var name by remember { mutableStateOf(initial.name) }
-    var emoji by remember { mutableStateOf(initial.emoji.ifEmpty { suggestions.first() }) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                stringResource(
-                    if (initial.id == 0L) R.string.feature_settings_new_label else R.string.feature_settings_edit_label,
-                ),
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.feature_settings_label_name)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                )
-                OutlinedTextField(
-                    value = emoji,
-                    onValueChange = { emoji = it.take(MAX_EMOJI_LENGTH) },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.feature_settings_label_emoji)) },
-                    singleLine = true,
-                )
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 44.dp),
-                    modifier = Modifier.heightIn(max = 160.dp),
-                ) {
-                    items(suggestions) { suggestion ->
-                        Box(
-                            modifier = Modifier
-                                .clickable { emoji = suggestion }
-                                .padding(6.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(suggestion, fontSize = 24.sp)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onSave(initial.copy(name = name, emoji = emoji)) },
-                enabled = name.isNotBlank(),
-            ) { Text(stringResource(R.string.feature_settings_save)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.feature_settings_cancel)) }
-        },
-    )
-}
-
 private class LabelStrings(
     @param:StringRes val title: Int,
     @param:StringRes val add: Int,
@@ -268,16 +200,4 @@ private val LocationStrings = LabelStrings(
     title = R.string.feature_settings_locations,
     add = R.string.feature_settings_add_location,
     deleteMessage = R.string.feature_settings_delete_location_message,
-)
-
-// Emoji can be several code units long (e.g. with a variation selector or skin tone).
-private const val MAX_EMOJI_LENGTH = 8
-
-private val CATEGORY_EMOJIS = listOf(
-    "🧀", "🥛", "🥚", "🍗", "🐟", "🥕", "🍎", "🍞", "🥫", "🍝", "🍨", "🧃", "🍷", "🍫", "🧂", "🍯",
-    "☕", "🍼", "💊", "🩹", "🧴", "🐶", "🧽", "📦",
-)
-
-private val LOCATION_EMOJIS = listOf(
-    "🧊", "❄️", "🗄️", "🍽️", "🪥", "🛁", "🏠", "🚗", "🧺", "📦", "🧰", "🛒",
 )

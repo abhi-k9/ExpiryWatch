@@ -8,6 +8,7 @@ import io.github.abhik9.expirywatch.core.domain.shopping.GetShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ObserveKnownProductsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.LookupProductUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.ObserveLabelsByUseUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.SaveItemUseCase
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.ProductInfo
@@ -18,6 +19,7 @@ import io.github.abhik9.expirywatch.core.testing.MainDispatcherRule
 import io.github.abhik9.expirywatch.core.testing.TestData
 import io.github.abhik9.expirywatch.core.testing.TestTime
 import io.github.abhik9.expirywatch.core.testing.repository.FakeCategoryRepository
+import io.github.abhik9.expirywatch.core.testing.repository.FakeCustomGroupRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeItemRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeProductCatalog
 import io.github.abhik9.expirywatch.core.testing.repository.FakeProductHistoryRepository
@@ -32,6 +34,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
@@ -45,11 +48,16 @@ class EditorViewModelTest {
     private val catalog = FakeProductCatalog()
     private val settings = FakeUserSettingsRepository()
     private val shopping = FakeShoppingRepository()
+    private val categories = FakeCategoryRepository(listOf(TestData.dairy, TestData.produce))
+    private val locations = FakeStorageLocationRepository(listOf(TestData.fridge))
+    private val groups = FakeCustomGroupRepository()
 
     private fun viewModel(key: EditorNavKey = EditorNavKey()) = EditorViewModel(
         key = key,
-        categoryRepository = FakeCategoryRepository(listOf(TestData.dairy, TestData.produce)),
-        locationRepository = FakeStorageLocationRepository(listOf(TestData.fridge)),
+        categoryRepository = categories,
+        locationRepository = locations,
+        groupRepository = groups,
+        observeLabelsByUse = ObserveLabelsByUseUseCase(categories, locations, groups, items, TestTime.clock),
         itemRepository = items,
         saveItem = SaveItemUseCase(items, history, TestTime.clock),
         finishItem = FinishItemUseCase(items, TestTime.clock),
@@ -99,6 +107,33 @@ class EditorViewModelTest {
         assertEquals(1.5, saved.quantity)
         assertEquals(TestData.dairy, saved.category)
         assertEquals(TestTime.today.plusDays(4), saved.expiryDate)
+    }
+
+    @Test
+    fun makesCategoriesLocationsAndGroupsWhileEditing() = runTest {
+        val viewModel = viewModel()
+        viewModel.updateForm { it.copy(name = "Beans", expiryDate = TestTime.today.plusDays(300)) }
+
+        viewModel.addCategory(" Tins ", "🥫")
+        viewModel.addLocation("Garage", " ")
+        viewModel.addGroup("Camping kit", "⛺")
+        viewModel.addGroup("  ", "⛺")
+
+        val tins = categories.observeCategories().first().single { it.name == "Tins" }
+        val garage = locations.observeLocations().first().single { it.name == "Garage" }
+        val camping = groups.currentGroups.single()
+        assertEquals(
+            Triple(tins.id, garage.id, camping.id),
+            Triple(viewModel.form.categoryId, viewModel.form.locationId, viewModel.form.groupId),
+        )
+        assertEquals("📦", garage.emoji)
+
+        viewModel.events.test {
+            viewModel.save()
+            assertEquals(EditorEvent.Done, awaitItem())
+        }
+        val beans = items.currentItems.single()
+        assertEquals(Triple(tins, garage, camping), Triple(beans.category, beans.location, beans.customGroup))
     }
 
     @Test

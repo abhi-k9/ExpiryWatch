@@ -10,6 +10,7 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.abhik9.expirywatch.core.domain.repository.CategoryRepository
+import io.github.abhik9.expirywatch.core.domain.repository.CustomGroupRepository
 import io.github.abhik9.expirywatch.core.domain.repository.ItemRepository
 import io.github.abhik9.expirywatch.core.domain.repository.StorageLocationRepository
 import io.github.abhik9.expirywatch.core.domain.shopping.AddItemsToShoppingListUseCase
@@ -17,11 +18,14 @@ import io.github.abhik9.expirywatch.core.domain.shopping.AddedToShoppingList
 import io.github.abhik9.expirywatch.core.domain.usecase.AdditionalDate
 import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemValidationError
+import io.github.abhik9.expirywatch.core.domain.usecase.LabelsByUse
 import io.github.abhik9.expirywatch.core.domain.usecase.LookupProductUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.ObserveLabelsByUseUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ProductLookupResult
 import io.github.abhik9.expirywatch.core.domain.usecase.SaveItemResult
 import io.github.abhik9.expirywatch.core.domain.usecase.SaveItemUseCase
 import io.github.abhik9.expirywatch.core.model.Category
+import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.ProductInfo
@@ -50,6 +54,7 @@ data class EditorForm(
     val barcode: String = "",
     val categoryId: Long? = null,
     val locationId: Long? = null,
+    val groupId: Long? = null,
     val quantityText: String = "1",
     val unit: QuantityUnit = QuantityUnit.PIECES,
     val expiryDate: LocalDate? = null,
@@ -120,6 +125,8 @@ class EditorViewModel @AssistedInject constructor(
     @Assisted private val key: EditorNavKey,
     private val categoryRepository: CategoryRepository,
     private val locationRepository: StorageLocationRepository,
+    private val groupRepository: CustomGroupRepository,
+    observeLabelsByUse: ObserveLabelsByUseUseCase,
     private val itemRepository: ItemRepository,
     private val saveItem: SaveItemUseCase,
     private val finishItem: FinishItemUseCase,
@@ -148,10 +155,9 @@ class EditorViewModel @AssistedInject constructor(
 
     val hasUnsavedChanges: Boolean get() = !isLoading && form != initialForm
 
-    val categories: StateFlow<List<Category>> = categoryRepository.observeCategories()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
-    val locations: StateFlow<List<StorageLocation>> = locationRepository.observeLocations()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
+    /** The categories, locations and groups to pick from, the ones used most and lately first. */
+    val labels: StateFlow<LabelsByUse> = observeLabelsByUse()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), LabelsByUse())
 
     private val _events = Channel<EditorEvent>(Channel.BUFFERED)
     val events: Flow<EditorEvent> = _events.receiveAsFlow()
@@ -245,6 +251,30 @@ class EditorViewModel @AssistedInject constructor(
         }
     }
 
+    /** Makes a category and puts the item in it. */
+    fun addCategory(name: String, emoji: String) = addLabel(name) { trimmed ->
+        val id = categoryRepository.upsert(Category(name = trimmed, emoji = emoji.ifBlank { DEFAULT_EMOJI }))
+        updateForm { it.copy(categoryId = id) }
+    }
+
+    /** Makes a storage location and keeps the item there. */
+    fun addLocation(name: String, emoji: String) = addLabel(name) { trimmed ->
+        val id = locationRepository.upsert(StorageLocation(name = trimmed, emoji = emoji.ifBlank { DEFAULT_EMOJI }))
+        updateForm { it.copy(locationId = id) }
+    }
+
+    /** Makes a group and puts the item in it. */
+    fun addGroup(name: String, emoji: String) = addLabel(name) { trimmed ->
+        val id = groupRepository.upsert(CustomGroup(name = trimmed, emoji = emoji.ifBlank { DEFAULT_EMOJI }))
+        updateForm { it.copy(groupId = id) }
+    }
+
+    private fun addLabel(name: String, create: suspend (String) -> Unit) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        viewModelScope.launch { create(trimmed) }
+    }
+
     fun delete() {
         val id = existingItem?.id ?: return
         viewModelScope.launch {
@@ -253,18 +283,20 @@ class EditorViewModel @AssistedInject constructor(
         }
     }
 
-    // Looks the labels up in the repositories rather than in [categories] and [locations], which are
-    // only kept up to date while the UI collects them.
+    // Looks the labels up in the repositories rather than in [labels], which is only kept up to date
+    // while the UI collects it.
     private suspend fun buildItem(form: EditorForm, expiryDate: LocalDate): Item {
         val base = existingItem ?: Item(name = "", expiryDate = expiryDate)
         val category = categoryRepository.observeCategories().first().find { it.id == form.categoryId }
         val location = locationRepository.observeLocations().first().find { it.id == form.locationId }
+        val group = groupRepository.observeGroups().first().find { it.id == form.groupId }
         return base.copy(
             name = form.name,
             brand = form.brand,
             barcode = form.barcode,
             category = category,
             location = location,
+            customGroup = group,
             quantity = form.quantityText.parseQuantity() ?: base.quantity,
             unit = form.unit,
             expiryDate = expiryDate,
@@ -305,6 +337,7 @@ class EditorViewModel @AssistedInject constructor(
 
     private companion object {
         const val STOP_TIMEOUT_MILLIS = 5_000L
+        const val DEFAULT_EMOJI = "📦"
     }
 }
 
@@ -316,6 +349,7 @@ private fun Item.toForm() = EditorForm(
     barcode = barcode.orEmpty(),
     categoryId = category?.id,
     locationId = location?.id,
+    groupId = customGroup?.id,
     quantityText = quantity.toQuantityText(),
     unit = unit,
     expiryDate = expiryDate,

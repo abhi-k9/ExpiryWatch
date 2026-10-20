@@ -41,8 +41,6 @@
     <string name="feature_settings_add_location">Add location</string>
     <string name="feature_settings_new_label">New</string>
     <string name="feature_settings_edit_label">Edit</string>
-    <string name="feature_settings_label_name">Name</string>
-    <string name="feature_settings_label_emoji">Emoji</string>
     <string name="feature_settings_delete_label">Delete %s</string>
     <string name="feature_settings_delete_label_title">Delete \"%s\"?</string>
     <string name="feature_settings_delete_category_message">Items in this category are kept, but will no longer have a category.</string>

@@ -46,6 +46,15 @@
     <string name="feature_editor_section_details">Details</string>
     <string name="feature_editor_category">Category</string>
     <string name="feature_editor_location">Stored in</string>
+    <string name="feature_editor_group">Group</string>
+    <string name="feature_editor_no_group">No group</string>
+    <string name="feature_editor_new_category">New category…</string>
+    <string name="feature_editor_new_location">New location…</string>
+    <string name="feature_editor_new_group">New group…</string>
+    <string name="feature_editor_new_category_title">New category</string>
+    <string name="feature_editor_new_location_title">New location</string>
+    <string name="feature_editor_new_group_title">New group</string>
+    <string name="feature_editor_create">Create</string>
     <string name="feature_editor_none">None</string>
     <string name="feature_editor_quantity">Quantity</string>
     <string name="feature_editor_unit">Unit</string>

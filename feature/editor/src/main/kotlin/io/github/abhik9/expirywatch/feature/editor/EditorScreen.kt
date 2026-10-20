@@ -59,12 +59,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.abhik9.expirywatch.core.designsystem.component.SectionHeader
-import io.github.abhik9.expirywatch.core.model.Category
+import io.github.abhik9.expirywatch.core.domain.usecase.LabelsByUse
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.QuantityUnit
-import io.github.abhik9.expirywatch.core.model.StorageLocation
 import io.github.abhik9.expirywatch.core.scanner.BarcodeScannerDialog
 import io.github.abhik9.expirywatch.core.ui.DateField
+import io.github.abhik9.expirywatch.core.ui.LabelDialog
+import io.github.abhik9.expirywatch.core.ui.LabelEmojis
 import io.github.abhik9.expirywatch.core.ui.PickerField
 import io.github.abhik9.expirywatch.core.ui.label
 import java.time.LocalDate
@@ -75,8 +76,7 @@ internal fun EditorRoute(
     onDone: () -> Unit,
     viewModel: EditorViewModel,
 ) {
-    val categories by viewModel.categories.collectAsStateWithLifecycle()
-    val locations by viewModel.locations.collectAsStateWithLifecycle()
+    val labels by viewModel.labels.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     // Updated on configuration changes without restarting the effect, which would drop a shown snackbar.
     val resources by rememberUpdatedState(LocalResources.current)
@@ -106,8 +106,7 @@ internal fun EditorRoute(
         errors = viewModel.errors,
         invalidAdditionalQuantities = viewModel.invalidAdditionalQuantities,
         lookup = viewModel.lookup,
-        categories = categories,
-        locations = locations,
+        labels = labels,
         today = viewModel.today,
         hasUnsavedChanges = viewModel.hasUnsavedChanges,
         openScannerInitially = openScanner,
@@ -118,6 +117,9 @@ internal fun EditorRoute(
         onFinish = viewModel::finish,
         onAddToShoppingList = viewModel::addToShoppingList,
         onDelete = viewModel::delete,
+        onAddCategory = viewModel::addCategory,
+        onAddLocation = viewModel::addLocation,
+        onAddGroup = viewModel::addGroup,
         onClose = onDone,
         snackbarHostState = snackbarHostState,
     )
@@ -133,8 +135,7 @@ internal fun EditorScreen(
     errors: Set<EditorError>,
     invalidAdditionalQuantities: Set<Int>,
     lookup: LookupState,
-    categories: List<Category>,
-    locations: List<StorageLocation>,
+    labels: LabelsByUse,
     today: LocalDate,
     hasUnsavedChanges: Boolean,
     openScannerInitially: Boolean,
@@ -145,6 +146,9 @@ internal fun EditorScreen(
     onFinish: (ItemStatus) -> Unit,
     onAddToShoppingList: () -> Unit,
     onDelete: () -> Unit,
+    onAddCategory: (name: String, emoji: String) -> Unit,
+    onAddLocation: (name: String, emoji: String) -> Unit,
+    onAddGroup: (name: String, emoji: String) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
@@ -152,6 +156,7 @@ internal fun EditorScreen(
     var showScanner by rememberSaveable { mutableStateOf(openScannerInitially) }
     var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
+    var newLabel by rememberSaveable { mutableStateOf<NewLabel?>(null) }
     val barcodeFocusRequester = remember { FocusRequester() }
 
     val requestClose: () -> Unit = { if (hasUnsavedChanges) showDiscardDialog = true else onClose() }
@@ -268,26 +273,41 @@ internal fun EditorScreen(
             )
 
             SectionHeader(stringResource(R.string.feature_editor_section_details), Modifier.padding(top = 8.dp))
-            val selectedCategory = categories.firstOrNull { it.id == form.categoryId }
-            val selectedLocation = locations.firstOrNull { it.id == form.locationId }
+            val selectedCategory = labels.categories.firstOrNull { it.id == form.categoryId }
+            val selectedLocation = labels.locations.firstOrNull { it.id == form.locationId }
+            val selectedGroup = labels.groups.firstOrNull { it.id == form.groupId }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 PickerField(
                     label = stringResource(R.string.feature_editor_category),
                     selectedText = selectedCategory?.let { "${it.emoji} ${it.name}" },
                     noneText = stringResource(R.string.feature_editor_none),
-                    options = categories.map { it.id to "${it.emoji} ${it.name}" },
+                    options = labels.categories.map { it.id to "${it.emoji} ${it.name}" },
                     onSelect = { id -> onFormChange { it.copy(categoryId = id) } },
                     modifier = Modifier.weight(1f),
+                    addText = stringResource(R.string.feature_editor_new_category),
+                    onAdd = { newLabel = NewLabel.CATEGORY },
                 )
                 PickerField(
                     label = stringResource(R.string.feature_editor_location),
                     selectedText = selectedLocation?.let { "${it.emoji} ${it.name}" },
                     noneText = stringResource(R.string.feature_editor_none),
-                    options = locations.map { it.id to "${it.emoji} ${it.name}" },
+                    options = labels.locations.map { it.id to "${it.emoji} ${it.name}" },
                     onSelect = { id -> onFormChange { it.copy(locationId = id) } },
                     modifier = Modifier.weight(1f),
+                    addText = stringResource(R.string.feature_editor_new_location),
+                    onAdd = { newLabel = NewLabel.LOCATION },
                 )
             }
+            PickerField(
+                label = stringResource(R.string.feature_editor_group),
+                selectedText = selectedGroup?.let { "${it.emoji} ${it.name}" },
+                noneText = stringResource(R.string.feature_editor_no_group),
+                options = labels.groups.map { it.id to "${it.emoji} ${it.name}" },
+                onSelect = { id -> onFormChange { it.copy(groupId = id) } },
+                modifier = Modifier.fillMaxWidth(),
+                addText = stringResource(R.string.feature_editor_new_group),
+                onAdd = { newLabel = NewLabel.GROUP },
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = form.quantityText,
@@ -334,6 +354,34 @@ internal fun EditorScreen(
                 )
             }
         }
+    }
+
+    newLabel?.let { kind ->
+        val close = { newLabel = null }
+        LabelDialog(
+            title = stringResource(
+                when (kind) {
+                    NewLabel.CATEGORY -> R.string.feature_editor_new_category_title
+                    NewLabel.LOCATION -> R.string.feature_editor_new_location_title
+                    NewLabel.GROUP -> R.string.feature_editor_new_group_title
+                },
+            ),
+            confirmText = stringResource(R.string.feature_editor_create),
+            suggestions = when (kind) {
+                NewLabel.CATEGORY -> LabelEmojis.CATEGORIES
+                NewLabel.LOCATION -> LabelEmojis.LOCATIONS
+                NewLabel.GROUP -> LabelEmojis.GROUPS
+            },
+            onConfirm = { name, emoji ->
+                close()
+                when (kind) {
+                    NewLabel.CATEGORY -> onAddCategory(name, emoji)
+                    NewLabel.LOCATION -> onAddLocation(name, emoji)
+                    NewLabel.GROUP -> onAddGroup(name, emoji)
+                }
+            },
+            onDismiss = close,
+        )
     }
 
     if (showScanner) {
@@ -517,3 +565,6 @@ internal fun BarcodeField(
         }
     }
 }
+
+/** What the dialog for making a label while editing an item makes. */
+private enum class NewLabel { CATEGORY, LOCATION, GROUP }
