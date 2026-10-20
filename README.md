@@ -10,8 +10,12 @@ Built with Kotlin, Jetpack Compose and Material 3, following Google's recommende
 - **Item list** sorted by expiry, grouped into *Expired*, *Expiring soon* and *Fresh*, with
   search (ignores case and accents), category and location filters, and several sort orders.
 - **Swipe to finish**: swipe right when an item is used up, left when it's thrown away, with undo.
-- **Select several items**: long-press an item, or a product's row for all of its items, then tap
-  others to add them. Snooze their reminders or put them on the shopping list together.
+- **Your own groups**: put items in groups you name, such as "Camping kit" or "Baby", whatever
+  their category. The list folds each group into one row with its emoji, how many items it holds
+  and which expires next; tap it to see them. Search finds items by their group's name too.
+- **Select several items**: long-press an item, or a product's or group's row for all of its
+  items, then tap others to add them. Snooze their reminders, put them on the shopping list or
+  move them to a group together.
 - **Several of the same product**: give an item more expiry dates in the editor, for example one per
   carton of a multipack. Each date is kept as an item of its own, and the list folds items with
   the same name into one row showing the next to expire; tap it to see, edit or finish each one.
@@ -49,8 +53,11 @@ Built with Kotlin, Jetpack Compose and Material 3, following Google's recommende
   name and brand, or no grouping) and whether a product's items stay in one group across
   statuses; whether daily reminders include expired items; and whether unknown barcodes are looked
   up online, so they can stay on the device.
-- Customizable **categories and storage locations**, light/dark theme, dynamic color, launcher
-  shortcuts and an adaptive layout (navigation rail on tablets and foldables).
+- Customizable **categories, storage locations and groups**, made in Settings or right from the
+  editor. Picking one, the two used most often come first, then the three used most recently, then
+  the rest by name.
+- Light/dark theme, dynamic color, launcher shortcuts and an adaptive layout (navigation rail on
+  tablets and foldables).
 
 ## Build flavors
 
@@ -92,7 +99,7 @@ The app follows a layered, multi-module architecture with unidirectional data fl
 | `feature:editor` | Add/edit screen and barcode lookup |
 | `feature:shopping` | Shopping lists, putting away what was bought, adding items from text |
 | `feature:insights` | Usage and waste statistics |
-| `feature:settings` | Settings, categories and locations, backup |
+| `feature:settings` | Settings, categories, locations and groups, backup |
 | `feature:widget` | Glance home-screen widget |
 | `core:model` | Domain models (pure Kotlin) |
 | `core:domain` | Use cases and repository interfaces (pure Kotlin) |
@@ -151,7 +158,7 @@ tests, lint and both flavors' release builds on every push that changes more tha
 ## Backup file format
 
 Backups are versioned JSON (`"format": "expirywatch-backup"`, `"version": 2`) with categories,
-locations, items, remembered products and the shopping lists: their items, the products added to
+locations, groups, items, remembered products and the shopping lists: their items, the products added to
 them before and the order of the aisles. The format has its own DTOs, separate from the domain
 models, so internal refactors can't silently change it. Importing validates the whole file before
 replacing any data. Version 1 files, from before shopping lists, still import; they keep the
