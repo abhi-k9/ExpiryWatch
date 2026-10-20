@@ -1,14 +1,18 @@
 package io.github.abhik9.expirywatch.core.data.repository
 
 import io.github.abhik9.expirywatch.core.database.dao.CategoryDao
+import io.github.abhik9.expirywatch.core.database.dao.CustomGroupDao
 import io.github.abhik9.expirywatch.core.database.dao.LocationDao
 import io.github.abhik9.expirywatch.core.database.model.CategoryEntity
+import io.github.abhik9.expirywatch.core.database.model.CustomGroupEntity
 import io.github.abhik9.expirywatch.core.database.model.LocationEntity
 import io.github.abhik9.expirywatch.core.database.model.asEntity
 import io.github.abhik9.expirywatch.core.database.model.asExternalModel
 import io.github.abhik9.expirywatch.core.domain.repository.CategoryRepository
+import io.github.abhik9.expirywatch.core.domain.repository.CustomGroupRepository
 import io.github.abhik9.expirywatch.core.domain.repository.StorageLocationRepository
 import io.github.abhik9.expirywatch.core.model.Category
+import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.StorageLocation
 import java.text.Collator
 import javax.inject.Inject
@@ -47,4 +51,21 @@ internal class RoomStorageLocationRepository @Inject constructor(
     }
 
     override suspend fun delete(id: Long) = locationDao.delete(id)
+}
+
+internal class RoomCustomGroupRepository @Inject constructor(
+    private val groupDao: CustomGroupDao,
+) : CustomGroupRepository {
+    override fun observeGroups(): Flow<List<CustomGroup>> = groupDao.observeAll().map { groups ->
+        groups.map(CustomGroupEntity::asExternalModel).sortedWith(compareBy(Collator.getInstance()) { it.name })
+    }
+
+    override suspend fun upsert(group: CustomGroup): Long = if (group.id == 0L) {
+        groupDao.insert(group.asEntity())
+    } else {
+        groupDao.update(group.asEntity())
+        group.id
+    }
+
+    override suspend fun delete(id: Long) = groupDao.delete(id)
 }

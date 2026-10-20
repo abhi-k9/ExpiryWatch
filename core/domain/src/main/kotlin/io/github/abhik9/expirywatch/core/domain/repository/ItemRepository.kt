@@ -30,5 +30,8 @@ interface ItemRepository {
      */
     suspend fun snoozeReminders(ids: Collection<Long>, until: LocalDate?)
 
+    /** Puts the items in the group with [groupId], or takes them out of any group when it's `null`. */
+    suspend fun moveToGroup(ids: Collection<Long>, groupId: Long?)
+
     suspend fun delete(id: Long)
 }

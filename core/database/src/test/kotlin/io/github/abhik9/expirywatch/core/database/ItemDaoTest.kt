@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.github.abhik9.expirywatch.core.database.model.CategoryEntity
+import io.github.abhik9.expirywatch.core.database.model.CustomGroupEntity
 import io.github.abhik9.expirywatch.core.database.model.ItemEntity
 import io.github.abhik9.expirywatch.core.database.model.LocationEntity
 import io.github.abhik9.expirywatch.core.database.model.asExternalModel
@@ -124,5 +125,21 @@ class ItemDaoTest {
 
         val snoozed = database.itemDao().getAll().associate { it.id to it.remindersSnoozedUntil }
         assertEquals(mapOf(milk to today.plusDays(7), bread to null, eggs to null), snoozed)
+    }
+
+    @Test
+    fun itemsMoveToAGroupAndLeaveItWhenItsDeleted() = runTest {
+        val camping = database.customGroupDao().insert(CustomGroupEntity(name = "Camping kit", emoji = "⛺"))
+        val beans = database.itemDao().insert(item("Beans"))
+        val milk = database.itemDao().insert(item("Milk"))
+
+        database.itemDao().setGroup(listOf(beans), camping)
+
+        val active = database.itemDao().observeActive().first().associateBy { it.item.id }
+        assertEquals("Camping kit", active.getValue(beans).group?.name)
+        assertNull(active.getValue(milk).group)
+
+        database.customGroupDao().delete(camping)
+        assertNull(database.itemDao().observe(beans).first()?.item?.groupId)
     }
 }

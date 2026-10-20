@@ -13,3 +13,13 @@ data class StorageLocation(
     val name: String,
     val emoji: String,
 )
+
+/**
+ * A group the user makes to keep items together, such as "Camping kit" or "Baby", whatever their
+ * category. The list shows a group's items folded into one row.
+ */
+data class CustomGroup(
+    val id: Long = 0,
+    val name: String,
+    val emoji: String,
+)

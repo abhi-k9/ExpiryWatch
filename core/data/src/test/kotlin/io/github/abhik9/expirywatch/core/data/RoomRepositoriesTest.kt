@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import io.github.abhik9.expirywatch.core.common.diagnostics.EventLog
 import io.github.abhik9.expirywatch.core.data.repository.RoomBackupRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomCategoryRepository
+import io.github.abhik9.expirywatch.core.data.repository.RoomCustomGroupRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomItemRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomProductHistoryRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomShoppingRepository
@@ -13,6 +14,7 @@ import io.github.abhik9.expirywatch.core.data.repository.RoomStorageLocationRepo
 import io.github.abhik9.expirywatch.core.database.ExpiryWatchDatabase
 import io.github.abhik9.expirywatch.core.domain.backup.BackupSnapshot
 import io.github.abhik9.expirywatch.core.model.Category
+import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.ProductInfo
@@ -240,8 +242,22 @@ class RoomRepositoriesTest {
             .upsert(StorageLocation(name = "Fridge", emoji = "🧊"))
         val dairy = Category(categoryId, "Dairy", "🧀")
         val fridge = StorageLocation(locationId, "Fridge", "🧊")
+        val camping =
+            CustomGroup(
+                RoomCustomGroupRepository(
+                    source.customGroupDao(),
+                ).upsert(CustomGroup(name = "Camping kit", emoji = "⛺")),
+                "Camping kit",
+                "⛺",
+            )
         val sourceItems = RoomItemRepository(source, EventLog.NONE)
-        sourceItems.upsert(TestData.item(name = "Milk", category = dairy, location = fridge).copy(barcode = "123"))
+        sourceItems.upsert(
+            TestData.item(
+                name = "Milk",
+                category = dairy,
+                location = fridge,
+            ).copy(barcode = "123", customGroup = camping),
+        )
         val finishedId = sourceItems.upsert(TestData.item(name = "Spinach", category = null, location = null))
         sourceItems.updateStatus(finishedId, ItemStatus.WASTED, TestTime.today)
         RoomProductHistoryRepository(source.productDao()).remember(
@@ -281,6 +297,7 @@ class RoomRepositoriesTest {
         val restoredMilk = RoomItemRepository(target, EventLog.NONE).getActiveItems().single()
         assertEquals(dairy, restoredMilk.category)
         assertEquals(fridge, restoredMilk.location)
+        assertEquals(camping, restoredMilk.customGroup)
         assertEquals("Milk", RoomProductHistoryRepository(target.productDao()).find("123")?.name)
     }
 

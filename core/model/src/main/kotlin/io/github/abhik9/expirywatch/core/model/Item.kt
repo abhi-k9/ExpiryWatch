@@ -15,6 +15,7 @@ import java.time.LocalDate
  * @property finishedDate the day the item left [ItemStatus.ACTIVE]; `null` while it is active.
  * @property remindersSnoozedUntil the day reminders about the item start again, or
  * [SNOOZED_INDEFINITELY]; `null` when they aren't snoozed. See [isReminderSnoozed].
+ * @property customGroup the group the user put the item in, if any.
  */
 data class Item(
     val id: Long = 0,
@@ -35,6 +36,7 @@ data class Item(
     val createdAt: Instant = Instant.EPOCH,
     val updatedAt: Instant = Instant.EPOCH,
     val remindersSnoozedUntil: LocalDate? = null,
+    val customGroup: CustomGroup? = null,
 ) {
     /** Whether reminders leave the item out on [today]. */
     fun isReminderSnoozed(today: LocalDate): Boolean = remindersSnoozedUntil?.isAfter(today) == true

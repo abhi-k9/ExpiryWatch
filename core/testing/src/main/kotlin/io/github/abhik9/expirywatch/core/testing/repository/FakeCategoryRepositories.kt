@@ -1,8 +1,10 @@
 package io.github.abhik9.expirywatch.core.testing.repository
 
 import io.github.abhik9.expirywatch.core.domain.repository.CategoryRepository
+import io.github.abhik9.expirywatch.core.domain.repository.CustomGroupRepository
 import io.github.abhik9.expirywatch.core.domain.repository.StorageLocationRepository
 import io.github.abhik9.expirywatch.core.model.Category
+import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.StorageLocation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,5 +42,24 @@ class FakeStorageLocationRepository(initial: List<StorageLocation> = emptyList()
 
     override suspend fun delete(id: Long) {
         locations.update { list -> list.filterNot { it.id == id } }
+    }
+}
+
+class FakeCustomGroupRepository(initial: List<CustomGroup> = emptyList()) : CustomGroupRepository {
+    private val groups = MutableStateFlow(initial)
+    private var nextId = (initial.maxOfOrNull { it.id } ?: 0) + 1
+
+    val currentGroups: List<CustomGroup> get() = groups.value
+
+    override fun observeGroups(): Flow<List<CustomGroup>> = groups.map { list -> list.sortedBy { it.name } }
+
+    override suspend fun upsert(group: CustomGroup): Long {
+        val id = if (group.id == 0L) nextId++ else group.id
+        groups.update { list -> list.filterNot { it.id == id } + group.copy(id = id) }
+        return id
+    }
+
+    override suspend fun delete(id: Long) {
+        groups.update { list -> list.filterNot { it.id == id } }
     }
 }

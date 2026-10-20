@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import io.github.abhik9.expirywatch.core.database.model.CategoryEntity
+import io.github.abhik9.expirywatch.core.database.model.CustomGroupEntity
 import io.github.abhik9.expirywatch.core.database.model.LocationEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -60,4 +61,28 @@ interface LocationDao {
 
     @Query("SELECT COUNT(*) FROM locations")
     suspend fun count(): Int
+}
+
+@Dao
+interface CustomGroupDao {
+    @Query("SELECT * FROM custom_groups")
+    fun observeAll(): Flow<List<CustomGroupEntity>>
+
+    @Query("SELECT * FROM custom_groups")
+    suspend fun getAll(): List<CustomGroupEntity>
+
+    @Insert
+    suspend fun insert(group: CustomGroupEntity): Long
+
+    @Insert
+    suspend fun insertAll(groups: List<CustomGroupEntity>)
+
+    @Update
+    suspend fun update(group: CustomGroupEntity)
+
+    @Query("DELETE FROM custom_groups WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("DELETE FROM custom_groups")
+    suspend fun deleteAll()
 }

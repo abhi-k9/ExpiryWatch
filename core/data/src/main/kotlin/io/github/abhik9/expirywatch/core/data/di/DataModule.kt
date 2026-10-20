@@ -12,12 +12,14 @@ import io.github.abhik9.expirywatch.core.data.repository.DataStoreUserSettingsRe
 import io.github.abhik9.expirywatch.core.data.repository.OpenFoodFactsProductCatalog
 import io.github.abhik9.expirywatch.core.data.repository.RoomBackupRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomCategoryRepository
+import io.github.abhik9.expirywatch.core.data.repository.RoomCustomGroupRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomItemRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomProductHistoryRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomShoppingRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomStorageLocationRepository
 import io.github.abhik9.expirywatch.core.domain.repository.BackupRepository
 import io.github.abhik9.expirywatch.core.domain.repository.CategoryRepository
+import io.github.abhik9.expirywatch.core.domain.repository.CustomGroupRepository
 import io.github.abhik9.expirywatch.core.domain.repository.DocumentStore
 import io.github.abhik9.expirywatch.core.domain.repository.ItemRepository
 import io.github.abhik9.expirywatch.core.domain.repository.ProductCatalog
@@ -37,6 +39,9 @@ internal abstract class DataModule {
 
     @Binds
     abstract fun bindsStorageLocationRepository(repository: RoomStorageLocationRepository): StorageLocationRepository
+
+    @Binds
+    abstract fun bindsCustomGroupRepository(repository: RoomCustomGroupRepository): CustomGroupRepository
 
     @Binds
     abstract fun bindsProductHistoryRepository(repository: RoomProductHistoryRepository): ProductHistoryRepository

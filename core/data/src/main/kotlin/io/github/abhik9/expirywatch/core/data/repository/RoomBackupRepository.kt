@@ -4,6 +4,7 @@ import android.database.sqlite.SQLiteException
 import androidx.room.withTransaction
 import io.github.abhik9.expirywatch.core.database.ExpiryWatchDatabase
 import io.github.abhik9.expirywatch.core.database.model.CategoryEntity
+import io.github.abhik9.expirywatch.core.database.model.CustomGroupEntity
 import io.github.abhik9.expirywatch.core.database.model.LocationEntity
 import io.github.abhik9.expirywatch.core.database.model.PopulatedItem
 import io.github.abhik9.expirywatch.core.database.model.PopulatedShoppingHistory
@@ -30,6 +31,7 @@ internal class RoomBackupRepository @Inject constructor(
                 items = database.itemDao().getAllPopulated().map(PopulatedItem::asExternalModel),
                 products = database.productDao().getAll().map(ProductEntity::asExternalModel),
                 shopping = readShopping(),
+                groups = database.customGroupDao().getAll().map(CustomGroupEntity::asExternalModel),
             )
         }
     }
@@ -46,9 +48,11 @@ internal class RoomBackupRepository @Inject constructor(
             database.productDao().deleteAll()
             database.categoryDao().deleteAll()
             database.locationDao().deleteAll()
+            database.customGroupDao().deleteAll()
 
             database.categoryDao().insertAll(snapshot.categories.map { it.asEntity() })
             database.locationDao().insertAll(snapshot.locations.map { it.asEntity() })
+            database.customGroupDao().insertAll(snapshot.groups.map { it.asEntity() })
             database.itemDao().insertAll(snapshot.items.map { it.asEntity() })
             database.productDao().insertAll(snapshot.products.map { it.asEntity() })
             database.shoppingDao().insertLists(shopping.lists.map { it.asEntity() })

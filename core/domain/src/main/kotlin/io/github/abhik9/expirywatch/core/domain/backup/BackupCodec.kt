@@ -3,6 +3,7 @@ package io.github.abhik9.expirywatch.core.domain.backup
 import io.github.abhik9.expirywatch.core.domain.productKey
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemValidator
 import io.github.abhik9.expirywatch.core.model.Category
+import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.ProductInfo
@@ -52,6 +53,7 @@ object BackupCodec {
             items = snapshot.items.map { it.toDto() },
             products = snapshot.products.map { it.toDto() },
             shopping = snapshot.shopping?.toDto(),
+            groups = snapshot.groups.map { GroupDto(it.id, it.name, it.emoji) },
         ),
     )
 
@@ -81,6 +83,7 @@ object BackupCodec {
         requireValidIds(categories.map { it.id }, "categories")
         requireValidIds(locations.map { it.id }, "locations")
         requireValidIds(items.map { it.id }, "items")
+        requireValidIds(groups.map { it.id }, "groups")
 
         val categoriesById = categories
             .map { Category(id = it.id, name = it.name.trim(), emoji = it.emoji) }
@@ -88,6 +91,10 @@ object BackupCodec {
             .associateBy { it.id }
         val locationsById = locations
             .map { StorageLocation(id = it.id, name = it.name.trim(), emoji = it.emoji) }
+            .filter { it.name.isNotEmpty() }
+            .associateBy { it.id }
+        val groupsById = groups
+            .map { CustomGroup(id = it.id, name = it.name.trim(), emoji = it.emoji) }
             .filter { it.name.isNotEmpty() }
             .associateBy { it.id }
 
@@ -117,6 +124,7 @@ object BackupCodec {
                     createdAt = dto.createdAt?.let(::parseInstant) ?: Instant.EPOCH,
                     updatedAt = dto.updatedAt?.let(::parseInstant) ?: Instant.EPOCH,
                     remindersSnoozedUntil = dto.remindersSnoozedUntil?.let(LocalDate::parse),
+                    customGroup = dto.groupId?.let(groupsById::get),
                 ).let { item ->
                     // An active item has no finish date; a finished one needs one for insights.
                     when {
@@ -145,6 +153,7 @@ object BackupCodec {
                     )
                 },
             shopping = shopping?.toBackup(categoriesById, locationsById),
+            groups = groupsById.values.toList(),
         )
     }
 
@@ -237,6 +246,7 @@ object BackupCodec {
         createdAt = createdAt.toString(),
         updatedAt = updatedAt.toString(),
         remindersSnoozedUntil = remindersSnoozedUntil?.toString(),
+        groupId = customGroup?.id,
     )
 
     private fun ShoppingBackup.toDto() = ShoppingDto(
@@ -291,6 +301,7 @@ private data class BackupFileDto(
     val items: List<ItemDto> = emptyList(),
     val products: List<ProductDto> = emptyList(),
     val shopping: ShoppingDto? = null,
+    val groups: List<GroupDto> = emptyList(),
 )
 
 @Serializable
@@ -298,6 +309,9 @@ private data class CategoryDto(val id: Long, val name: String, val emoji: String
 
 @Serializable
 private data class LocationDto(val id: Long, val name: String, val emoji: String = "")
+
+@Serializable
+private data class GroupDto(val id: Long, val name: String, val emoji: String = "")
 
 @Serializable
 private data class ItemDto(
@@ -320,6 +334,7 @@ private data class ItemDto(
     val createdAt: String? = null,
     val updatedAt: String? = null,
     val remindersSnoozedUntil: String? = null,
+    val groupId: Long? = null,
 )
 
 @Serializable

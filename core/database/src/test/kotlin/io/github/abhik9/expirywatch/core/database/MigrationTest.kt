@@ -86,6 +86,8 @@ class MigrationTest {
         assertEquals("Dairy", milk.category?.name)
         // Version 3 added snoozing an item's reminders, which none are.
         assertNull(milk.item.remindersSnoozedUntil)
+        // Version 4 added the user's groups, which it isn't in.
+        assertNull(milk.group)
 
         val now = Instant.parse("2026-03-10T12:00:00Z")
         val list = db.shoppingDao().insertList(ShoppingListEntity(name = "Groceries", createdAt = now))

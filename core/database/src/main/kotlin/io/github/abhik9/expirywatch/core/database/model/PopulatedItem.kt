@@ -3,6 +3,7 @@ package io.github.abhik9.expirywatch.core.database.model
 import androidx.room.Embedded
 import androidx.room.Relation
 import io.github.abhik9.expirywatch.core.model.Category
+import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ProductInfo
 import io.github.abhik9.expirywatch.core.model.ProductSource
@@ -15,6 +16,8 @@ data class PopulatedItem(
     val category: CategoryEntity?,
     @Relation(parentColumn = "location_id", entityColumn = "id")
     val location: LocationEntity?,
+    @Relation(parentColumn = "group_id", entityColumn = "id")
+    val group: CustomGroupEntity?,
 )
 
 fun PopulatedItem.asExternalModel() = Item(
@@ -36,6 +39,7 @@ fun PopulatedItem.asExternalModel() = Item(
     createdAt = item.createdAt,
     updatedAt = item.updatedAt,
     remindersSnoozedUntil = item.remindersSnoozedUntil,
+    customGroup = group?.asExternalModel(),
 )
 
 fun Item.asEntity() = ItemEntity(
@@ -57,6 +61,7 @@ fun Item.asEntity() = ItemEntity(
     createdAt = createdAt,
     updatedAt = updatedAt,
     remindersSnoozedUntil = remindersSnoozedUntil,
+    groupId = customGroup?.id,
 )
 
 fun CategoryEntity.asExternalModel() = Category(id = id, name = name, emoji = emoji)
@@ -66,6 +71,10 @@ fun Category.asEntity() = CategoryEntity(id = id, name = name, emoji = emoji)
 fun LocationEntity.asExternalModel() = StorageLocation(id = id, name = name, emoji = emoji)
 
 fun StorageLocation.asEntity() = LocationEntity(id = id, name = name, emoji = emoji)
+
+fun CustomGroupEntity.asExternalModel() = CustomGroup(id = id, name = name, emoji = emoji)
+
+fun CustomGroup.asEntity() = CustomGroupEntity(id = id, name = name, emoji = emoji)
 
 fun ProductEntity.asExternalModel() = ProductInfo(
     barcode = barcode,

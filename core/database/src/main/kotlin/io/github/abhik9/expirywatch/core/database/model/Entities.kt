@@ -24,6 +24,13 @@ data class LocationEntity(
     val emoji: String,
 )
 
+@Entity(tableName = "custom_groups")
+data class CustomGroupEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val emoji: String,
+)
+
 @Entity(
     tableName = "items",
     foreignKeys = [
@@ -39,11 +46,18 @@ data class LocationEntity(
             childColumns = ["location_id"],
             onDelete = ForeignKey.SET_NULL,
         ),
+        ForeignKey(
+            entity = CustomGroupEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["group_id"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
     ],
     indices = [
         Index("category_id"),
         Index("location_id"),
         Index("status", "finished_date"),
+        Index("group_id"),
     ],
 )
 data class ItemEntity(
@@ -65,6 +79,7 @@ data class ItemEntity(
     @ColumnInfo(name = "created_at") val createdAt: Instant,
     @ColumnInfo(name = "updated_at") val updatedAt: Instant,
     @ColumnInfo(name = "reminders_snoozed_until") val remindersSnoozedUntil: LocalDate? = null,
+    @ColumnInfo(name = "group_id") val groupId: Long? = null,
 )
 
 /** What the user entered the last time they saved an item with this barcode. */

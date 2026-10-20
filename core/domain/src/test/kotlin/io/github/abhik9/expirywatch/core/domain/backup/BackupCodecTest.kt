@@ -1,5 +1,6 @@
 package io.github.abhik9.expirywatch.core.domain.backup
 
+import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.ProductInfo
@@ -17,6 +18,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class BackupCodecTest {
+    private val camping = CustomGroup(id = 5, name = "Camping kit", emoji = "⛺")
     private val snapshot = BackupSnapshot(
         categories = listOf(TestData.dairy, TestData.produce),
         locations = listOf(TestData.fridge, TestData.pantry),
@@ -29,6 +31,7 @@ class BackupCodecTest {
                 useWithinDaysAfterOpening = 4,
                 notes = "Organic",
                 remindersSnoozedUntil = TestTime.today.plusDays(3),
+                customGroup = camping,
             ),
             TestData.item(id = 2, name = "Spinach", category = TestData.produce, location = null).copy(
                 status = ItemStatus.WASTED,
@@ -78,6 +81,7 @@ class BackupCodecTest {
             ),
             aisleOrder = listOf(2L, 1L),
         ),
+        groups = listOf(camping),
     )
 
     @Test
@@ -89,6 +93,7 @@ class BackupCodecTest {
         assertEquals(snapshot.items, decoded.items)
         assertEquals(snapshot.products, decoded.products)
         assertEquals(snapshot.shopping, decoded.shopping)
+        assertEquals(snapshot.groups, decoded.groups)
     }
 
     @Test
@@ -179,12 +184,13 @@ class BackupCodecTest {
         val decoded = BackupCodec.decode(
             """{"format": "expirywatch-backup", "version": 1, "futureField": true,
                "items": [{"id": 1, "name": "Milk", "expiryDate": "2026-03-12",
-                          "categoryId": 99, "unit": "BUSHELS", "status": "ACTIVE",
+                          "categoryId": 99, "groupId": 7, "unit": "BUSHELS", "status": "ACTIVE",
                           "finishedDate": "2026-03-01"}]}""",
         )
 
         val item = decoded.items.single()
         assertNull(item.category)
+        assertNull(item.customGroup)
         assertEquals(QuantityUnit.PIECES, item.unit)
         // Active items never carry a finish date.
         assertNull(item.finishedDate)

@@ -1,6 +1,7 @@
 package io.github.abhik9.expirywatch.core.testing.repository
 
 import io.github.abhik9.expirywatch.core.domain.repository.ItemRepository
+import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import java.time.LocalDate
@@ -9,7 +10,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
-class FakeItemRepository(initialItems: List<Item> = emptyList()) : ItemRepository {
+/** Items in memory. Moving items to a group looks the group up in [groups], when there are any. */
+class FakeItemRepository(
+    initialItems: List<Item> = emptyList(),
+    private val groups: FakeCustomGroupRepository? = null,
+) : ItemRepository {
     private val items = MutableStateFlow(initialItems.associateBy { it.id })
     private var nextId = (initialItems.maxOfOrNull { it.id } ?: 0) + 1
 
@@ -46,6 +51,11 @@ class FakeItemRepository(initialItems: List<Item> = emptyList()) : ItemRepositor
             val item = all[id] ?: return@update all
             all + (id to item.copy(status = status, finishedDate = finishedDate))
         }
+    }
+
+    override suspend fun moveToGroup(ids: Collection<Long>, groupId: Long?) {
+        val group = groupId?.let { id -> groups?.currentGroups?.find { it.id == id } ?: CustomGroup(id, "", "") }
+        items.update { all -> all.mapValues { (id, item) -> if (id in ids) item.copy(customGroup = group) else item } }
     }
 
     override suspend fun snoozeReminders(ids: Collection<Long>, until: LocalDate?) = items.update { all ->

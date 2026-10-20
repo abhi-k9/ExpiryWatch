@@ -47,6 +47,12 @@ internal class RoomItemRepository @Inject constructor(
         log.record { "items: #$id is now $status" }
     }
 
+    override suspend fun moveToGroup(ids: Collection<Long>, groupId: Long?) {
+        if (ids.isEmpty()) return
+        itemDao.setGroup(ids.toList(), groupId)
+        log.record { "items: ${ids.joinToString { "#$it" }} moved to ${groupId?.let { "group #$it" } ?: "no group"}" }
+    }
+
     override suspend fun snoozeReminders(ids: Collection<Long>, until: LocalDate?) {
         if (ids.isEmpty()) return
         itemDao.setRemindersSnoozedUntil(ids.toList(), until)

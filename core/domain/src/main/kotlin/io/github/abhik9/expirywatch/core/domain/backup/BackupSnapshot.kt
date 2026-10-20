@@ -2,6 +2,7 @@ package io.github.abhik9.expirywatch.core.domain.backup
 
 import io.github.abhik9.expirywatch.core.domain.productKey
 import io.github.abhik9.expirywatch.core.model.Category
+import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ProductInfo
 import io.github.abhik9.expirywatch.core.model.ShoppingHistoryEntry
@@ -17,6 +18,8 @@ data class BackupSnapshot(
     val products: List<ProductInfo>,
     /** The shopping lists; `null` when read from a backup made before the app had them. */
     val shopping: ShoppingBackup? = null,
+    /** The user's groups of items, which [items] refer to. */
+    val groups: List<CustomGroup> = emptyList(),
 )
 
 /** The shopping lists with what's on them, and the products added to them before. */

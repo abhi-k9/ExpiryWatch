@@ -10,6 +10,7 @@ import dagger.hilt.components.SingletonComponent
 import io.github.abhik9.expirywatch.core.database.DefaultDataCallback
 import io.github.abhik9.expirywatch.core.database.ExpiryWatchDatabase
 import io.github.abhik9.expirywatch.core.database.dao.CategoryDao
+import io.github.abhik9.expirywatch.core.database.dao.CustomGroupDao
 import io.github.abhik9.expirywatch.core.database.dao.ItemDao
 import io.github.abhik9.expirywatch.core.database.dao.LocationDao
 import io.github.abhik9.expirywatch.core.database.dao.ProductDao
@@ -40,4 +41,7 @@ internal object DatabaseModule {
 
     @Provides
     fun providesShoppingDao(database: ExpiryWatchDatabase): ShoppingDao = database.shoppingDao()
+
+    @Provides
+    fun providesCustomGroupDao(database: ExpiryWatchDatabase): CustomGroupDao = database.customGroupDao()
 }

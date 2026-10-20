@@ -48,6 +48,9 @@ interface ItemDao {
     @Query("UPDATE items SET status = :status, finished_date = :finishedDate WHERE id = :id")
     suspend fun updateStatus(id: Long, status: ItemStatus, finishedDate: LocalDate?)
 
+    @Query("UPDATE items SET group_id = :groupId WHERE id IN (:ids)")
+    suspend fun setGroup(ids: List<Long>, groupId: Long?)
+
     @Query("UPDATE items SET reminders_snoozed_until = :until WHERE id IN (:ids)")
     suspend fun setRemindersSnoozedUntil(ids: List<Long>, until: LocalDate?)
 
