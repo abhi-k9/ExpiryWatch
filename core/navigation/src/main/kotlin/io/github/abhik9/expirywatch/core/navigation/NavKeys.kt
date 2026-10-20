@@ -41,11 +41,12 @@ data class EditorNavKey(
 @Serializable
 data object AdvancedSettingsNavKey : NavKey
 
-/** Lets the user rename, add and delete categories or storage locations. */
+/** Lets the user rename, add and delete categories, storage locations or their groups. */
 @Serializable
 data class ManageLabelsNavKey(val kind: LabelKind) : NavKey
 
 enum class LabelKind {
     CATEGORIES,
     LOCATIONS,
+    GROUPS,
 }

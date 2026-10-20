@@ -39,6 +39,10 @@
     <string name="feature_settings_locations_summary">Fridge, freezer, pantry…</string>
     <string name="feature_settings_add_category">Add category</string>
     <string name="feature_settings_add_location">Add location</string>
+    <string name="feature_settings_groups">Groups</string>
+    <string name="feature_settings_groups_summary">Your own groups of items, such as a camping kit</string>
+    <string name="feature_settings_add_group">Add group</string>
+    <string name="feature_settings_delete_group_message">Items in this group are kept, but will no longer be in a group.</string>
     <string name="feature_settings_new_label">New</string>
     <string name="feature_settings_edit_label">Edit</string>
     <string name="feature_settings_delete_label">Delete %s</string>

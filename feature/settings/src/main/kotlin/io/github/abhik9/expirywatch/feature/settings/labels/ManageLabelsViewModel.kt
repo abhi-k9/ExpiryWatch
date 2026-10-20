@@ -7,8 +7,10 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.abhik9.expirywatch.core.domain.repository.CategoryRepository
+import io.github.abhik9.expirywatch.core.domain.repository.CustomGroupRepository
 import io.github.abhik9.expirywatch.core.domain.repository.StorageLocationRepository
 import io.github.abhik9.expirywatch.core.model.Category
+import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.StorageLocation
 import io.github.abhik9.expirywatch.core.navigation.LabelKind
 import kotlinx.coroutines.flow.Flow
@@ -18,7 +20,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** A category or storage location, which are edited the same way. */
+/** A category, storage location or group, which are edited the same way. */
 data class Label(
     val id: Long = 0,
     val name: String,
@@ -30,6 +32,7 @@ class ManageLabelsViewModel @AssistedInject constructor(
     @Assisted val kind: LabelKind,
     private val categoryRepository: CategoryRepository,
     private val locationRepository: StorageLocationRepository,
+    private val groupRepository: CustomGroupRepository,
 ) : ViewModel() {
     private val source: Flow<List<Label>> = when (kind) {
         LabelKind.CATEGORIES -> categoryRepository.observeCategories().map { list ->
@@ -37,6 +40,10 @@ class ManageLabelsViewModel @AssistedInject constructor(
         }
 
         LabelKind.LOCATIONS -> locationRepository.observeLocations().map { list ->
+            list.map { Label(it.id, it.name, it.emoji) }
+        }
+
+        LabelKind.GROUPS -> groupRepository.observeGroups().map { list ->
             list.map { Label(it.id, it.name, it.emoji) }
         }
     }
@@ -53,6 +60,7 @@ class ManageLabelsViewModel @AssistedInject constructor(
             when (kind) {
                 LabelKind.CATEGORIES -> categoryRepository.upsert(Category(label.id, name, emoji))
                 LabelKind.LOCATIONS -> locationRepository.upsert(StorageLocation(label.id, name, emoji))
+                LabelKind.GROUPS -> groupRepository.upsert(CustomGroup(label.id, name, emoji))
             }
         }
     }
@@ -62,6 +70,7 @@ class ManageLabelsViewModel @AssistedInject constructor(
             when (kind) {
                 LabelKind.CATEGORIES -> categoryRepository.delete(label.id)
                 LabelKind.LOCATIONS -> locationRepository.delete(label.id)
+                LabelKind.GROUPS -> groupRepository.delete(label.id)
             }
         }
     }

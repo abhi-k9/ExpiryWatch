@@ -15,6 +15,7 @@ import io.github.abhik9.expirywatch.core.testing.TestTime
 import io.github.abhik9.expirywatch.core.testing.diagnostics.FakeDiagnosticsRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeBackupRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeCategoryRepository
+import io.github.abhik9.expirywatch.core.testing.repository.FakeCustomGroupRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeDocumentStore
 import io.github.abhik9.expirywatch.core.testing.repository.FakeStorageLocationRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepository
@@ -119,7 +120,13 @@ class SettingsViewModelTest {
     @Test
     fun labelsCanBeAddedRenamedAndDeleted() = runTest {
         val categories = FakeCategoryRepository(listOf(TestData.dairy))
-        val labels = ManageLabelsViewModel(LabelKind.CATEGORIES, categories, FakeStorageLocationRepository())
+        val labels =
+            ManageLabelsViewModel(
+                LabelKind.CATEGORIES,
+                categories,
+                FakeStorageLocationRepository(),
+                FakeCustomGroupRepository(),
+            )
         backgroundScope.launch { labels.labels.collect {} }
 
         labels.save(Label(name = "  Spices ", emoji = ""))

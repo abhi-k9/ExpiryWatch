@@ -66,8 +66,11 @@ internal fun ManageLabelsScreen(
     // The label being edited: a new one has id 0.
     var editing by remember { mutableStateOf<Label?>(null) }
     var deleting by remember { mutableStateOf<Label?>(null) }
-    val isCategories = kind == LabelKind.CATEGORIES
-    val strings = if (isCategories) CategoryStrings else LocationStrings
+    val strings = when (kind) {
+        LabelKind.CATEGORIES -> CategoryStrings
+        LabelKind.LOCATIONS -> LocationStrings
+        LabelKind.GROUPS -> GroupStrings
+    }
 
     Scaffold(
         modifier = modifier,
@@ -106,7 +109,7 @@ internal fun ManageLabelsScreen(
             }
 
             labels.isEmpty() -> EmptyState(
-                emoji = if (isCategories) "🏷️" else "🗄️",
+                emoji = strings.emptyEmoji,
                 title = stringResource(R.string.feature_settings_labels_empty_title),
                 message = stringResource(R.string.feature_settings_labels_empty_message),
                 modifier = Modifier.padding(innerPadding),
@@ -150,7 +153,7 @@ internal fun ManageLabelsScreen(
                 if (label.id == 0L) R.string.feature_settings_new_label else R.string.feature_settings_edit_label,
             ),
             confirmText = stringResource(R.string.feature_settings_save),
-            suggestions = if (isCategories) LabelEmojis.CATEGORIES else LabelEmojis.LOCATIONS,
+            suggestions = strings.suggestions,
             onConfirm = { name, emoji ->
                 onSave(label.copy(name = name, emoji = emoji))
                 editing = null
@@ -188,16 +191,30 @@ private class LabelStrings(
     @param:StringRes val title: Int,
     @param:StringRes val add: Int,
     @param:StringRes val deleteMessage: Int,
+    val emptyEmoji: String,
+    val suggestions: List<String>,
 )
 
 private val CategoryStrings = LabelStrings(
     title = R.string.feature_settings_categories,
     add = R.string.feature_settings_add_category,
     deleteMessage = R.string.feature_settings_delete_category_message,
+    emptyEmoji = "🏷️",
+    suggestions = LabelEmojis.CATEGORIES,
 )
 
 private val LocationStrings = LabelStrings(
     title = R.string.feature_settings_locations,
     add = R.string.feature_settings_add_location,
     deleteMessage = R.string.feature_settings_delete_location_message,
+    emptyEmoji = "🗄️",
+    suggestions = LabelEmojis.LOCATIONS,
+)
+
+private val GroupStrings = LabelStrings(
+    title = R.string.feature_settings_groups,
+    add = R.string.feature_settings_add_group,
+    deleteMessage = R.string.feature_settings_delete_group_message,
+    emptyEmoji = "🗂️",
+    suggestions = LabelEmojis.GROUPS,
 )

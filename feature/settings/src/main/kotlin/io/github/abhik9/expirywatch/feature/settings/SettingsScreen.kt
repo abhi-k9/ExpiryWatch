@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FileUpload
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Kitchen
 import androidx.compose.material.icons.outlined.Language
@@ -226,6 +227,12 @@ internal fun SettingsScreen(
                 title = stringResource(R.string.feature_settings_locations),
                 subtitle = stringResource(R.string.feature_settings_locations_summary),
                 onClick = { onManageLabels(LabelKind.LOCATIONS) },
+            )
+            SettingsRow(
+                icon = Icons.Outlined.Folder,
+                title = stringResource(R.string.feature_settings_groups),
+                subtitle = stringResource(R.string.feature_settings_groups_summary),
+                onClick = { onManageLabels(LabelKind.GROUPS) },
             )
 
             BackupSection(isBackupInProgress = isBackupInProgress, onExport = onExport, onImport = onImport)
