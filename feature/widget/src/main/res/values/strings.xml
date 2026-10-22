@@ -10,4 +10,11 @@
         <item quantity="one">%d needs attention</item>
         <item quantity="other">%d need attention</item>
     </plurals>
+    <!-- The filter pill, e.g. "All items ▾"; tapping it shows the next filter. -->
+    <string name="feature_widget_filter">%s ▾</string>
+    <string name="feature_widget_filter_all">All items</string>
+    <string name="feature_widget_filter_attention">Needs attention</string>
+    <string name="feature_widget_nothing_here">Nothing here</string>
+    <string name="feature_widget_used_up">Mark %s used up</string>
+    <string name="feature_widget_thrown_away">Mark %s thrown away</string>
 </resources>

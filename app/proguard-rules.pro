@@ -8,5 +8,10 @@
     <init>();
 }
 
+# Glance creates the widget's button callbacks by class name, so their constructors must stay.
+-keep class * implements androidx.glance.appwidget.action.ActionCallback {
+    <init>();
+}
+
 # Repackage into a single package to shrink the APK a little more.
 -repackageclasses

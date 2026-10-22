@@ -12,6 +12,7 @@ dependencies {
     implementation(projects.core.designsystem)
     implementation(projects.core.domain)
     implementation(projects.core.ui)
+    implementation(libs.androidx.dataStore.preferences)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
 }
