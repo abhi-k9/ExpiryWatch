@@ -32,6 +32,8 @@ class BackupCodecTest {
                 notes = "Organic",
                 remindersSnoozedUntil = TestTime.today.plusDays(3),
                 customGroup = camping,
+                remindDaysBefore = 7,
+                price = 1.29,
             ),
             TestData.item(id = 2, name = "Spinach", category = TestData.produce, location = null).copy(
                 status = ItemStatus.WASTED,

@@ -88,6 +88,9 @@ class MigrationTest {
         assertNull(milk.item.remindersSnoozedUntil)
         // Version 4 added the user's groups, which it isn't in.
         assertNull(milk.group)
+        // Version 5 added an item's own reminder lead time and its price.
+        assertNull(milk.item.remindDaysBefore)
+        assertNull(milk.item.price)
 
         val now = Instant.parse("2026-03-10T12:00:00Z")
         val list = db.shoppingDao().insertList(ShoppingListEntity(name = "Groceries", createdAt = now))

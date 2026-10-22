@@ -80,6 +80,8 @@ data class ItemEntity(
     @ColumnInfo(name = "updated_at") val updatedAt: Instant,
     @ColumnInfo(name = "reminders_snoozed_until") val remindersSnoozedUntil: LocalDate? = null,
     @ColumnInfo(name = "group_id") val groupId: Long? = null,
+    @ColumnInfo(name = "remind_days_before") val remindDaysBefore: Int? = null,
+    val price: Double? = null,
 )
 
 /** What the user entered the last time they saved an item with this barcode. */

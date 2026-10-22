@@ -16,6 +16,9 @@ import java.time.LocalDate
  * @property remindersSnoozedUntil the day reminders about the item start again, or
  * [SNOOZED_INDEFINITELY]; `null` when they aren't snoozed. See [isReminderSnoozed].
  * @property customGroup the group the user put the item in, if any.
+ * @property remindDaysBefore how many days before it expires the item counts as expiring soon,
+ * overriding the setting for all items; `null` to follow it.
+ * @property price what the item cost, in the user's currency, if they noted it.
  */
 data class Item(
     val id: Long = 0,
@@ -37,6 +40,8 @@ data class Item(
     val updatedAt: Instant = Instant.EPOCH,
     val remindersSnoozedUntil: LocalDate? = null,
     val customGroup: CustomGroup? = null,
+    val remindDaysBefore: Int? = null,
+    val price: Double? = null,
 ) {
     /** Whether reminders leave the item out on [today]. */
     fun isReminderSnoozed(today: LocalDate): Boolean = remindersSnoozedUntil?.isAfter(today) == true

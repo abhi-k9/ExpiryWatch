@@ -35,7 +35,7 @@ import io.github.abhik9.expirywatch.core.database.util.Converters
         ShoppingHistoryEntity::class,
         CustomGroupEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
     autoMigrations = [
         // Adds the shopping lists.
@@ -44,6 +44,8 @@ import io.github.abhik9.expirywatch.core.database.util.Converters
         AutoMigration(from = 2, to = 3),
         // Adds the user's own groups of items.
         AutoMigration(from = 3, to = 4),
+        // Adds each item's own reminder lead time and its price.
+        AutoMigration(from = 4, to = 5),
     ],
 )
 @TypeConverters(Converters::class)

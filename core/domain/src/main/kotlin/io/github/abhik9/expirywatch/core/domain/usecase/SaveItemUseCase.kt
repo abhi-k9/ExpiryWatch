@@ -15,6 +15,8 @@ enum class ItemValidationError {
     NAME_REQUIRED,
     QUANTITY_INVALID,
     OPENED_WINDOW_INVALID,
+    REMIND_DAYS_INVALID,
+    PRICE_INVALID,
 }
 
 /** More of the same product that expires on another day, such as a second carton of milk. */
@@ -29,6 +31,8 @@ sealed interface SaveItemResult {
 object ItemValidator {
     const val MAX_QUANTITY = 1_000_000.0
     val OPENED_WINDOW_DAYS_RANGE = 1..3650
+    val REMIND_DAYS_BEFORE_RANGE = 0..365
+    const val MAX_PRICE = 1_000_000.0
 
     fun validate(item: Item): Set<ItemValidationError> = buildSet {
         if (item.name.isBlank()) add(ItemValidationError.NAME_REQUIRED)
@@ -38,6 +42,14 @@ object ItemValidator {
         val window = item.useWithinDaysAfterOpening
         if (window != null && window !in OPENED_WINDOW_DAYS_RANGE) {
             add(ItemValidationError.OPENED_WINDOW_INVALID)
+        }
+        val remindDays = item.remindDaysBefore
+        if (remindDays != null && remindDays !in REMIND_DAYS_BEFORE_RANGE) {
+            add(ItemValidationError.REMIND_DAYS_INVALID)
+        }
+        val price = item.price
+        if (price != null && (!price.isFinite() || price < 0.0 || price > MAX_PRICE)) {
+            add(ItemValidationError.PRICE_INVALID)
         }
     }
 }

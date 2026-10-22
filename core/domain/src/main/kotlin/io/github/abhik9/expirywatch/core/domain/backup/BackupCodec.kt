@@ -125,6 +125,8 @@ object BackupCodec {
                     updatedAt = dto.updatedAt?.let(::parseInstant) ?: Instant.EPOCH,
                     remindersSnoozedUntil = dto.remindersSnoozedUntil?.let(LocalDate::parse),
                     customGroup = dto.groupId?.let(groupsById::get),
+                    remindDaysBefore = dto.remindDaysBefore?.takeIf { it in ItemValidator.REMIND_DAYS_BEFORE_RANGE },
+                    price = dto.price?.takeIf { it.isFinite() && it >= 0 },
                 ).let { item ->
                     // An active item has no finish date; a finished one needs one for insights.
                     when {
@@ -247,6 +249,8 @@ object BackupCodec {
         updatedAt = updatedAt.toString(),
         remindersSnoozedUntil = remindersSnoozedUntil?.toString(),
         groupId = customGroup?.id,
+        remindDaysBefore = remindDaysBefore,
+        price = price,
     )
 
     private fun ShoppingBackup.toDto() = ShoppingDto(
@@ -335,6 +339,8 @@ private data class ItemDto(
     val updatedAt: String? = null,
     val remindersSnoozedUntil: String? = null,
     val groupId: Long? = null,
+    val remindDaysBefore: Int? = null,
+    val price: Double? = null,
 )
 
 @Serializable

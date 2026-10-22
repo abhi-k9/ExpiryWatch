@@ -40,6 +40,8 @@ fun PopulatedItem.asExternalModel() = Item(
     updatedAt = item.updatedAt,
     remindersSnoozedUntil = item.remindersSnoozedUntil,
     customGroup = group?.asExternalModel(),
+    remindDaysBefore = item.remindDaysBefore,
+    price = item.price,
 )
 
 fun Item.asEntity() = ItemEntity(
@@ -62,6 +64,8 @@ fun Item.asEntity() = ItemEntity(
     updatedAt = updatedAt,
     remindersSnoozedUntil = remindersSnoozedUntil,
     groupId = customGroup?.id,
+    remindDaysBefore = remindDaysBefore,
+    price = price,
 )
 
 fun CategoryEntity.asExternalModel() = Category(id = id, name = name, emoji = emoji)

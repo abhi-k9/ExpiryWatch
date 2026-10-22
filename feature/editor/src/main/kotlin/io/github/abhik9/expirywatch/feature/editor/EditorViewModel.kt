@@ -96,6 +96,8 @@ enum class EditorError {
     EXPIRY_REQUIRED,
     QUANTITY_INVALID,
     OPENED_WINDOW_INVALID,
+    REMIND_DAYS_INVALID,
+    PRICE_INVALID,
 }
 
 sealed interface LookupState {
@@ -328,6 +330,8 @@ class EditorViewModel @AssistedInject constructor(
         ItemValidationError.NAME_REQUIRED -> EditorError.NAME_REQUIRED
         ItemValidationError.QUANTITY_INVALID -> EditorError.QUANTITY_INVALID
         ItemValidationError.OPENED_WINDOW_INVALID -> EditorError.OPENED_WINDOW_INVALID
+        ItemValidationError.REMIND_DAYS_INVALID -> EditorError.REMIND_DAYS_INVALID
+        ItemValidationError.PRICE_INVALID -> EditorError.PRICE_INVALID
     }
 
     @AssistedFactory

@@ -29,13 +29,14 @@ fun Item.daysUntilExpiry(today: LocalDate): Long = ChronoUnit.DAYS.between(today
  * Classifies the item relative to [today]. An item that expires today counts as expiring soon,
  * not expired, since it can still be used.
  *
- * @param expiringSoonDays how many days ahead count as "soon".
+ * @param expiringSoonDays how many days ahead count as "soon", unless the item has its own
+ * [Item.remindDaysBefore].
  */
 fun Item.expiryStatus(today: LocalDate, expiringSoonDays: Int): ExpiryStatus {
     val days = daysUntilExpiry(today)
     return when {
         days < 0 -> ExpiryStatus.EXPIRED
-        days <= expiringSoonDays -> ExpiryStatus.EXPIRING_SOON
+        days <= (remindDaysBefore ?: expiringSoonDays) -> ExpiryStatus.EXPIRING_SOON
         else -> ExpiryStatus.FRESH
     }
 }

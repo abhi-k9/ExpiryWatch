@@ -52,4 +52,14 @@ class ItemExpiryTest {
         assertEquals(0, item(today).daysUntilExpiry(today))
         assertEquals(5, item(today.plusDays(5)).daysUntilExpiry(today))
     }
+
+    @Test
+    fun anItemsOwnLeadTimeDecidesWhenItsExpiringSoon() {
+        val medicine = item(expiry = today.plusDays(20)).copy(remindDaysBefore = 30)
+        val milk = item(expiry = today.plusDays(2)).copy(remindDaysBefore = 0)
+
+        assertEquals(ExpiryStatus.EXPIRING_SOON, medicine.expiryStatus(today, expiringSoonDays = 3))
+        assertEquals(ExpiryStatus.FRESH, milk.expiryStatus(today, expiringSoonDays = 3))
+        assertEquals(ExpiryStatus.EXPIRING_SOON, milk.expiryStatus(today.plusDays(2), expiringSoonDays = 3))
+    }
 }
