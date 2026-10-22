@@ -180,6 +180,11 @@ class ItemsViewModel @AssistedInject constructor(
         filters.update { it.copy(locationId = locationId) }
     }
 
+    fun onGroupFilterChange(groupId: Long?) {
+        clearSelection()
+        filters.update { it.copy(groupId = groupId) }
+    }
+
     fun clearFilters() {
         clearSelection()
         searchText = ""

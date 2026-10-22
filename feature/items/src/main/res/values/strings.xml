@@ -112,4 +112,5 @@
     <string name="feature_items_reminder_problem_late">No reminder came for more than a day.</string>
     <string name="feature_items_reminder_problem_fix">Fix</string>
     <string name="feature_items_reminder_problem_dismiss">Dismiss</string>
+    <string name="feature_items_filter_all_groups">All groups</string>
 </resources>

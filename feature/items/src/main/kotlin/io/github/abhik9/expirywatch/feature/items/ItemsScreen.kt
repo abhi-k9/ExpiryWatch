@@ -158,6 +158,7 @@ internal fun ItemsRoute(
         onStatusFilterChange = viewModel::onStatusFilterChange,
         onCategoryFilterChange = viewModel::onCategoryFilterChange,
         onLocationFilterChange = viewModel::onLocationFilterChange,
+        onGroupFilterChange = viewModel::onGroupFilterChange,
         onClearFilters = viewModel::clearFilters,
         onSortOrderChange = viewModel::onSortOrderChange,
         onGroupClick = viewModel::onGroupClick,
@@ -238,6 +239,7 @@ internal fun ItemsScreen(
     onStatusFilterChange: (ExpiryStatus?) -> Unit,
     onCategoryFilterChange: (Long?) -> Unit,
     onLocationFilterChange: (Long?) -> Unit,
+    onGroupFilterChange: (Long?) -> Unit,
     onClearFilters: () -> Unit,
     onSortOrderChange: (ItemSortOrder) -> Unit,
     onGroupClick: (String) -> Unit,
@@ -331,6 +333,8 @@ internal fun ItemsScreen(
                 onStatusFilterChange = onStatusFilterChange,
                 onCategoryFilterChange = onCategoryFilterChange,
                 onLocationFilterChange = onLocationFilterChange,
+                groups = groups,
+                onGroupFilterChange = onGroupFilterChange,
                 onClearFilters = onClearFilters,
                 onGroupClick = onGroupClick,
                 onItemClick = onItemClick,
@@ -417,6 +421,8 @@ private fun ItemsContent(
     onStatusFilterChange: (ExpiryStatus?) -> Unit,
     onCategoryFilterChange: (Long?) -> Unit,
     onLocationFilterChange: (Long?) -> Unit,
+    groups: List<CustomGroup>,
+    onGroupFilterChange: (Long?) -> Unit,
     onClearFilters: () -> Unit,
     onGroupClick: (String) -> Unit,
     onItemClick: (Item) -> Unit,
@@ -475,8 +481,10 @@ private fun ItemsContent(
                 query = state.query,
                 categories = state.categories,
                 locations = state.locations,
+                groups = groups,
                 onCategoryFilterChange = onCategoryFilterChange,
                 onLocationFilterChange = onLocationFilterChange,
+                onGroupFilterChange = onGroupFilterChange,
                 onClearFilters = onClearFilters,
             )
         }
@@ -668,7 +676,7 @@ private fun LazyListScope.itemGroups(
 @Composable
 private fun NoMatchingItems(query: ItemQuery, onClearFilters: () -> Unit) {
     val (emoji, title) = when {
-        query.searchText.isBlank() && query.categoryId == null && query.locationId == null &&
+        query.searchText.isBlank() && query.categoryId == null && query.locationId == null && query.groupId == null &&
             query.status == ExpiryStatus.EXPIRED -> "🎉" to stringResource(R.string.feature_items_nothing_expired)
 
         else -> "🔍" to stringResource(R.string.feature_items_no_results_title)

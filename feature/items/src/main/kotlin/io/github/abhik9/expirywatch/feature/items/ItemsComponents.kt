@@ -532,8 +532,10 @@ internal fun FilterRow(
     query: ItemQuery,
     categories: List<Category>,
     locations: List<StorageLocation>,
+    groups: List<CustomGroup>,
     onCategoryFilterChange: (Long?) -> Unit,
     onLocationFilterChange: (Long?) -> Unit,
+    onGroupFilterChange: (Long?) -> Unit,
     onClearFilters: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -563,6 +565,18 @@ internal fun FilterRow(
             options = locations.map { it.id to "${it.emoji} ${it.name}" },
             onSelect = onLocationFilterChange,
         )
+        // Only once the user has groups, or one is still picked.
+        val selectedGroup = groups.firstOrNull { it.id == query.groupId }
+        if (groups.isNotEmpty() || query.groupId != null) {
+            DropdownFilterChip(
+                label = selectedGroup?.let { "${it.emoji} ${it.name}" }
+                    ?: stringResource(R.string.feature_items_filter_all_groups),
+                selected = query.groupId != null,
+                anyLabel = stringResource(R.string.feature_items_filter_all_groups),
+                options = groups.sortedBy { it.name.lowercase() }.map { it.id to "${it.emoji} ${it.name}" },
+                onSelect = onGroupFilterChange,
+            )
+        }
         if (query.hasFilters) {
             TextButton(onClick = onClearFilters) {
                 Text(stringResource(R.string.feature_items_clear_filters))

@@ -24,9 +24,12 @@ data class ItemQuery(
     val status: ExpiryStatus? = null,
     val categoryId: Long? = null,
     val locationId: Long? = null,
+    /** One of the user's groups. */
+    val groupId: Long? = null,
 ) {
     val hasFilters: Boolean
-        get() = searchText.isNotBlank() || status != null || categoryId != null || locationId != null
+        get() = searchText.isNotBlank() || status != null || categoryId != null || locationId != null ||
+            groupId != null
 }
 
 /** An item together with where it stands on [today][ItemsOverview.today]. */
@@ -42,7 +45,7 @@ data class ItemWithExpiry(
  * one of their own groups are grouped by that instead, whatever their product.
  *
  * @property key identifies the group within the list.
- * @property entries soonest to expire first, so the first is the one to use next.
+ * @property entries soonest to expire first, or for one of the user's groups, in the list's order.
  * @property customGroup the user's group these items are in, if they're grouped by that.
  */
 data class ItemGroup(
@@ -50,8 +53,11 @@ data class ItemGroup(
     val entries: List<ItemWithExpiry>,
     val customGroup: CustomGroup? = null,
 ) {
-    val next: ItemWithExpiry get() = entries.first()
+    /** The item to use next: the one that expires first. */
+    val next: ItemWithExpiry get() = entries.minWith(expiryOrder)
 }
+
+private val expiryOrder = compareBy<ItemWithExpiry> { it.item.effectiveExpiryDate }.thenBy { it.item.id }
 
 /**
  * A part of the list: the items in one [status], or all of them when [status] is `null`. When
@@ -125,6 +131,7 @@ internal fun buildItemsOverview(
         .asSequence()
         .filter { query.categoryId == null || it.category?.id == query.categoryId }
         .filter { query.locationId == null || it.location?.id == query.locationId }
+        .filter { query.groupId == null || it.customGroup?.id == query.groupId }
         .filter { it.matchesAll(searchTerms) }
         .map {
             ItemWithExpiry(
@@ -146,9 +153,9 @@ internal fun buildItemsOverview(
 
     val sections = when {
         !sortOrder.sectionsByStatus || query.status != null ->
-            listOf(ItemSection(status = null, groups = visible.grouped(grouping, sectionKey = "all")))
+            listOf(ItemSection(status = null, groups = visible.grouped(grouping, sectionKey = "all", sortComparator)))
 
-        keepProductsTogether -> visible.grouped(grouping, sectionKey = "together")
+        keepProductsTogether -> visible.grouped(grouping, sectionKey = "together", sortComparator)
             .sortedWith { a, b -> sortComparator.compare(a.next, b.next) }
             .groupBy { it.next.status }
             .map { (status, groups) -> ItemSection(status, groups) }
@@ -157,10 +164,11 @@ internal fun buildItemsOverview(
             val position = visible.withIndex().associate { (index, entry) -> entry.item.id to index }
             val (inCustomGroups, others) = visible.partition { it.item.customGroup != null }
             val productGroups = others.groupBy { it.status }.flatMap { (status, inStatus) ->
-                inStatus.grouped(grouping, sectionKey = status.name).map { status to it }
+                inStatus.grouped(grouping, sectionKey = status.name, sortComparator).map { status to it }
             }
             // The user's groups stay whole, in the status of their item that expires first.
-            val customGroups = inCustomGroups.grouped(grouping, sectionKey = "groups").map { it.next.status to it }
+            val customGroups = inCustomGroups.grouped(grouping, sectionKey = "groups", sortComparator)
+                .map { it.next.status to it }
             (productGroups + customGroups)
                 .sortedBy { (status, group) ->
                     group.entries.filter { it.status == status }.minOf { position.getValue(it.item.id) }
@@ -185,18 +193,21 @@ private val ItemSortOrder.sectionsByStatus: Boolean
 
 /**
  * Groups sorted items by product, or by the user's group for the items in one, keeping the order in
- * which each group first appears.
+ * which each group first appears. A product's items go soonest to expire first; a user's group keeps
+ * its items in the list's [order], since they're often different things.
  */
-private fun List<ItemWithExpiry>.grouped(grouping: ProductGrouping, sectionKey: String): List<ItemGroup> =
-    groupBy { it.item.groupKey(grouping) }.map { (key, entries) ->
-        ItemGroup(
-            key = "$sectionKey/$key",
-            entries = entries.sortedWith(
-                compareBy<ItemWithExpiry> { it.item.effectiveExpiryDate }.thenBy { it.item.id },
-            ),
-            customGroup = entries.first().item.customGroup,
-        )
-    }
+private fun List<ItemWithExpiry>.grouped(
+    grouping: ProductGrouping,
+    sectionKey: String,
+    order: Comparator<ItemWithExpiry>,
+): List<ItemGroup> = groupBy { it.item.groupKey(grouping) }.map { (key, entries) ->
+    val customGroup = entries.first().item.customGroup
+    ItemGroup(
+        key = "$sectionKey/$key",
+        entries = entries.sortedWith(if (customGroup != null) order else expiryOrder),
+        customGroup = customGroup,
+    )
+}
 
 /** What the item is grouped by: the user's group it's in, or else its product. */
 private fun Item.groupKey(grouping: ProductGrouping): String =

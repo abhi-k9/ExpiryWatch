@@ -278,4 +278,32 @@ class ItemsOverviewTest {
         val found = overview(query = ItemQuery(searchText = "camping"), items = all + beans + oats)
         assertEquals(listOf("Beans", "Oats"), found.items.map { it.item.name })
     }
+
+    @Test
+    fun aGroupsItemsFollowTheListsOrderWhileTheGroupGoesByItsFirstToExpire() {
+        val camping = CustomGroup(id = 7, name = "Camping kit", emoji = "⛺")
+        val beans = TestData.item(id = 5, name = "Beans", expiresInDays = 200).copy(customGroup = camping)
+        val oats = TestData.item(id = 6, name = "Oats", expiresInDays = 2).copy(customGroup = camping)
+        val apricots = TestData.item(id = 7, name = "Apricots", expiresInDays = 100).copy(customGroup = camping)
+
+        val byName = overview(sortOrder = ItemSortOrder.NAME, items = listOf(beans, oats, apricots))
+        val group = byName.sections.single().groups.single()
+        assertEquals(listOf("Apricots", "Beans", "Oats"), group.entries.map { it.item.name })
+        assertEquals("Oats", group.next.item.name)
+
+        val byExpiry = overview(items = listOf(beans, oats, apricots)).sections.single()
+        assertEquals(ExpiryStatus.EXPIRING_SOON, byExpiry.status)
+        assertEquals(listOf("Oats", "Apricots", "Beans"), byExpiry.groups.single().entries.map { it.item.name })
+    }
+
+    @Test
+    fun filtersByGroup() {
+        val camping = CustomGroup(id = 7, name = "Camping kit", emoji = "⛺")
+        val beans = TestData.item(id = 5, name = "Beans", expiresInDays = 200).copy(customGroup = camping)
+
+        val result = overview(query = ItemQuery(groupId = 7), items = all + beans)
+
+        assertEquals(listOf("Beans"), result.items.map { it.item.name })
+        assertEquals(true, ItemQuery(groupId = 7).hasFilters)
+    }
 }
