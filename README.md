@@ -33,8 +33,9 @@ Built with Kotlin, Jetpack Compose and Material 3, following Google's recommende
   may deliver them late to save battery; turn on **Exact time** to get them on time with an alarm.
   Since Android 12 this needs permission to set alarms; the app opens that system setting when you
   turn it on.
-  - Act on the reminder from the notification: snooze everything in it for a week, or mark each
-    of the first few expired items used up or thrown away, or snooze it.
+  - Act on the reminder from the notification: snooze everything in it for a week (or, as an
+    advanced option, only what has expired), or mark each of the first few expired items used up
+    or thrown away, or snooze it.
   - **Reminder health**: Settings, and a banner above the list, point out what keeps reminders from
     arriving (notifications or alarms not allowed, restricted battery use such as One UI's sleeping
     apps) and reminders that stopped coming, with a way to fix it.
@@ -64,8 +65,9 @@ Built with Kotlin, Jetpack Compose and Material 3, following Google's recommende
 - **Diagnostics**: an opt-in log of what the app does, to export when reporting an issue.
 - **Advanced options** in Settings: what counts as the same product in the list (same name, same
   name and brand, or no grouping) and whether a product's items stay in one group across
-  statuses; whether daily reminders include expired items; and whether unknown barcodes are looked
-  up online, so they can stay on the device.
+  statuses; whether daily reminders include expired items, and whether their Snooze all button
+  also snoozes items about to expire; and whether unknown barcodes are looked up online, so they
+  can stay on the device.
 - Customizable **categories, storage locations and groups**, made in Settings or right from the
   editor. Picking one, the two used most often come first, then the three used most recently, then
   the rest by name.

@@ -38,7 +38,10 @@ internal class ReminderCheck @Inject constructor(
                 "reminder check: ${summary.expired.size} expired$leftOut, " +
                     "${summary.expiringSoon.size} expiring soon, ${summary.snoozed.size} snoozed"
             }
-            notifier.showExpiryReminder(summary.forReminder(settings.remindAboutExpired))
+            notifier.showExpiryReminder(
+                summary.forReminder(settings.remindAboutExpired),
+                settings.snoozeAllIncludesExpiringSoon,
+            )
         } else {
             log.record { "reminder check: the reminder due at $occurrence was already shown" }
         }

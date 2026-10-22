@@ -31,6 +31,8 @@ interface UserSettingsRepository {
 
     suspend fun setRemindAboutExpired(remind: Boolean)
 
+    suspend fun setSnoozeAllIncludesExpiringSoon(include: Boolean)
+
     suspend fun setOnlineProductLookup(enabled: Boolean)
 
     suspend fun setShoppingListId(id: Long)

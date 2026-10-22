@@ -23,6 +23,12 @@ data class ExpirySummary(
     val snoozed: List<ItemWithExpiry> = (expired + expiringSoon).filter { it.item.isReminderSnoozed(today) }
 
     /**
+     * What the reminder's "Snooze all" snoozes: everything in it, or only the expired items unless
+     * [includeExpiringSoon].
+     */
+    fun toSnoozeAll(includeExpiringSoon: Boolean): List<ItemWithExpiry> = if (includeExpiringSoon) items else expired
+
+    /**
      * What the day's reminder is about: everything but the snoozed items, and the expired ones too
      * unless [remindAboutExpired].
      */

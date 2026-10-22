@@ -18,6 +18,7 @@ import io.github.abhik9.expirywatch.core.testing.diagnostics.RecordingEventLog
 import io.github.abhik9.expirywatch.core.testing.repository.FakeItemRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepository
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -66,7 +67,7 @@ class ReminderActionsTest {
 
     @Test
     fun eachExpiredItemGetsANotificationWithButtons() = runTest {
-        notifier.showExpiryReminder(getExpirySummary())
+        notifier.showExpiryReminder(getExpirySummary(), snoozeAllIncludesExpiringSoon = true)
 
         assertEquals(listOf("Milk", "Yogurt"), itemNotifications().sortedBy { it })
         assertEquals(1, summary().actions.size)
@@ -75,7 +76,7 @@ class ReminderActionsTest {
 
     @Test
     fun finishingAnItemRemovesItsNotificationAndUpdatesTheSummary() = runTest {
-        notifier.showExpiryReminder(getExpirySummary())
+        notifier.showExpiryReminder(getExpirySummary(), snoozeAllIncludesExpiringSoon = true)
 
         actions(ReminderActions.ACTION_USED_UP, itemId = 1)
         actions(ReminderActions.ACTION_THROWN_AWAY, itemId = 2)
@@ -91,7 +92,7 @@ class ReminderActionsTest {
 
     @Test
     fun snoozingAllRemovesTheReminder() = runTest {
-        notifier.showExpiryReminder(getExpirySummary())
+        notifier.showExpiryReminder(getExpirySummary(), snoozeAllIncludesExpiringSoon = true)
 
         actions(ReminderActions.ACTION_SNOOZE_ALL, itemId = null)
 
@@ -101,7 +102,7 @@ class ReminderActionsTest {
 
     @Test
     fun anActionDoesNotBringBackADismissedReminder() = runTest {
-        notifier.showExpiryReminder(getExpirySummary())
+        notifier.showExpiryReminder(getExpirySummary(), snoozeAllIncludesExpiringSoon = true)
         NotificationManagerCompat.from(context).cancelAll()
 
         actions(ReminderActions.ACTION_SNOOZE, itemId = 1)
@@ -114,5 +115,20 @@ class ReminderActionsTest {
     fun theActionDataCarriesTheItem() {
         assertEquals(42L, ReminderActions.itemIdFrom(ReminderActions.dataUri(42)))
         assertEquals(null, ReminderActions.itemIdFrom(ReminderActions.dataUri(null)))
+    }
+
+    @Test
+    fun snoozingAllCanLeaveOutWhatsOnlyExpiringSoon() = runTest {
+        settings.setSnoozeAllIncludesExpiringSoon(false)
+        notifier.showExpiryReminder(getExpirySummary(), snoozeAllIncludesExpiringSoon = false)
+        assertEquals("Snooze expired for a week", summary().actions.single().title.toString())
+
+        actions(ReminderActions.ACTION_SNOOZE_ALL, itemId = null)
+
+        assertEquals(TestTime.today.plusWeeks(1), items.observeItem(1).first()?.remindersSnoozedUntil)
+        assertEquals(null, items.observeItem(3).first()?.remindersSnoozedUntil)
+        // Only Bread is left to remind about, and with nothing expired there's nothing to snooze.
+        assertEquals("1 item needs your attention", summary().title())
+        assertTrue(summary().actions.isNullOrEmpty())
     }
 }

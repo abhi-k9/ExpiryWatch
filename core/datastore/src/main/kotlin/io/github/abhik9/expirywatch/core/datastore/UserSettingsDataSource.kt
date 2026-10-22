@@ -57,6 +57,9 @@ class UserSettingsDataSource @Inject constructor(
 
     suspend fun setRemindAboutExpired(remind: Boolean) = dataStore.edit { it[Keys.REMIND_ABOUT_EXPIRED] = remind }
 
+    suspend fun setSnoozeAllIncludesExpiringSoon(include: Boolean) =
+        dataStore.edit { it[Keys.SNOOZE_ALL_INCLUDES_EXPIRING_SOON] = include }
+
     suspend fun setOnlineProductLookup(enabled: Boolean) = dataStore.edit { it[Keys.ONLINE_PRODUCT_LOOKUP] = enabled }
 
     suspend fun setShoppingListId(id: Long) = dataStore.edit { it[Keys.SHOPPING_LIST_ID] = id }
@@ -99,6 +102,8 @@ class UserSettingsDataSource @Inject constructor(
             productGrouping = enumOrDefault(this[Keys.PRODUCT_GROUPING], defaults.productGrouping),
             keepProductsTogether = this[Keys.KEEP_PRODUCTS_TOGETHER] ?: defaults.keepProductsTogether,
             remindAboutExpired = this[Keys.REMIND_ABOUT_EXPIRED] ?: defaults.remindAboutExpired,
+            snoozeAllIncludesExpiringSoon = this[Keys.SNOOZE_ALL_INCLUDES_EXPIRING_SOON]
+                ?: defaults.snoozeAllIncludesExpiringSoon,
             onlineProductLookup = this[Keys.ONLINE_PRODUCT_LOOKUP] ?: defaults.onlineProductLookup,
             shoppingListId = this[Keys.SHOPPING_LIST_ID] ?: defaults.shoppingListId,
             dismissedRestockSuggestions = this[Keys.DISMISSED_RESTOCK_SUGGESTIONS]
@@ -129,6 +134,7 @@ class UserSettingsDataSource @Inject constructor(
         val PRODUCT_GROUPING = stringPreferencesKey("product_grouping")
         val KEEP_PRODUCTS_TOGETHER = booleanPreferencesKey("keep_products_together")
         val REMIND_ABOUT_EXPIRED = booleanPreferencesKey("remind_about_expired")
+        val SNOOZE_ALL_INCLUDES_EXPIRING_SOON = booleanPreferencesKey("snooze_all_includes_expiring_soon")
         val ONLINE_PRODUCT_LOOKUP = booleanPreferencesKey("online_product_lookup")
         val SHOPPING_LIST_ID = longPreferencesKey("shopping_list_id")
         val DISMISSED_RESTOCK_SUGGESTIONS = stringSetPreferencesKey("dismissed_restock_suggestions")

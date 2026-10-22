@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.EventBusy
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material.icons.outlined.Snooze
 import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -42,6 +43,7 @@ internal fun AdvancedSettingsRoute(onBack: () -> Unit, viewModel: AdvancedSettin
         onProductGroupingChange = viewModel::setProductGrouping,
         onKeepProductsTogetherChange = viewModel::setKeepProductsTogether,
         onRemindAboutExpiredChange = viewModel::setRemindAboutExpired,
+        onSnoozeAllIncludesExpiringSoonChange = viewModel::setSnoozeAllIncludesExpiringSoon,
         onOnlineProductLookupChange = viewModel::setOnlineProductLookup,
         onBack = onBack,
     )
@@ -55,6 +57,7 @@ internal fun AdvancedSettingsScreen(
     onProductGroupingChange: (ProductGrouping) -> Unit,
     onKeepProductsTogetherChange: (Boolean) -> Unit,
     onRemindAboutExpiredChange: (Boolean) -> Unit,
+    onSnoozeAllIncludesExpiringSoonChange: (Boolean) -> Unit,
     onOnlineProductLookupChange: (Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -115,6 +118,13 @@ internal fun AdvancedSettingsScreen(
                 subtitle = stringResource(R.string.feature_settings_remind_expired_summary),
                 checked = settings.remindAboutExpired,
                 onCheckedChange = onRemindAboutExpiredChange,
+            )
+            SwitchRow(
+                icon = Icons.Outlined.Snooze,
+                title = stringResource(R.string.feature_settings_snooze_all_expiring_soon),
+                subtitle = stringResource(R.string.feature_settings_snooze_all_expiring_soon_summary),
+                checked = settings.snoozeAllIncludesExpiringSoon,
+                onCheckedChange = onSnoozeAllIncludesExpiringSoonChange,
             )
 
             SectionHeader(stringResource(R.string.feature_settings_section_scanning))

@@ -108,6 +108,8 @@
     <string name="feature_settings_keep_together">Keep each product in one group</string>
     <string name="feature_settings_keep_together_summary">Show all of a product\'s dates together, under the status of the one that expires first. When off, each status has its own group.</string>
     <string name="feature_settings_remind_expired">Include expired items</string>
+    <string name="feature_settings_snooze_all_expiring_soon">Snooze all includes expiring soon</string>
+    <string name="feature_settings_snooze_all_expiring_soon_summary">The reminder\'s Snooze all button also snoozes items about to expire, not just expired ones</string>
     <string name="feature_settings_remind_expired_summary">List items that have already expired in the daily reminder, not just those about to</string>
     <string name="feature_settings_section_scanning">Barcode scanning</string>
     <string name="feature_settings_online_lookup">Look up products online</string>

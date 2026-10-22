@@ -56,6 +56,10 @@ internal class DataStoreUserSettingsRepository @Inject constructor(
         dataSource.setRemindAboutExpired(remind)
     }
 
+    override suspend fun setSnoozeAllIncludesExpiringSoon(include: Boolean) {
+        dataSource.setSnoozeAllIncludesExpiringSoon(include)
+    }
+
     override suspend fun setOnlineProductLookup(enabled: Boolean) {
         dataSource.setOnlineProductLookup(enabled)
     }

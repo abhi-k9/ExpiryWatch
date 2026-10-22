@@ -114,6 +114,22 @@ class ItemLifecycleUseCasesTest {
     }
 
     @Test
+    fun snoozingAllCanLeaveOutWhatsOnlyExpiringSoon() = runTest {
+        items.setItems(
+            listOf(
+                TestData.item(id = 1, name = "Old", expiresInDays = -1),
+                TestData.item(id = 2, name = "Soon", expiresInDays = 2),
+            ),
+        )
+        val settings = FakeUserSettingsRepository(UserSettings(expiringSoonDays = 3))
+
+        val summary = GetExpirySummaryUseCase(items, settings, ObserveTodayUseCase(TestTime.clock))()
+
+        assertEquals(listOf("Old", "Soon"), summary.toSnoozeAll(includeExpiringSoon = true).map { it.item.name })
+        assertEquals(listOf("Old"), summary.toSnoozeAll(includeExpiringSoon = false).map { it.item.name })
+    }
+
+    @Test
     fun observedExpirySummaryFollowsItemsAndSettings() = runTest {
         items.setItems(listOf(TestData.item(id = 1, name = "Milk", expiresInDays = 5)))
         val settings = FakeUserSettingsRepository(UserSettings(expiringSoonDays = 3))

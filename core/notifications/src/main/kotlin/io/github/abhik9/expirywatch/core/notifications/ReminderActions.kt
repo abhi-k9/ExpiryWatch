@@ -33,12 +33,12 @@ internal class ReminderActions @Inject constructor(
             ACTION_SNOOZE -> itemId?.let { snooze(it) }
             else -> return
         }
-        notifier.updateExpiryReminder(currentSummary())
+        notifier.updateExpiryReminder(currentSummary(), settings().snoozeAllIncludesExpiringSoon)
     }
 
-    /** Snoozes everything the reminder is about for a week. */
+    /** Snoozes what the reminder is about for a week: everything, or as the settings say, only what expired. */
     private suspend fun snoozeAll() {
-        val items = currentSummary().items.map { it.item }
+        val items = currentSummary().toSnoozeAll(settings().snoozeAllIncludesExpiringSoon).map { it.item }
         snoozeReminders(items, snoozeEnd())
         log.record { "reminder action: snoozed ${items.size} items" }
     }
@@ -57,8 +57,9 @@ internal class ReminderActions @Inject constructor(
 
     private fun snoozeEnd(): LocalDate = SnoozeLength.ONE_WEEK.resumeDate(LocalDate.now(clock))
 
-    private suspend fun currentSummary() =
-        getExpirySummary().forReminder(settingsRepository.settings.first().remindAboutExpired)
+    private suspend fun settings() = settingsRepository.settings.first()
+
+    private suspend fun currentSummary() = getExpirySummary().forReminder(settings().remindAboutExpired)
 
     companion object {
         const val ACTION_SNOOZE_ALL = "io.github.abhik9.expirywatch.action.SNOOZE_ALL"

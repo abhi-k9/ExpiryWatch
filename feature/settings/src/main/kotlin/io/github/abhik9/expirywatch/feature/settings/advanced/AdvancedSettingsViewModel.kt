@@ -26,6 +26,9 @@ class AdvancedSettingsViewModel @Inject constructor(
 
     fun setRemindAboutExpired(remind: Boolean) = launch { settingsRepository.setRemindAboutExpired(remind) }
 
+    fun setSnoozeAllIncludesExpiringSoon(include: Boolean) =
+        launch { settingsRepository.setSnoozeAllIncludesExpiringSoon(include) }
+
     fun setOnlineProductLookup(enabled: Boolean) = launch { settingsRepository.setOnlineProductLookup(enabled) }
 
     private fun launch(block: suspend () -> Unit) {

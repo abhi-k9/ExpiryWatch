@@ -41,6 +41,9 @@ class FakeUserSettingsRepository(initial: UserSettings = UserSettings()) : UserS
 
     override suspend fun setRemindAboutExpired(remind: Boolean) = state.update { it.copy(remindAboutExpired = remind) }
 
+    override suspend fun setSnoozeAllIncludesExpiringSoon(include: Boolean) =
+        state.update { it.copy(snoozeAllIncludesExpiringSoon = include) }
+
     override suspend fun setOnlineProductLookup(enabled: Boolean) =
         state.update { it.copy(onlineProductLookup = enabled) }
 

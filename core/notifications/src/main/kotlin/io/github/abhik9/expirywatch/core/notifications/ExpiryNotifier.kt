@@ -33,104 +33,121 @@ class ExpiryNotifier @Inject constructor(
     /** Creates the reminders channel, so it can be set up in the system settings before the first reminder. */
     fun createChannel() = with(context) { ensureChannel(NotificationManagerCompat.from(this)) }
 
-    /** Posts a summary of expired and soon-to-expire items, or removes it when there are none. */
-    fun showExpiryReminder(summary: ExpirySummary) = post(summary, update = false)
+    /**
+     * Posts a summary of expired and soon-to-expire items, or removes it when there are none. Its
+     * "Snooze all" button snoozes the items about to expire too when [snoozeAllIncludesExpiringSoon].
+     */
+    fun showExpiryReminder(summary: ExpirySummary, snoozeAllIncludesExpiringSoon: Boolean) =
+        post(summary, snoozeAllIncludesExpiringSoon, update = false)
 
     /**
      * Brings the reminder up to date after the user acted on it: quietly, and without bringing
      * back notifications they dismissed.
      */
-    fun updateExpiryReminder(summary: ExpirySummary) = post(summary, update = true)
+    fun updateExpiryReminder(summary: ExpirySummary, snoozeAllIncludesExpiringSoon: Boolean) =
+        post(summary, snoozeAllIncludesExpiringSoon, update = true)
 
     /** Removes the notification about the item with [itemId]. */
     fun cancelItemReminder(itemId: Long) = NotificationManagerCompat.from(context).cancel(ITEM_TAG, itemId.toInt())
 
-    private fun post(summary: ExpirySummary, update: Boolean): Unit = with(context) {
-        val notificationManager = NotificationManagerCompat.from(this)
-        val needingAttention = summary.expired + summary.expiringSoon
-        val itemsToShow = summary.expired.take(MAX_ITEM_NOTIFICATIONS)
-        // Items finished, snoozed or no longer expired since keep no notification.
-        val shown = notificationManager.activeNotifications
-        shown.filter { it.tag == ITEM_TAG && itemsToShow.none { entry -> entry.item.id.toInt() == it.id } }
-            .forEach { notificationManager.cancel(ITEM_TAG, it.id) }
-        if (needingAttention.isEmpty()) {
-            notificationManager.cancel(REMINDER_NOTIFICATION_ID)
-            log.record { "reminder notification: removed, nothing needs attention" }
-            return@with
-        }
-        if (update && shown.none { it.tag == null && it.id == REMINDER_NOTIFICATION_ID }) return@with
-        // ContextCompat treats POST_NOTIFICATIONS as granted before Android 13 when notifications
-        // are enabled for the app.
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            log.record { "reminder notification: not shown, notifications are off" }
-            return@with
-        }
-        ensureChannel(notificationManager)
+    private fun post(summary: ExpirySummary, snoozeAllIncludesExpiringSoon: Boolean, update: Boolean): Unit =
+        with(context) {
+            val notificationManager = NotificationManagerCompat.from(this)
+            val needingAttention = summary.expired + summary.expiringSoon
+            val itemsToShow = summary.expired.take(MAX_ITEM_NOTIFICATIONS)
+            // Items finished, snoozed or no longer expired since keep no notification.
+            val shown = notificationManager.activeNotifications
+            shown.filter { it.tag == ITEM_TAG && itemsToShow.none { entry -> entry.item.id.toInt() == it.id } }
+                .forEach { notificationManager.cancel(ITEM_TAG, it.id) }
+            if (needingAttention.isEmpty()) {
+                notificationManager.cancel(REMINDER_NOTIFICATION_ID)
+                log.record { "reminder notification: removed, nothing needs attention" }
+                return@with
+            }
+            if (update && shown.none { it.tag == null && it.id == REMINDER_NOTIFICATION_ID }) return@with
+            // ContextCompat treats POST_NOTIFICATIONS as granted before Android 13 when notifications
+            // are enabled for the app.
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                log.record { "reminder notification: not shown, notifications are off" }
+                return@with
+            }
+            ensureChannel(notificationManager)
 
-        val title = resources.getQuantityString(
-            R.plurals.core_notifications_title,
-            needingAttention.size,
-            needingAttention.size,
-        )
-        val statusLine = listOfNotNull(
-            summary.expired.size.takeIf { it > 0 }?.let {
-                resources.getQuantityString(R.plurals.core_notifications_expired_count, it, it)
-            },
-            summary.expiringSoon.size.takeIf { it > 0 }?.let {
-                resources.getQuantityString(R.plurals.core_notifications_expiring_soon_count, it, it)
-            },
-        ).joinToString(separator = " · ")
-
-        val style = NotificationCompat.InboxStyle().setBigContentTitle(title)
-        needingAttention.take(MAX_LINES).forEach {
-            style.addLine(
-                getString(
-                    R.string.core_notifications_item_line,
-                    it.item.name,
-                    ExpiryText.sentence(resources, it.daysUntilExpiry),
-                ),
+            val title = resources.getQuantityString(
+                R.plurals.core_notifications_title,
+                needingAttention.size,
+                needingAttention.size,
             )
-        }
-        if (needingAttention.size > MAX_LINES) {
-            val more = needingAttention.size - MAX_LINES
-            style.setSummaryText(resources.getQuantityString(R.plurals.core_notifications_more, more, more))
-        }
+            val statusLine = listOfNotNull(
+                summary.expired.size.takeIf { it > 0 }?.let {
+                    resources.getQuantityString(R.plurals.core_notifications_expired_count, it, it)
+                },
+                summary.expiringSoon.size.takeIf { it > 0 }?.let {
+                    resources.getQuantityString(R.plurals.core_notifications_expiring_soon_count, it, it)
+                },
+            ).joinToString(separator = " · ")
 
-        // Open the list filtered to what the notification is about.
-        val filter = when {
-            summary.expiringSoon.isEmpty() -> ExpiryStatus.EXPIRED
-            summary.expired.isEmpty() -> ExpiryStatus.EXPIRING_SOON
-            else -> null
-        }
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.core_notifications_ic_stat_expiry)
-            .setContentTitle(title)
-            .setContentText(statusLine)
-            .setStyle(style)
-            .setNumber(needingAttention.size)
-            .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setContentIntent(deepLinkPendingIntent(DeepLink.Items(status = filter)))
-            .addAction(
-                R.drawable.core_notifications_ic_stat_expiry,
-                getString(R.string.core_notifications_snooze_all),
-                actionPendingIntent(ReminderActions.ACTION_SNOOZE_ALL, itemId = null),
-            )
-            .setAutoCancel(true)
-            .setOnlyAlertOnce(true)
-            .setSilent(update)
-            .build()
+            val style = NotificationCompat.InboxStyle().setBigContentTitle(title)
+            needingAttention.take(MAX_LINES).forEach {
+                style.addLine(
+                    getString(
+                        R.string.core_notifications_item_line,
+                        it.item.name,
+                        ExpiryText.sentence(resources, it.daysUntilExpiry),
+                    ),
+                )
+            }
+            if (needingAttention.size > MAX_LINES) {
+                val more = needingAttention.size - MAX_LINES
+                style.setSummaryText(resources.getQuantityString(R.plurals.core_notifications_more, more, more))
+            }
 
-        notificationManager.notify(REMINDER_NOTIFICATION_ID, notification)
-        if (update) {
-            log.record { "reminder notification: updated for ${needingAttention.size} items" }
-            return@with
+            // Open the list filtered to what the notification is about.
+            val filter = when {
+                summary.expiringSoon.isEmpty() -> ExpiryStatus.EXPIRED
+                summary.expired.isEmpty() -> ExpiryStatus.EXPIRING_SOON
+                else -> null
+            }
+            val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.core_notifications_ic_stat_expiry)
+                .setContentTitle(title)
+                .setContentText(statusLine)
+                .setStyle(style)
+                .setNumber(needingAttention.size)
+                .setCategory(NotificationCompat.CATEGORY_REMINDER)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setContentIntent(deepLinkPendingIntent(DeepLink.Items(status = filter)))
+                .apply {
+                    // Nothing to snooze when only expired items are snoozed and none are.
+                    if (summary.toSnoozeAll(snoozeAllIncludesExpiringSoon).isNotEmpty()) {
+                        addAction(
+                            R.drawable.core_notifications_ic_stat_expiry,
+                            getString(
+                                if (snoozeAllIncludesExpiringSoon) {
+                                    R.string.core_notifications_snooze_all
+                                } else {
+                                    R.string.core_notifications_snooze_expired
+                                },
+                            ),
+                            actionPendingIntent(ReminderActions.ACTION_SNOOZE_ALL, itemId = null),
+                        )
+                    }
+                }
+                .setAutoCancel(true)
+                .setOnlyAlertOnce(true)
+                .setSilent(update)
+                .build()
+
+            notificationManager.notify(REMINDER_NOTIFICATION_ID, notification)
+            if (update) {
+                log.record { "reminder notification: updated for ${needingAttention.size} items" }
+                return@with
+            }
+            log.record { "reminder notification: shown for ${needingAttention.size} items" }
+            itemsToShow.forEach { notificationManager.notify(ITEM_TAG, it.item.id.toInt(), itemNotification(it)) }
         }
-        log.record { "reminder notification: shown for ${needingAttention.size} items" }
-        itemsToShow.forEach { notificationManager.notify(ITEM_TAG, it.item.id.toInt(), itemNotification(it)) }
-    }
 
     private fun Context.itemNotification(entry: ItemWithExpiry): Notification {
         val id = entry.item.id

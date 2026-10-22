@@ -46,6 +46,7 @@ class UserSettingsDataSourceTest {
         dataSource.setProductGrouping(ProductGrouping.NAME_AND_BRAND)
         dataSource.setKeepProductsTogether(true)
         dataSource.setRemindAboutExpired(false)
+        dataSource.setSnoozeAllIncludesExpiringSoon(false)
         dataSource.setOnlineProductLookup(false)
         dataSource.setShoppingListId(7)
         dataSource.setDismissedRestockSuggestions(setOf("milk|2026-03-08"))
@@ -64,6 +65,7 @@ class UserSettingsDataSourceTest {
                 productGrouping = ProductGrouping.NAME_AND_BRAND,
                 keepProductsTogether = true,
                 remindAboutExpired = false,
+                snoozeAllIncludesExpiringSoon = false,
                 onlineProductLookup = false,
                 shoppingListId = 7,
                 dismissedRestockSuggestions = setOf("milk|2026-03-08"),

@@ -30,6 +30,7 @@ class AdvancedSettingsViewModelTest {
         viewModel.setProductGrouping(ProductGrouping.NAME_AND_BRAND)
         viewModel.setKeepProductsTogether(true)
         viewModel.setRemindAboutExpired(false)
+        viewModel.setSnoozeAllIncludesExpiringSoon(false)
         viewModel.setOnlineProductLookup(false)
 
         assertEquals(
@@ -37,6 +38,7 @@ class AdvancedSettingsViewModelTest {
                 productGrouping = ProductGrouping.NAME_AND_BRAND,
                 keepProductsTogether = true,
                 remindAboutExpired = false,
+                snoozeAllIncludesExpiringSoon = false,
                 onlineProductLookup = false,
             ),
             settings.current,

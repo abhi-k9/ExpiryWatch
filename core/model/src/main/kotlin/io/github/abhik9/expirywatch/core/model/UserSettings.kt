@@ -22,6 +22,8 @@ data class UserSettings(
     val keepProductsTogether: Boolean = false,
     /** List expired items in the daily reminder, not just those about to expire. */
     val remindAboutExpired: Boolean = true,
+    /** The reminder's "Snooze all" also snoozes the items about to expire, not just the expired ones. */
+    val snoozeAllIncludesExpiringSoon: Boolean = true,
     /** Look up unknown barcodes in the online product catalog. */
     val onlineProductLookup: Boolean = true,
     /** The shopping list last opened; `null` for the first one. */
