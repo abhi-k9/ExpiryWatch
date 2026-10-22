@@ -9,4 +9,9 @@ android {
 dependencies {
     implementation(projects.core.scanner)
     implementation(libs.coil.compose)
+
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.robolectric)
+    // Registers the empty activity the Compose test rule shows content in.
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

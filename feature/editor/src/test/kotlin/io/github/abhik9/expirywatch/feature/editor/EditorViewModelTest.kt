@@ -1,17 +1,6 @@
 package io.github.abhik9.expirywatch.feature.editor
 
 import app.cash.turbine.test
-import io.github.abhik9.expirywatch.core.common.diagnostics.EventLog
-import io.github.abhik9.expirywatch.core.domain.shopping.AddItemsToShoppingListUseCase
-import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListUseCase
-import io.github.abhik9.expirywatch.core.domain.shopping.GetShoppingListUseCase
-import io.github.abhik9.expirywatch.core.domain.shopping.ObserveKnownProductsUseCase
-import io.github.abhik9.expirywatch.core.domain.usecase.DeleteItemUseCase
-import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
-import io.github.abhik9.expirywatch.core.domain.usecase.LookupProductUseCase
-import io.github.abhik9.expirywatch.core.domain.usecase.ObserveLabelsByUseUseCase
-import io.github.abhik9.expirywatch.core.domain.usecase.RecentlyDeletedItems
-import io.github.abhik9.expirywatch.core.domain.usecase.SaveItemUseCase
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.ProductInfo
 import io.github.abhik9.expirywatch.core.model.ProductSource
@@ -20,14 +9,6 @@ import io.github.abhik9.expirywatch.core.navigation.EditorNavKey
 import io.github.abhik9.expirywatch.core.testing.MainDispatcherRule
 import io.github.abhik9.expirywatch.core.testing.TestData
 import io.github.abhik9.expirywatch.core.testing.TestTime
-import io.github.abhik9.expirywatch.core.testing.repository.FakeCategoryRepository
-import io.github.abhik9.expirywatch.core.testing.repository.FakeCustomGroupRepository
-import io.github.abhik9.expirywatch.core.testing.repository.FakeItemRepository
-import io.github.abhik9.expirywatch.core.testing.repository.FakeProductCatalog
-import io.github.abhik9.expirywatch.core.testing.repository.FakeProductHistoryRepository
-import io.github.abhik9.expirywatch.core.testing.repository.FakeShoppingRepository
-import io.github.abhik9.expirywatch.core.testing.repository.FakeStorageLocationRepository
-import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepository
 import io.github.abhik9.expirywatch.core.ui.parseQuantity
 import io.github.abhik9.expirywatch.core.ui.toQuantityText
 import java.util.Locale
@@ -45,38 +26,18 @@ class EditorViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private val items = FakeItemRepository()
-    private val history = FakeProductHistoryRepository()
-    private val catalog = FakeProductCatalog()
-    private val settings = FakeUserSettingsRepository()
-    private val shopping = FakeShoppingRepository()
-    private val categories = FakeCategoryRepository(listOf(TestData.dairy, TestData.produce))
-    private val locations = FakeStorageLocationRepository(listOf(TestData.fridge))
-    private val groups = FakeCustomGroupRepository()
+    private val fixture = EditorFixture()
+    private val items = fixture.items
+    private val history = fixture.history
+    private val catalog = fixture.catalog
+    private val settings = fixture.settings
+    private val shopping = fixture.shopping
+    private val categories = fixture.categories
+    private val locations = fixture.locations
+    private val groups = fixture.groups
+    private val recentlyDeleted = fixture.recentlyDeleted
 
-    private val recentlyDeleted = RecentlyDeletedItems()
-
-    private fun viewModel(key: EditorNavKey = EditorNavKey()) = EditorViewModel(
-        key = key,
-        categoryRepository = categories,
-        locationRepository = locations,
-        groupRepository = groups,
-        observeLabelsByUse = ObserveLabelsByUseUseCase(categories, locations, groups, items, TestTime.clock),
-        itemRepository = items,
-        saveItem = SaveItemUseCase(items, history, TestTime.clock),
-        finishItem = FinishItemUseCase(items, TestTime.clock),
-        deleteItem = DeleteItemUseCase(items, recentlyDeleted),
-        lookupProduct = LookupProductUseCase(history, catalog, settings, EventLog.NONE),
-        addItemsToShoppingList = AddItemsToShoppingListUseCase(
-            GetShoppingListUseCase(shopping, settings, "Shopping list", TestTime.clock),
-            AddToShoppingListUseCase(
-                shopping,
-                ObserveKnownProductsUseCase(shopping, items, TestTime.clock),
-                TestTime.clock,
-            ),
-        ),
-        clock = TestTime.clock,
-    )
+    private fun viewModel(key: EditorNavKey = EditorNavKey()) = fixture.viewModel(key)
 
     @Test
     fun requiresNameAndExpiryDate() = runTest {

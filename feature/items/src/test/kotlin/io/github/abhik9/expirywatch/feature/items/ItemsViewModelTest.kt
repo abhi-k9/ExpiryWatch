@@ -3,22 +3,8 @@ package io.github.abhik9.expirywatch.feature.items
 import androidx.compose.runtime.snapshots.Snapshot
 import app.cash.turbine.test
 import io.github.abhik9.expirywatch.core.domain.repository.ReminderProblem
-import io.github.abhik9.expirywatch.core.domain.shopping.AddItemsToShoppingListUseCase
-import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListUseCase
-import io.github.abhik9.expirywatch.core.domain.shopping.GetShoppingListUseCase
-import io.github.abhik9.expirywatch.core.domain.shopping.ObserveKnownProductsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.DeleteItemUseCase
-import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
-import io.github.abhik9.expirywatch.core.domain.usecase.MoveItemsToGroupUseCase
-import io.github.abhik9.expirywatch.core.domain.usecase.ObserveItemsUseCase
-import io.github.abhik9.expirywatch.core.domain.usecase.ObserveLabelsByUseUseCase
-import io.github.abhik9.expirywatch.core.domain.usecase.ObserveReminderProblemsUseCase
-import io.github.abhik9.expirywatch.core.domain.usecase.ObserveTodayUseCase
-import io.github.abhik9.expirywatch.core.domain.usecase.RecentlyDeletedItems
-import io.github.abhik9.expirywatch.core.domain.usecase.RestoreItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeLength
-import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeRemindersUseCase
-import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.ExpiryStatus
 import io.github.abhik9.expirywatch.core.model.Item
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
@@ -26,13 +12,6 @@ import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.testing.MainDispatcherRule
 import io.github.abhik9.expirywatch.core.testing.TestData
 import io.github.abhik9.expirywatch.core.testing.TestTime
-import io.github.abhik9.expirywatch.core.testing.repository.FakeCategoryRepository
-import io.github.abhik9.expirywatch.core.testing.repository.FakeCustomGroupRepository
-import io.github.abhik9.expirywatch.core.testing.repository.FakeItemRepository
-import io.github.abhik9.expirywatch.core.testing.repository.FakeReminderHealthMonitor
-import io.github.abhik9.expirywatch.core.testing.repository.FakeShoppingRepository
-import io.github.abhik9.expirywatch.core.testing.repository.FakeStorageLocationRepository
-import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepository
 import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -51,50 +30,15 @@ class ItemsViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private val groups = FakeCustomGroupRepository(listOf(CustomGroup(id = 1, name = "Baby", emoji = "🍼")))
-    private val items = FakeItemRepository(
-        groups = groups,
-        initialItems = listOf(
-            TestData.item(id = 1, name = "Milk", expiresInDays = 1),
-            TestData.item(id = 2, name = "Yogurt", expiresInDays = -1),
-            TestData.item(id = 3, name = "Apples", expiresInDays = 12, category = TestData.produce),
-        ),
-    )
-    private val settings = FakeUserSettingsRepository()
-    private val shopping = FakeShoppingRepository()
-    private val reminderHealth = FakeReminderHealthMonitor()
-    private val recentlyDeleted = RecentlyDeletedItems()
+    private val fixture = ItemsFixture()
+    private val groups = fixture.groups
+    private val items = fixture.items
+    private val settings = fixture.settings
+    private val shopping = fixture.shopping
+    private val reminderHealth = fixture.reminderHealth
+    private val recentlyDeleted = fixture.recentlyDeleted
 
-    private fun viewModel(initialStatus: ExpiryStatus? = null) = ItemsViewModel(
-        initialStatus = initialStatus,
-        observeItems = ObserveItemsUseCase(items, settings, ObserveTodayUseCase(TestTime.clock)),
-        categoryRepository = FakeCategoryRepository(listOf(TestData.dairy, TestData.produce)),
-        locationRepository = FakeStorageLocationRepository(listOf(TestData.fridge)),
-        settingsRepository = settings,
-        finishItem = FinishItemUseCase(items, TestTime.clock),
-        restoreItem = RestoreItemUseCase(items),
-        addItemsToShoppingList = AddItemsToShoppingListUseCase(
-            GetShoppingListUseCase(shopping, settings, "Shopping list", TestTime.clock),
-            AddToShoppingListUseCase(
-                shopping,
-                ObserveKnownProductsUseCase(shopping, items, TestTime.clock),
-                TestTime.clock,
-            ),
-        ),
-        snoozeReminders = SnoozeRemindersUseCase(items),
-        moveItemsToGroup = MoveItemsToGroupUseCase(items),
-        groupRepository = groups,
-        observeLabelsByUse = ObserveLabelsByUseUseCase(
-            FakeCategoryRepository(),
-            FakeStorageLocationRepository(),
-            groups,
-            items,
-            TestTime.clock,
-        ),
-        observeReminderProblems = ObserveReminderProblemsUseCase(reminderHealth, settings, TestTime.clock),
-        recentlyDeleted = recentlyDeleted,
-        deleteItem = DeleteItemUseCase(items, recentlyDeleted),
-    )
+    private fun viewModel(initialStatus: ExpiryStatus? = null) = fixture.viewModel(initialStatus)
 
     private suspend fun ItemsViewModel.successState(): ItemsUiState.Success =
         uiState.filterIsInstance<ItemsUiState.Success>().first()
