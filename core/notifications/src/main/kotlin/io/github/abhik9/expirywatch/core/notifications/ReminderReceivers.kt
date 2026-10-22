@@ -22,6 +22,15 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
     }
 }
 
+/** Runs what the user picked on a reminder notification, such as marking an item used up. */
+class ReminderActionReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val action = intent.action ?: return
+        val itemId = ReminderActions.itemIdFrom(intent.dataString)
+        runAsync(context) { reminderActions()(action, itemId) }
+    }
+}
+
 /**
  * Sets the exact reminder alarm again when the system clears it or it no longer matches the clock:
  * after a restart or an app update, when the time or time zone changes, and when the user allows
@@ -56,6 +65,8 @@ internal interface ReminderReceiverEntryPoint {
     fun applicationScope(): CoroutineScope
 
     fun reminderCheck(): ReminderCheck
+
+    fun reminderActions(): ReminderActions
 
     fun syncReminderSchedule(): SyncReminderScheduleUseCase
 

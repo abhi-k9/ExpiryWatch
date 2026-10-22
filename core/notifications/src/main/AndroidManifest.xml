@@ -12,6 +12,9 @@
             android:name="io.github.abhik9.expirywatch.core.notifications.ReminderAlarmReceiver"
             android:exported="false" />
         <receiver
+            android:name="io.github.abhik9.expirywatch.core.notifications.ReminderActionReceiver"
+            android:exported="false" />
+        <receiver
             android:name="io.github.abhik9.expirywatch.core.notifications.ReminderRescheduleReceiver"
             android:exported="false">
             <intent-filter>

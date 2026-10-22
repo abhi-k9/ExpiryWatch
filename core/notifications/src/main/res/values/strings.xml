@@ -20,4 +20,9 @@
     </plurals>
     <!-- A line in the reminder notification, e.g. "Milk · Expires tomorrow". -->
     <string name="core_notifications_item_line">%1$s · %2$s</string>
+    <!-- Buttons on the reminder notifications. -->
+    <string name="core_notifications_snooze_all">Snooze all for a week</string>
+    <string name="core_notifications_used_up">Used up</string>
+    <string name="core_notifications_thrown_away">Thrown away</string>
+    <string name="core_notifications_snooze_item">Snooze a week</string>
 </resources>
