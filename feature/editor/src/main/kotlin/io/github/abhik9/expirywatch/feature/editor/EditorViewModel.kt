@@ -18,6 +18,7 @@ import io.github.abhik9.expirywatch.core.domain.shopping.AddedToShoppingList
 import io.github.abhik9.expirywatch.core.domain.usecase.AdditionalDate
 import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemValidationError
+import io.github.abhik9.expirywatch.core.domain.usecase.ItemValidator
 import io.github.abhik9.expirywatch.core.domain.usecase.LabelsByUse
 import io.github.abhik9.expirywatch.core.domain.usecase.LookupProductUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveLabelsByUseUseCase
@@ -61,6 +62,9 @@ data class EditorForm(
     val isOpened: Boolean = false,
     val openedDate: LocalDate? = null,
     val useWithinDaysText: String = "",
+    /** Days before expiry the item counts as expiring soon; empty to follow the setting. */
+    val remindDaysText: String = "",
+    val priceText: String = "",
     val notes: String = "",
     val imageUrl: String? = null,
     val additionalDates: List<AdditionalDateForm> = emptyList(),
@@ -304,6 +308,8 @@ class EditorViewModel @AssistedInject constructor(
             expiryDate = expiryDate,
             openedDate = if (form.isOpened) form.openedDate ?: today else null,
             useWithinDaysAfterOpening = form.useWithinDaysText.trim().toIntOrNull(),
+            remindDaysBefore = form.remindDaysText.trim().toIntOrNull(),
+            price = form.priceText.parseQuantity(),
             notes = form.notes,
             imageUrl = form.imageUrl,
         )
@@ -324,6 +330,14 @@ class EditorViewModel @AssistedInject constructor(
         if (!form.quantityText.isValidQuantity()) add(EditorError.QUANTITY_INVALID)
         val window = form.useWithinDaysText.trim()
         if (window.isNotEmpty() && (window.toIntOrNull() ?: 0) <= 0) add(EditorError.OPENED_WINDOW_INVALID)
+        val remindDays = form.remindDaysText.trim()
+        if (remindDays.isNotEmpty() && remindDays.toIntOrNull() !in ItemValidator.REMIND_DAYS_BEFORE_RANGE) {
+            add(EditorError.REMIND_DAYS_INVALID)
+        }
+        val price = form.priceText.trim()
+        if (price.isNotEmpty() && price.parseQuantity()?.takeIf { it >= 0 && it <= ItemValidator.MAX_PRICE } == null) {
+            add(EditorError.PRICE_INVALID)
+        }
     }
 
     private fun toEditorError(error: ItemValidationError): EditorError = when (error) {
@@ -360,6 +374,8 @@ private fun Item.toForm() = EditorForm(
     isOpened = openedDate != null,
     openedDate = openedDate,
     useWithinDaysText = useWithinDaysAfterOpening?.toString().orEmpty(),
+    remindDaysText = remindDaysBefore?.toString().orEmpty(),
+    priceText = price?.toQuantityText().orEmpty(),
     notes = notes.orEmpty(),
     imageUrl = imageUrl,
 )

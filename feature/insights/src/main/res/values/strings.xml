@@ -9,6 +9,8 @@
     <string name="feature_insights_thrown_away">Thrown away</string>
     <string name="feature_insights_waste_rate">Waste rate</string>
     <string name="feature_insights_used_in_time">Used before expiry</string>
+    <string name="feature_insights_value_used">Value used up</string>
+    <string name="feature_insights_value_wasted">Money wasted</string>
 
     <string name="feature_insights_headline_period_month">this month</string>
     <string name="feature_insights_headline_period_three_months">in the last 3 months</string>

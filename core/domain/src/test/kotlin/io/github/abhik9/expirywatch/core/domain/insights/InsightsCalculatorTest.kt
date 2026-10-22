@@ -11,6 +11,8 @@ import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class InsightsCalculatorTest {
     private val today = TestTime.today // 2026-03-10
@@ -93,5 +95,22 @@ class InsightsCalculatorTest {
     @Test
     fun earliestRelevantDateCoversTheLongestPeriod() {
         assertEquals(LocalDate.of(2025, 4, 1), InsightsCalculator.earliestRelevantDate(today))
+    }
+
+    @Test
+    fun addsUpWhatUsedAndWastedItemsCost() {
+        val items = listOf(
+            finished(ItemStatus.CONSUMED, finishedOn = today).copy(price = 2.5),
+            finished(ItemStatus.CONSUMED, finishedOn = today),
+            finished(ItemStatus.WASTED, finishedOn = today).copy(price = 1.25),
+            finished(ItemStatus.WASTED, finishedOn = today.minusMonths(6)).copy(price = 9.0),
+        )
+
+        val insights = InsightsCalculator.calculate(items, InsightsPeriod.ONE_MONTH, today)
+
+        assertEquals(2.5, insights.consumedValue)
+        assertEquals(1.25, insights.wastedValue)
+        assertTrue(insights.hasPrices)
+        assertFalse(InsightsCalculator.calculate(items.drop(3), InsightsPeriod.ONE_MONTH, today).hasPrices)
     }
 }

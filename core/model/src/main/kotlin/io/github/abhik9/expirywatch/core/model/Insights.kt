@@ -13,6 +13,12 @@ data class Insights(
     val monthly: List<MonthlyUsage>,
     /** Categories with the most wasted items, most wasted first. */
     val topWastedCategories: List<CategoryWaste>,
+    /** What the items with a price that were used up cost, in the user's currency. */
+    val consumedValue: Double = 0.0,
+    /** What the items with a price that were thrown away cost. */
+    val wastedValue: Double = 0.0,
+    /** Whether any item finished in the period has a price, so the values mean something. */
+    val hasPrices: Boolean = false,
 ) {
     val finishedCount: Int get() = consumedCount + wastedCount
 

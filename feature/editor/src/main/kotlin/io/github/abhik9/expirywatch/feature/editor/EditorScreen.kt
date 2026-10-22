@@ -336,6 +336,48 @@ internal fun EditorScreen(
                     modifier = Modifier.weight(1f),
                 )
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = form.priceText,
+                    onValueChange = { text -> onFormChange { it.copy(priceText = text) } },
+                    modifier = Modifier.weight(1f),
+                    label = { Text(stringResource(R.string.feature_editor_price)) },
+                    isError = EditorError.PRICE_INVALID in errors,
+                    supportingText = {
+                        Text(
+                            stringResource(
+                                if (EditorError.PRICE_INVALID in errors) {
+                                    R.string.feature_editor_error_price
+                                } else {
+                                    R.string.feature_editor_price_hint
+                                },
+                            ),
+                        )
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                )
+                OutlinedTextField(
+                    value = form.remindDaysText,
+                    onValueChange = { text -> onFormChange { it.copy(remindDaysText = text.filter(Char::isDigit)) } },
+                    modifier = Modifier.weight(1f),
+                    label = { Text(stringResource(R.string.feature_editor_remind_days)) },
+                    isError = EditorError.REMIND_DAYS_INVALID in errors,
+                    supportingText = {
+                        Text(
+                            stringResource(
+                                if (EditorError.REMIND_DAYS_INVALID in errors) {
+                                    R.string.feature_editor_error_remind_days
+                                } else {
+                                    R.string.feature_editor_remind_days_hint
+                                },
+                            ),
+                        )
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+            }
             OutlinedTextField(
                 value = form.notes,
                 onValueChange = { notes -> onFormChange { it.copy(notes = notes) } },

@@ -50,6 +50,9 @@ object InsightsCalculator {
                     compareByDescending<CategoryWaste> { it.wastedCount }.thenBy(nullsLast()) { it.category?.name },
                 )
                 .take(TOP_CATEGORY_COUNT),
+            consumedValue = consumed.sumOf { it.item.price ?: 0.0 },
+            wastedValue = wasted.sumOf { it.item.price ?: 0.0 },
+            hasPrices = inPeriod.any { it.item.price != null },
         )
     }
 

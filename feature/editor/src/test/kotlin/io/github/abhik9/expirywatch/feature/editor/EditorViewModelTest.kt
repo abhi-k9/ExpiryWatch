@@ -137,6 +137,30 @@ class EditorViewModelTest {
     }
 
     @Test
+    fun savesPriceAndReminderLeadAndRejectsInvalidOnes() = runTest {
+        val viewModel = viewModel()
+        viewModel.updateForm {
+            it.copy(
+                name = "Aspirin",
+                expiryDate = TestTime.today.plusDays(200),
+                priceText = "abc",
+                remindDaysText = "400",
+            )
+        }
+
+        viewModel.save()
+        assertEquals(setOf(EditorError.PRICE_INVALID, EditorError.REMIND_DAYS_INVALID), viewModel.errors)
+
+        viewModel.updateForm { it.copy(priceText = "4,99", remindDaysText = "30") }
+        viewModel.events.test {
+            viewModel.save()
+            assertEquals(EditorEvent.Done, awaitItem())
+        }
+        val aspirin = items.currentItems.single()
+        assertEquals(4.99 to 30, aspirin.price to aspirin.remindDaysBefore)
+    }
+
+    @Test
     fun savesEachAdditionalDateAsAnItemOfItsOwn() = runTest {
         val viewModel = viewModel()
         viewModel.updateForm {

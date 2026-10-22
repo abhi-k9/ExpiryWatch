@@ -165,6 +165,23 @@ private fun InsightsContent(insights: Insights) {
             modifier = Modifier.weight(1f),
         )
     }
+    if (insights.hasPrices) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            val currency = NumberFormat.getCurrencyInstance(currentLocale())
+            StatTile(
+                label = stringResource(R.string.feature_insights_value_used),
+                value = currency.format(insights.consumedValue),
+                markerColor = colors.consumed,
+                modifier = Modifier.weight(1f),
+            )
+            StatTile(
+                label = stringResource(R.string.feature_insights_value_wasted),
+                value = currency.format(insights.wastedValue),
+                markerColor = colors.wasted,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
     Text(
         text = insightsHeadline(insights),
         style = MaterialTheme.typography.bodyLarge,

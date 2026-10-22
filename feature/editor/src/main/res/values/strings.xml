@@ -47,6 +47,12 @@
     <string name="feature_editor_category">Category</string>
     <string name="feature_editor_location">Stored in</string>
     <string name="feature_editor_group">Group</string>
+    <string name="feature_editor_price">Price</string>
+    <string name="feature_editor_price_hint">Optional, for insights</string>
+    <string name="feature_editor_error_price">Enter a price, like 2.49</string>
+    <string name="feature_editor_remind_days">Remind days before</string>
+    <string name="feature_editor_remind_days_hint">Empty: as in Settings</string>
+    <string name="feature_editor_error_remind_days">Enter 0 to 365 days</string>
     <string name="feature_editor_no_group">No group</string>
     <string name="feature_editor_new_category">New category…</string>
     <string name="feature_editor_new_location">New location…</string>
