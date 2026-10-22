@@ -1,12 +1,15 @@
 package io.github.abhik9.expirywatch.feature.items
 
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeRight
 import io.github.abhik9.expirywatch.core.domain.usecase.DeleteItemUseCase
+import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.testing.TestTime
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -77,5 +80,22 @@ class ItemsScreenTest {
 
         assertEquals(milk, runBlocking { fixture.items.observeItem(1).first() })
         composeRule.onNodeWithText("Milk").assertExists()
+    }
+
+    @Test
+    fun swipingAnItemToTheEndMarksItUsedUpAndUndoPutsItBack() {
+        showItems()
+
+        // Well past the threshold; the text itself is narrower than the row.
+        composeRule.onNodeWithText("Milk").performTouchInput { swipeRight(startX = left, endX = left + 1000f) }
+        composeRule.waitForIdle()
+        assertEquals(ItemStatus.CONSUMED, runBlocking { fixture.items.observeItem(1).first()?.status })
+
+        composeRule.onNodeWithText("Undo").performClick()
+        composeRule.waitForIdle()
+        assertEquals(ItemStatus.ACTIVE, runBlocking { fixture.items.observeItem(1).first()?.status })
+        // Back in its place, rather than swiped away, and not finished again.
+        composeRule.onNodeWithText("Milk").assertIsDisplayed()
+        assertEquals(ItemStatus.ACTIVE, runBlocking { fixture.items.observeItem(1).first()?.status })
     }
 }

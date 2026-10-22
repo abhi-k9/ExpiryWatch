@@ -33,10 +33,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -220,12 +222,15 @@ internal fun ShoppingItemRow(
             onRemove()
         }
     }
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
+    val dismissState = rememberSwipeToDismissBoxState()
+    // Removes the item once a swipe settles past the threshold; only swiping to the start can.
+    LaunchedEffect(dismissState) {
+        // A row brought back by undo can get its swiped-away state back from the list: put it in place.
+        dismissState.reset()
+        snapshotFlow { dismissState.currentValue }.collect { value ->
             if (value == SwipeToDismissBoxValue.EndToStart) removeOnce()
-            value == SwipeToDismissBoxValue.EndToStart
-        },
-    )
+        }
+    }
     val editLabel = stringResource(R.string.feature_shopping_edit)
     val removeLabel = stringResource(R.string.feature_shopping_remove)
     SwipeToDismissBox(

@@ -75,6 +75,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -643,23 +644,19 @@ internal fun SwipeableItemRow(
             onFinish(outcome)
         }
     }
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
+    val dismissState = rememberSwipeToDismissBoxState()
+    // Finishes the item once a swipe settles past the threshold; the row then leaves the list.
+    LaunchedEffect(dismissState) {
+        // A row brought back by undo can get its swiped-away state back from the list: put it in place.
+        dismissState.reset()
+        snapshotFlow { dismissState.currentValue }.collect { value ->
             when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    finishOnce(ItemStatus.CONSUMED)
-                    true
-                }
-
-                SwipeToDismissBoxValue.EndToStart -> {
-                    finishOnce(ItemStatus.WASTED)
-                    true
-                }
-
-                SwipeToDismissBoxValue.Settled -> false
+                SwipeToDismissBoxValue.StartToEnd -> finishOnce(ItemStatus.CONSUMED)
+                SwipeToDismissBoxValue.EndToStart -> finishOnce(ItemStatus.WASTED)
+                SwipeToDismissBoxValue.Settled -> Unit
             }
-        },
-    )
+        }
+    }
     val consumedLabel = stringResource(R.string.feature_items_action_consumed)
     val wastedLabel = stringResource(R.string.feature_items_action_wasted)
     val shoppingLabel = stringResource(R.string.feature_items_add_to_shopping_list)
