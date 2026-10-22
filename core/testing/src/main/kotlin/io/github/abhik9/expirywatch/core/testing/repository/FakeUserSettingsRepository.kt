@@ -1,6 +1,7 @@
 package io.github.abhik9.expirywatch.core.testing.repository
 
 import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
+import io.github.abhik9.expirywatch.core.model.AutoBackupRun
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
 import io.github.abhik9.expirywatch.core.model.ProductGrouping
 import io.github.abhik9.expirywatch.core.model.ThemeMode
@@ -53,4 +54,9 @@ class FakeUserSettingsRepository(initial: UserSettings = UserSettings()) : UserS
 
     override suspend fun setKeepScreenOnWhileShopping(keepOn: Boolean) =
         state.update { it.copy(keepScreenOnWhileShopping = keepOn) }
+
+    override suspend fun setAutoBackupFolder(uri: String?) =
+        state.update { it.copy(autoBackupFolder = uri, lastAutoBackup = null) }
+
+    override suspend fun setLastAutoBackup(run: AutoBackupRun) = state.update { it.copy(lastAutoBackup = run) }
 }

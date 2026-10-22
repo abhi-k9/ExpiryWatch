@@ -9,12 +9,16 @@ import io.github.abhik9.expirywatch.core.domain.usecase.ExportBackupUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ExportDiagnosticsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ImportBackupUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveReminderProblemsUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.RunAutoBackupUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.SetAutoBackupFolderUseCase
 import io.github.abhik9.expirywatch.core.model.ThemeMode
 import io.github.abhik9.expirywatch.core.navigation.LabelKind
 import io.github.abhik9.expirywatch.core.testing.MainDispatcherRule
 import io.github.abhik9.expirywatch.core.testing.TestData
 import io.github.abhik9.expirywatch.core.testing.TestTime
 import io.github.abhik9.expirywatch.core.testing.diagnostics.FakeDiagnosticsRepository
+import io.github.abhik9.expirywatch.core.testing.repository.FakeAutoBackupScheduler
+import io.github.abhik9.expirywatch.core.testing.repository.FakeBackupFolder
 import io.github.abhik9.expirywatch.core.testing.repository.FakeBackupRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeCategoryRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeCustomGroupRepository
@@ -46,6 +50,8 @@ class SettingsViewModelTest {
     private val documents = FakeDocumentStore()
     private val diagnostics = FakeDiagnosticsRepository(report = "the report")
     private val reminderHealth = FakeReminderHealthMonitor()
+    private val backupFolder = FakeBackupFolder()
+    private val autoBackupScheduler = FakeAutoBackupScheduler()
 
     // Lazy, so the ViewModel is created after MainDispatcherRule has replaced the main dispatcher.
     private val viewModel by lazy {
@@ -58,6 +64,12 @@ class SettingsViewModelTest {
             clock = TestTime.clock,
             appInfo = AppInfo(versionName = "1.0", barcodeEngine = "ZXing", sourceCodeUrl = "https://example.com"),
             observeReminderProblems = ObserveReminderProblemsUseCase(reminderHealth, settings, TestTime.clock),
+            setAutoBackupFolder = SetAutoBackupFolderUseCase(
+                settings,
+                backupFolder,
+                autoBackupScheduler,
+                RunAutoBackupUseCase(backups, backupFolder, settings, TestTime.clock, EventLog.NONE),
+            ),
         )
     }
 
@@ -88,6 +100,24 @@ class SettingsViewModelTest {
             viewModel.recheckReminders()
             assertEquals(listOf(ReminderProblem.BACKGROUND_RESTRICTED), awaitItem())
         }
+    }
+
+    @Test
+    fun automaticBackupsStartWithABackupAndCanBeStopped() = runTest {
+        viewModel.events.test {
+            viewModel.startAutoBackups("content://tree/backups")
+
+            val event = assertIs<SettingsEvent.BackupFinished>(awaitItem())
+            assertEquals(BackupOperation.AUTO_BACKUP, event.operation)
+            assertIs<BackupResult.Success>(event.result)
+        }
+        assertTrue(autoBackupScheduler.scheduled)
+        assertEquals("content://tree/backups", settings.current.autoBackupFolder)
+
+        viewModel.stopAutoBackups()
+
+        assertFalse(autoBackupScheduler.scheduled)
+        assertEquals(null, settings.current.autoBackupFolder)
     }
 
     @Test

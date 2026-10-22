@@ -26,3 +26,31 @@ interface DocumentStore {
     /** @throws java.io.IOException when the document can't be read. */
     suspend fun readText(uri: String): String
 }
+
+/** A folder the user picked to keep backups in, identified by a document tree URI string. */
+interface BackupFolder {
+    /** Keeps the app's access to the folder at [folderUri] after a restart. */
+    suspend fun keepAccess(folderUri: String)
+
+    /** Gives up the app's access to the folder at [folderUri], once it's no longer backed up to. */
+    suspend fun releaseAccess(folderUri: String)
+
+    /**
+     * Writes [text] to the file named [fileName] in the folder, replacing it if it's there.
+     * @throws java.io.IOException when the file can't be written, e.g. the folder is gone.
+     */
+    suspend fun write(folderUri: String, fileName: String, text: String)
+
+    /** @throws java.io.IOException when the folder can't be read. */
+    suspend fun fileNames(folderUri: String): List<String>
+
+    /** @throws java.io.IOException when the file can't be deleted. */
+    suspend fun delete(folderUri: String, fileName: String)
+}
+
+/** Runs the automatic backup every week while it's on. */
+interface AutoBackupScheduler {
+    suspend fun scheduleWeekly()
+
+    suspend fun cancel()
+}

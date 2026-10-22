@@ -9,11 +9,13 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import io.github.abhik9.expirywatch.core.model.AutoBackupRun
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
 import io.github.abhik9.expirywatch.core.model.ProductGrouping
 import io.github.abhik9.expirywatch.core.model.ThemeMode
 import io.github.abhik9.expirywatch.core.model.UserSettings
 import java.io.IOException
+import java.time.Instant
 import java.time.LocalTime
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -68,6 +70,18 @@ class UserSettingsDataSource @Inject constructor(
     suspend fun setKeepScreenOnWhileShopping(keepOn: Boolean) =
         dataStore.edit { it[Keys.KEEP_SCREEN_ON_WHILE_SHOPPING] = keepOn }
 
+    /** Sets the folder to back up to, or turns automatic backups off; either forgets the last run. */
+    suspend fun setAutoBackupFolder(uri: String?) = dataStore.edit {
+        if (uri == null) it.remove(Keys.AUTO_BACKUP_FOLDER) else it[Keys.AUTO_BACKUP_FOLDER] = uri
+        it.remove(Keys.LAST_AUTO_BACKUP_AT)
+        it.remove(Keys.LAST_AUTO_BACKUP_FAILED)
+    }
+
+    suspend fun setLastAutoBackup(run: AutoBackupRun) = dataStore.edit {
+        it[Keys.LAST_AUTO_BACKUP_AT] = run.at.toEpochMilli()
+        it[Keys.LAST_AUTO_BACKUP_FAILED] = run.failed
+    }
+
     private fun Preferences.toUserSettings(): UserSettings {
         val defaults = UserSettings()
         return UserSettings(
@@ -94,6 +108,10 @@ class UserSettingsDataSource @Inject constructor(
                 ?.mapNotNull { it.trim().toLongOrNull() }
                 ?: defaults.shoppingAisleOrder,
             keepScreenOnWhileShopping = this[Keys.KEEP_SCREEN_ON_WHILE_SHOPPING] ?: defaults.keepScreenOnWhileShopping,
+            autoBackupFolder = this[Keys.AUTO_BACKUP_FOLDER],
+            lastAutoBackup = this[Keys.LAST_AUTO_BACKUP_AT]?.let {
+                AutoBackupRun(at = Instant.ofEpochMilli(it), failed = this[Keys.LAST_AUTO_BACKUP_FAILED] ?: false)
+            },
         )
     }
 
@@ -116,6 +134,9 @@ class UserSettingsDataSource @Inject constructor(
         val DISMISSED_RESTOCK_SUGGESTIONS = stringSetPreferencesKey("dismissed_restock_suggestions")
         val SHOPPING_AISLE_ORDER = stringPreferencesKey("shopping_aisle_order")
         val KEEP_SCREEN_ON_WHILE_SHOPPING = booleanPreferencesKey("keep_screen_on_while_shopping")
+        val AUTO_BACKUP_FOLDER = stringPreferencesKey("auto_backup_folder")
+        val LAST_AUTO_BACKUP_AT = longPreferencesKey("last_auto_backup_at")
+        val LAST_AUTO_BACKUP_FAILED = booleanPreferencesKey("last_auto_backup_failed")
     }
 
     private companion object {

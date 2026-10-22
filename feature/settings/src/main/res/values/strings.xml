@@ -68,6 +68,15 @@
         <item quantity="one">Backup saved with %d item</item>
         <item quantity="other">Backup saved with %d items</item>
     </plurals>
+    <plurals name="feature_settings_auto_backup_first_done">
+        <item quantity="one">Automatic backups are on. First backup saved with %d item</item>
+        <item quantity="other">Automatic backups are on. First backup saved with %d items</item>
+    </plurals>
+    <string name="feature_settings_auto_backup">Automatic backups</string>
+    <string name="feature_settings_auto_backup_summary">Back up every week to a folder you choose, keeping the last %d backups</string>
+    <string name="feature_settings_auto_backup_folder_summary">Backed up every week. Tap to choose another folder</string>
+    <string name="feature_settings_auto_backup_done">Last backup on %s. Tap to choose another folder</string>
+    <string name="feature_settings_auto_backup_failed">The backup on %s failed. Tap to choose the folder again</string>
     <plurals name="feature_settings_import_done">
         <item quantity="one">Backup restored: %d item</item>
         <item quantity="other">Backup restored: %d items</item>

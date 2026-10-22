@@ -1,6 +1,8 @@
 package io.github.abhik9.expirywatch.core.testing.repository
 
 import io.github.abhik9.expirywatch.core.domain.backup.BackupSnapshot
+import io.github.abhik9.expirywatch.core.domain.repository.AutoBackupScheduler
+import io.github.abhik9.expirywatch.core.domain.repository.BackupFolder
 import io.github.abhik9.expirywatch.core.domain.repository.BackupRepository
 import io.github.abhik9.expirywatch.core.domain.repository.DocumentStore
 import io.github.abhik9.expirywatch.core.domain.repository.ReminderHealth
@@ -70,4 +72,49 @@ class FakeReminderHealthMonitor(
     ),
 ) : ReminderHealthMonitor {
     override fun current(): ReminderHealth = health
+}
+
+class FakeBackupFolder : BackupFolder {
+    /** The files in each folder, by name. */
+    val folders = mutableMapOf<String, MutableMap<String, String>>()
+
+    /** The folders the app keeps access to. */
+    val accessible = mutableSetOf<String>()
+    var failWith: IOException? = null
+
+    override suspend fun keepAccess(folderUri: String) {
+        accessible += folderUri
+    }
+
+    override suspend fun releaseAccess(folderUri: String) {
+        accessible -= folderUri
+    }
+
+    override suspend fun write(folderUri: String, fileName: String, text: String) {
+        failWith?.let { throw it }
+        folders.getOrPut(folderUri) { mutableMapOf() }[fileName] = text
+    }
+
+    override suspend fun fileNames(folderUri: String): List<String> {
+        failWith?.let { throw it }
+        return folders[folderUri].orEmpty().keys.toList()
+    }
+
+    override suspend fun delete(folderUri: String, fileName: String) {
+        failWith?.let { throw it }
+        folders[folderUri]?.remove(fileName)
+    }
+}
+
+class FakeAutoBackupScheduler : AutoBackupScheduler {
+    var scheduled = false
+        private set
+
+    override suspend fun scheduleWeekly() {
+        scheduled = true
+    }
+
+    override suspend fun cancel() {
+        scheduled = false
+    }
 }

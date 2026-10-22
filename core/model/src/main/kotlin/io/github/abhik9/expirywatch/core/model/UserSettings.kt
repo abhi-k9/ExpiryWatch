@@ -1,5 +1,6 @@
 package io.github.abhik9.expirywatch.core.model
 
+import java.time.Instant
 import java.time.LocalTime
 
 data class UserSettings(
@@ -31,6 +32,10 @@ data class UserSettings(
     val shoppingAisleOrder: List<Long> = emptyList(),
     /** Keep the screen from turning off while the shopping list is open. */
     val keepScreenOnWhileShopping: Boolean = false,
+    /** The folder, a document tree URI, to back up to every week; `null` while automatic backups are off. */
+    val autoBackupFolder: String? = null,
+    /** How the last automatic backup to [autoBackupFolder] went; `null` before the first. */
+    val lastAutoBackup: AutoBackupRun? = null,
 ) {
     companion object {
         const val DEFAULT_EXPIRING_SOON_DAYS = 3
@@ -38,6 +43,9 @@ data class UserSettings(
         val DEFAULT_REMINDER_TIME: LocalTime = LocalTime.of(9, 0)
     }
 }
+
+/** An automatic backup that ran [at] a time, and whether it [failed]. */
+data class AutoBackupRun(val at: Instant, val failed: Boolean)
 
 enum class ThemeMode {
     SYSTEM,

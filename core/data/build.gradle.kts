@@ -14,6 +14,10 @@ dependencies {
     implementation(projects.core.datastore)
     implementation(projects.core.network)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.hilt.work)
+    implementation(libs.androidx.work.ktx)
+    ksp(libs.androidx.hilt.compiler)
 
     testImplementation(projects.core.testing)
     testImplementation(libs.androidx.test.core)

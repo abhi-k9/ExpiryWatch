@@ -7,6 +7,8 @@ import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
 import io.github.abhik9.expirywatch.core.common.diagnostics.DiagnosticsSection
 import io.github.abhik9.expirywatch.core.data.DataDiagnosticsSection
+import io.github.abhik9.expirywatch.core.data.backup.SafBackupFolder
+import io.github.abhik9.expirywatch.core.data.backup.WorkManagerAutoBackupScheduler
 import io.github.abhik9.expirywatch.core.data.repository.ContentResolverDocumentStore
 import io.github.abhik9.expirywatch.core.data.repository.DataStoreUserSettingsRepository
 import io.github.abhik9.expirywatch.core.data.repository.OpenFoodFactsProductCatalog
@@ -17,6 +19,8 @@ import io.github.abhik9.expirywatch.core.data.repository.RoomItemRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomProductHistoryRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomShoppingRepository
 import io.github.abhik9.expirywatch.core.data.repository.RoomStorageLocationRepository
+import io.github.abhik9.expirywatch.core.domain.repository.AutoBackupScheduler
+import io.github.abhik9.expirywatch.core.domain.repository.BackupFolder
 import io.github.abhik9.expirywatch.core.domain.repository.BackupRepository
 import io.github.abhik9.expirywatch.core.domain.repository.CategoryRepository
 import io.github.abhik9.expirywatch.core.domain.repository.CustomGroupRepository
@@ -57,6 +61,12 @@ internal abstract class DataModule {
 
     @Binds
     abstract fun bindsDocumentStore(store: ContentResolverDocumentStore): DocumentStore
+
+    @Binds
+    abstract fun bindsBackupFolder(folder: SafBackupFolder): BackupFolder
+
+    @Binds
+    abstract fun bindsAutoBackupScheduler(scheduler: WorkManagerAutoBackupScheduler): AutoBackupScheduler
 
     @Binds
     abstract fun bindsUserSettingsRepository(repository: DataStoreUserSettingsRepository): UserSettingsRepository

@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Alarm
 import androidx.compose.material.icons.outlined.AlarmOff
+import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.BatteryAlert
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Category
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.Folder
@@ -88,11 +90,14 @@ import io.github.abhik9.expirywatch.core.designsystem.theme.supportsDynamicThemi
 import io.github.abhik9.expirywatch.core.domain.backup.BackupCodec
 import io.github.abhik9.expirywatch.core.domain.repository.ReminderProblem
 import io.github.abhik9.expirywatch.core.domain.usecase.BackupResult
+import io.github.abhik9.expirywatch.core.domain.usecase.RunAutoBackupUseCase
 import io.github.abhik9.expirywatch.core.model.ThemeMode
 import io.github.abhik9.expirywatch.core.model.UserSettings
 import io.github.abhik9.expirywatch.core.navigation.LabelKind
+import io.github.abhik9.expirywatch.core.ui.formatMedium
 import io.github.abhik9.expirywatch.core.ui.formatShort
 import java.time.LocalTime
+import java.time.ZoneId
 import kotlin.math.roundToInt
 
 @Composable
@@ -131,6 +136,10 @@ internal fun SettingsRoute(
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.importFrom(it.toString()) }
     }
+    val autoBackupFolderLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            uri?.let { viewModel.startAutoBackups(it.toString()) }
+        }
     val diagnosticsExportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument(DIAGNOSTICS_MIME_TYPE),
     ) { uri -> uri?.let { viewModel.exportDiagnosticsTo(it.toString()) } }
@@ -153,6 +162,8 @@ internal fun SettingsRoute(
         onExport = { exportLauncher.launch(viewModel.suggestedBackupFileName) },
         // Some file managers label JSON files as plain text or a generic binary.
         onImport = { importLauncher.launch(arrayOf(BackupCodec.MIME_TYPE, "text/plain", "application/octet-stream")) },
+        onPickAutoBackupFolder = { autoBackupFolderLauncher.launch(null) },
+        onStopAutoBackups = viewModel::stopAutoBackups,
         diagnostics = diagnostics,
         onDiagnosticsRecordingChange = viewModel::setDiagnosticsRecording,
         onExportDiagnostics = { diagnosticsExportLauncher.launch(viewModel.suggestedDiagnosticsFileName) },
@@ -165,6 +176,7 @@ private fun Resources.backupMessage(operation: BackupOperation, result: BackupRe
         when (operation) {
             BackupOperation.EXPORT -> R.plurals.feature_settings_export_done
             BackupOperation.IMPORT -> R.plurals.feature_settings_import_done
+            BackupOperation.AUTO_BACKUP -> R.plurals.feature_settings_auto_backup_first_done
         },
         result.stats.itemCount,
         result.stats.itemCount,
@@ -194,6 +206,8 @@ internal fun SettingsScreen(
     onOpenAdvanced: () -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
+    onPickAutoBackupFolder: () -> Unit,
+    onStopAutoBackups: () -> Unit,
     diagnostics: DiagnosticsState,
     onDiagnosticsRecordingChange: (Boolean) -> Unit,
     onExportDiagnostics: () -> Unit,
@@ -244,7 +258,14 @@ internal fun SettingsScreen(
                 onClick = { onManageLabels(LabelKind.GROUPS) },
             )
 
-            BackupSection(isBackupInProgress = isBackupInProgress, onExport = onExport, onImport = onImport)
+            BackupSection(
+                settings = settings,
+                isBackupInProgress = isBackupInProgress,
+                onExport = onExport,
+                onImport = onImport,
+                onPickAutoBackupFolder = onPickAutoBackupFolder,
+                onStopAutoBackups = onStopAutoBackups,
+            )
             DiagnosticsSection(diagnostics, onDiagnosticsRecordingChange, onExportDiagnostics, onClearDiagnostics)
 
             SectionHeader(stringResource(R.string.feature_settings_section_advanced))
@@ -451,7 +472,14 @@ private fun RemindersSection(
 }
 
 @Composable
-private fun BackupSection(isBackupInProgress: Boolean, onExport: () -> Unit, onImport: () -> Unit) {
+private fun BackupSection(
+    settings: UserSettings,
+    isBackupInProgress: Boolean,
+    onExport: () -> Unit,
+    onImport: () -> Unit,
+    onPickAutoBackupFolder: () -> Unit,
+    onStopAutoBackups: () -> Unit,
+) {
     var confirmImport by rememberSaveable { mutableStateOf(false) }
 
     SectionHeader(stringResource(R.string.feature_settings_section_backup))
@@ -476,6 +504,33 @@ private fun BackupSection(isBackupInProgress: Boolean, onExport: () -> Unit, onI
         enabled = !isBackupInProgress,
         onClick = { confirmImport = true },
     )
+    val autoBackupFolder = settings.autoBackupFolder
+    SwitchRow(
+        icon = Icons.Outlined.Backup,
+        title = stringResource(R.string.feature_settings_auto_backup),
+        subtitle = stringResource(
+            R.string.feature_settings_auto_backup_summary,
+            RunAutoBackupUseCase.KEEP_AUTO_BACKUPS,
+        ),
+        checked = autoBackupFolder != null,
+        enabled = !isBackupInProgress,
+        onCheckedChange = { on -> if (on) onPickAutoBackupFolder() else onStopAutoBackups() },
+    )
+    if (autoBackupFolder != null) {
+        val lastRun = settings.lastAutoBackup
+        val lastDate = lastRun?.at?.atZone(ZoneId.systemDefault())?.toLocalDate()?.formatMedium()
+        SettingsRow(
+            icon = if (lastRun?.failed == true) Icons.Outlined.ErrorOutline else Icons.Outlined.Folder,
+            title = folderName(autoBackupFolder),
+            subtitle = when {
+                lastRun == null -> stringResource(R.string.feature_settings_auto_backup_folder_summary)
+                lastRun.failed -> stringResource(R.string.feature_settings_auto_backup_failed, lastDate.orEmpty())
+                else -> stringResource(R.string.feature_settings_auto_backup_done, lastDate.orEmpty())
+            },
+            enabled = !isBackupInProgress,
+            onClick = onPickAutoBackupFolder,
+        )
+    }
 
     if (confirmImport) {
         AlertDialog(
@@ -602,6 +657,10 @@ internal fun SwitchRow(
         modifier = Modifier.toggleableRow(checked, onCheckedChange, enabled),
     )
 }
+
+/** The folder's path as the file manager shows it, e.g. "Documents/Backups", from its tree URI. */
+private fun folderName(treeUri: String): String =
+    Uri.decode(treeUri.substringAfterLast('/')).substringAfter(':').ifEmpty { treeUri }
 
 // Covers both the Android 13+ permission and notifications turned off in system settings.
 private fun Context.canPostNotifications(): Boolean = NotificationManagerCompat.from(this).areNotificationsEnabled()

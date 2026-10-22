@@ -1,5 +1,6 @@
 package io.github.abhik9.expirywatch.core.domain.repository
 
+import io.github.abhik9.expirywatch.core.model.AutoBackupRun
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
 import io.github.abhik9.expirywatch.core.model.ProductGrouping
 import io.github.abhik9.expirywatch.core.model.ThemeMode
@@ -39,4 +40,9 @@ interface UserSettingsRepository {
     suspend fun setShoppingAisleOrder(categoryIds: List<Long>)
 
     suspend fun setKeepScreenOnWhileShopping(keepOn: Boolean)
+
+    /** Sets the folder to back up to every week, or turns automatic backups off with `null`. */
+    suspend fun setAutoBackupFolder(uri: String?)
+
+    suspend fun setLastAutoBackup(run: AutoBackupRun)
 }

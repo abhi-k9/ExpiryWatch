@@ -15,6 +15,7 @@ import io.github.abhik9.expirywatch.core.domain.usecase.ExportBackupUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ExportDiagnosticsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ImportBackupUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveReminderProblemsUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.SetAutoBackupFolderUseCase
 import io.github.abhik9.expirywatch.core.model.ThemeMode
 import io.github.abhik9.expirywatch.core.model.UserSettings
 import java.time.Clock
@@ -46,6 +47,9 @@ data class DiagnosticsState(
 enum class BackupOperation {
     EXPORT,
     IMPORT,
+
+    /** The first automatic backup, made when the folder is picked. */
+    AUTO_BACKUP,
 }
 
 @HiltViewModel
@@ -58,6 +62,7 @@ class SettingsViewModel @Inject constructor(
     private val clock: Clock,
     val appInfo: AppInfo,
     observeReminderProblems: ObserveReminderProblemsUseCase,
+    private val setAutoBackupFolder: SetAutoBackupFolderUseCase,
 ) : ViewModel() {
     val settings: StateFlow<UserSettings?> = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
@@ -107,6 +112,13 @@ class SettingsViewModel @Inject constructor(
     fun exportTo(uri: String) = runBackup(BackupOperation.EXPORT) { exportBackup(uri) }
 
     fun importFrom(uri: String) = runBackup(BackupOperation.IMPORT) { importBackup(uri) }
+
+    /** Backs up to the folder at [uri] every week, starting now. */
+    fun startAutoBackups(uri: String) = runBackup(BackupOperation.AUTO_BACKUP) {
+        setAutoBackupFolder(uri) ?: BackupResult.IoError
+    }
+
+    fun stopAutoBackups() = launch { setAutoBackupFolder(null) }
 
     fun setDiagnosticsRecording(enabled: Boolean) = diagnosticsRepository.setRecording(enabled)
 

@@ -2,6 +2,7 @@ package io.github.abhik9.expirywatch.core.data.repository
 
 import io.github.abhik9.expirywatch.core.datastore.UserSettingsDataSource
 import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
+import io.github.abhik9.expirywatch.core.model.AutoBackupRun
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
 import io.github.abhik9.expirywatch.core.model.ProductGrouping
 import io.github.abhik9.expirywatch.core.model.ThemeMode
@@ -73,5 +74,13 @@ internal class DataStoreUserSettingsRepository @Inject constructor(
 
     override suspend fun setKeepScreenOnWhileShopping(keepOn: Boolean) {
         dataSource.setKeepScreenOnWhileShopping(keepOn)
+    }
+
+    override suspend fun setAutoBackupFolder(uri: String?) {
+        dataSource.setAutoBackupFolder(uri)
+    }
+
+    override suspend fun setLastAutoBackup(run: AutoBackupRun) {
+        dataSource.setLastAutoBackup(run)
     }
 }
