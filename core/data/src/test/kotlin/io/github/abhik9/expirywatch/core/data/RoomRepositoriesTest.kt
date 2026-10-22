@@ -21,6 +21,7 @@ import io.github.abhik9.expirywatch.core.model.ProductInfo
 import io.github.abhik9.expirywatch.core.model.ProductSource
 import io.github.abhik9.expirywatch.core.model.ShoppingItem
 import io.github.abhik9.expirywatch.core.model.StorageLocation
+import io.github.abhik9.expirywatch.core.model.UserSettings
 import io.github.abhik9.expirywatch.core.testing.TestData
 import io.github.abhik9.expirywatch.core.testing.TestTime
 import io.github.abhik9.expirywatch.core.testing.diagnostics.RecordingEventLog
@@ -28,6 +29,7 @@ import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepo
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -213,7 +215,12 @@ class RoomRepositoriesTest {
             database.locationDao(),
             database.productDao(),
             database.shoppingDao(),
-            FakeUserSettingsRepository(),
+            FakeUserSettingsRepository(
+                UserSettings(
+                    autoBackupFolder = "content://tree/primary%3ADocuments%2FPrivate",
+                    dismissedRestockSuggestions = setOf("eggs|2026-03-08"),
+                ),
+            ),
         )
 
         val lines = section.describe()
@@ -221,7 +228,10 @@ class RoomRepositoriesTest {
         assertEquals("Items: 1 active, 0 used up, 1 thrown away", lines[0])
         assertEquals("Categories: 0, locations: 0, remembered products: 0", lines[1])
         assertEquals("Shopping lists: 0, with 0 items", lines[2])
-        assertFalse(lines.any { "Milk" in it || "Bread" in it })
+        assertTrue("Automatic backups: on, last run: none" in lines)
+        assertTrue("Dismissed restock suggestions: 1" in lines)
+        // Counts only, nothing the user entered or picked.
+        assertFalse(lines.any { "Milk" in it || "Bread" in it || "eggs" in it || "Private" in it })
     }
 
     @Test
