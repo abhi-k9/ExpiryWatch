@@ -3,7 +3,7 @@
 What changed in each release of ExpiryWatch, newest first. The APKs are on the
 [releases page](https://github.com/abhi-k9/ExpiryWatch/releases).
 
-## Unreleased
+## 1.8.1 (2026-10-22)
 
 - The diagnostics report no longer contains the automatic backup folder's path or the names of
   products whose restock suggestions were dismissed; it says only whether automatic backups are on,
