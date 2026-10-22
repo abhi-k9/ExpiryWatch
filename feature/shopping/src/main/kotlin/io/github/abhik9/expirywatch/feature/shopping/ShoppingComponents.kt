@@ -64,6 +64,8 @@ import io.github.abhik9.expirywatch.core.model.Category
 import io.github.abhik9.expirywatch.core.model.QuantityUnit
 import io.github.abhik9.expirywatch.core.model.ShoppingItem
 import io.github.abhik9.expirywatch.core.ui.formatQuantity
+import io.github.abhik9.expirywatch.core.ui.rememberFocusRestorer
+import io.github.abhik9.expirywatch.core.ui.restoreFocus
 import java.time.Instant
 
 /**
@@ -94,10 +96,11 @@ internal fun AddItemField(
 
         else -> stringResource(R.string.feature_shopping_amount_tip)
     }
+    val focusRestorer = rememberFocusRestorer()
     OutlinedTextField(
         value = input,
         onValueChange = onInputChange,
-        modifier = modifier,
+        modifier = modifier.restoreFocus(focusRestorer),
         placeholder = { Text(stringResource(R.string.feature_shopping_add_hint)) },
         trailingIcon = {
             if (typed != null) {

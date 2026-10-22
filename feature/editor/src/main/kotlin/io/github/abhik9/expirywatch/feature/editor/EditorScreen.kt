@@ -68,6 +68,8 @@ import io.github.abhik9.expirywatch.core.ui.LabelDialog
 import io.github.abhik9.expirywatch.core.ui.LabelEmojis
 import io.github.abhik9.expirywatch.core.ui.PickerField
 import io.github.abhik9.expirywatch.core.ui.label
+import io.github.abhik9.expirywatch.core.ui.rememberFocusRestorer
+import io.github.abhik9.expirywatch.core.ui.restoreFocus
 import java.time.LocalDate
 
 @Composable
@@ -222,10 +224,13 @@ internal fun EditorScreen(
                 onLookUpBarcode = onLookUpBarcode,
             )
 
+            val nameFocus = rememberFocusRestorer()
             OutlinedTextField(
                 value = form.name,
                 onValueChange = { name -> onFormChange { it.copy(name = name) } },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .restoreFocus(nameFocus),
                 label = { Text(stringResource(R.string.feature_editor_name)) },
                 isError = EditorError.NAME_REQUIRED in errors,
                 supportingText = if (EditorError.NAME_REQUIRED in errors) {
