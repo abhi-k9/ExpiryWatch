@@ -2,7 +2,6 @@ package io.github.abhik9.expirywatch.core.notifications
 
 import android.Manifest
 import android.app.Application
-import android.app.Notification
 import android.content.Context
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -128,7 +127,10 @@ class ReminderActionsTest {
         assertEquals(TestTime.today.plusWeeks(1), items.observeItem(1).first()?.remindersSnoozedUntil)
         assertEquals(null, items.observeItem(3).first()?.remindersSnoozedUntil)
         // Only Bread is left to remind about, and with nothing expired there's nothing to snooze.
-        assertEquals("1 item needs your attention", summary().title())
+        assertEquals(
+            "1 item needs your attention",
+            summary().extras.getCharSequence(NotificationCompat.EXTRA_TITLE)?.toString(),
+        )
         assertTrue(summary().actions.isNullOrEmpty())
     }
 }
