@@ -28,14 +28,12 @@ class EditorViewModelTest {
 
     private val fixture = EditorFixture()
     private val items = fixture.items
-    private val history = fixture.history
     private val catalog = fixture.catalog
     private val settings = fixture.settings
     private val shopping = fixture.shopping
     private val categories = fixture.categories
     private val locations = fixture.locations
     private val groups = fixture.groups
-    private val recentlyDeleted = fixture.recentlyDeleted
 
     private fun viewModel(key: EditorNavKey = EditorNavKey()) = fixture.viewModel(key)
 
