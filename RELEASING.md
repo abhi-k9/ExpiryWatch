@@ -29,6 +29,9 @@ To sign the release APKs built by CI and the release workflow, add these reposit
 
 ## Publishing a release
 
+First move the changes under **Unreleased** in [CHANGELOG.md](CHANGELOG.md) to a section for the
+new version, with the date.
+
 The release workflow publishes a [GitHub release](https://github.com/abhi-k9/ExpiryWatch/releases)
 with signed APKs of both flavors and their SHA-256 checksums. Start it either way:
 

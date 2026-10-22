@@ -35,6 +35,7 @@ class AutoBackupWorker @AssistedInject internal constructor(
     }
 }
 
+/** Runs [AutoBackupWorker] weekly while the battery isn't low, the first time a week after it's set. */
 internal class WorkManagerAutoBackupScheduler @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : AutoBackupScheduler {

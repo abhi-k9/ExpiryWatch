@@ -120,10 +120,10 @@ The app follows a layered, multi-module architecture with unidirectional data fl
 | `core:domain` | Use cases and repository interfaces (pure Kotlin) |
 | `core:common` | Coroutine dispatchers, clock, deep links (pure Kotlin) |
 | `core:network` | Open Food Facts client (pure Kotlin) |
-| `core:data` | Repository implementations |
+| `core:data` | Repository implementations and weekly automatic backups |
 | `core:database` | Room database |
 | `core:datastore` | User settings |
-| `core:notifications` | Daily reminder work, exact alarms and notifications |
+| `core:notifications` | Daily reminder work, exact alarms, notifications and their buttons, reminder health |
 | `core:diagnostics` | Diagnostics log and report |
 | `core:scanner`, `core:scanner-mlkit`, `core:scanner-zxing` | CameraX scanner UI and the two analyzers |
 | `core:designsystem` | Theme, colors and basic components |
@@ -155,7 +155,8 @@ Requirements: JDK 17 or newer, and the Android SDK (Android Studio sets this up 
 ```
 
 Debug builds use the application ID suffix `.debug`, so they can be installed next to a release
-build. Signing release builds and publishing releases are described in [RELEASING.md](RELEASING.md).
+build. Signing release builds and publishing releases are described in [RELEASING.md](RELEASING.md),
+and what changed in each release in [CHANGELOG.md](CHANGELOG.md).
 
 ## Testing and checks
 
@@ -177,8 +178,12 @@ Backups are versioned JSON (`"format": "expirywatch-backup"`, `"version": 2`) wi
 locations, groups, items, remembered products and the shopping lists: their items, the products added to
 them before and the order of the aisles. The format has its own DTOs, separate from the domain
 models, so internal refactors can't silently change it. Importing validates the whole file before
-replacing any data. Version 1 files, from before shopping lists, still import; they keep the
-shopping lists on the device, moved to the restored categories and locations of the same name.
+replacing any data, and drops values the editor would reject, such as a negative quantity. Version 1
+files, from before shopping lists, still import; they keep the shopping lists on the device, moved
+to the restored categories and locations of the same name. Fields added since, such as groups,
+reminder snoozes, prices and per-item reminder lead times, are optional, so older files read as not
+having them. Automatic backups use the same format, in files named
+`expirywatch-auto-backup-YYYY-MM-DD.json`.
 
 ## Diagnostics
 
@@ -195,8 +200,9 @@ read one, run the **Retrace** workflow from the Actions tab with the app version
 the top of the log, and paste the stack trace. Releases also include each flavor's R8 mapping file
 for use with the Android SDK's `retrace` tool.
 
-It only contains technical details. Items are identified by number, never by name, and scanned
-codes other than product barcodes (such as QR codes) are recorded by length only. The log is capped
+It only contains technical details. Items are identified by number, never by name, scanned codes
+other than product barcodes (such as QR codes) are recorded by length only, and the settings are
+reported without the automatic backup folder or the products whose suggestions were dismissed. The log is capped
 at about 512 KB, isn't included in backups, and never leaves the device unless you export it.
 
 ## Credits
