@@ -6,8 +6,8 @@ import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.ExpiryStatus
 import io.github.abhik9.expirywatch.core.model.Item
 import java.time.LocalDate
-import kotlin.test.Test
 import kotlin.test.assertEquals
+import org.junit.Test
 
 class WidgetFilterTest {
     private val today = LocalDate.of(2026, 3, 10)
