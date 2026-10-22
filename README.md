@@ -8,11 +8,14 @@ Built with Kotlin, Jetpack Compose and Material 3, following Google's recommende
 ## Features
 
 - **Item list** sorted by expiry, grouped into *Expired*, *Expiring soon* and *Fresh*, with
-  search (ignores case and accents), category and location filters, and several sort orders.
+  search (ignores case and accents), category, location and group filters, and several sort
+  orders.
 - **Swipe to finish**: swipe right when an item is used up, left when it's thrown away, with undo.
+  Deleting an item in the editor can be undone from the list too.
 - **Your own groups**: put items in groups you name, such as "Camping kit" or "Baby", whatever
   their category. The list folds each group into one row with its emoji, how many items it holds
-  and which expires next; tap it to see them. Search finds items by their group's name too.
+  and which expires next; tap it to see them, in the list's sort order. Search finds items by their
+  group's name too.
 - **Select several items**: long-press an item, or a product's or group's row for all of its
   items, then tap others to add them. Snooze their reminders, put them on the shopping list or
   move them to a group together.
@@ -24,10 +27,17 @@ Built with Kotlin, Jetpack Compose and Material 3, following Google's recommende
   the name, brand and photo.
 - **Opened items**: record when a package was opened and how long it keeps afterwards (e.g. "use
   within 3 days"); the earlier of the two dates counts.
+- **Per item**: how many days before it expires an item counts as expiring soon, overriding the
+  setting for all items, and what it cost.
 - **Daily reminders** at a time you choose, summarizing expired and soon-to-expire items. Android
   may deliver them late to save battery; turn on **Exact time** to get them on time with an alarm.
   Since Android 12 this needs permission to set alarms; the app opens that system setting when you
   turn it on.
+  - Act on the reminder from the notification: snooze everything in it for a week, or mark each
+    of the first few expired items used up or thrown away, or snooze it.
+  - **Reminder health**: Settings, and a banner above the list, point out what keeps reminders from
+    arriving (notifications or alarms not allowed, restricted battery use such as One UI's sleeping
+    apps) and reminders that stopped coming, with a way to fix it.
 - **Snooze reminders** about items you know about, such as honey past its date: for a week, a
   month, until a date or until you turn them back on. Snoozed items stay in the list, marked with
   when their reminders start again, but the daily reminder leaves them out.
@@ -45,9 +55,12 @@ Built with Kotlin, Jetpack Compose and Material 3, following Google's recommende
   - Share a list as text, add items from text pasted or shared from another app, keep the screen on
     while shopping, and open the list from a launcher shortcut.
 - **Insights**: how much you used up versus threw away, a monthly trend and the most wasted
-  categories.
-- **Home-screen widget** listing what expires next.
-- **Backup and restore** to a JSON file through the system file picker.
+  categories. With prices entered, also the value used up in time and the money wasted.
+- **Home-screen widget** listing what expires next, with buttons to mark an item used up or thrown
+  away. Tap the filter under the title to switch between all items, those needing attention and
+  each of your groups; each widget keeps its own choice.
+- **Backup and restore** to a JSON file through the system file picker, and **automatic backups**
+  every week to a folder you choose, keeping the last five.
 - **Diagnostics**: an opt-in log of what the app does, to export when reporting an issue.
 - **Advanced options** in Settings: what counts as the same product in the list (same name, same
   name and brand, or no grouping) and whether a product's items stay in one group across
@@ -152,7 +165,8 @@ build. Signing release builds and publishing releases are described in [RELEASIN
 
 Domain, network and navigation logic has plain JVM unit tests. Room DAOs and repositories are
 tested against an in-memory database with Robolectric, and ViewModels are tested with fakes from
-`core:testing`. The [CI workflow](.github/workflows/ci.yml) runs formatting checks, all unit
+`core:testing`. Key screens, such as the item list and the editor, also have Compose UI tests
+that run on Robolectric. The [CI workflow](.github/workflows/ci.yml) runs formatting checks, all unit
 tests, lint and both flavors' release builds on every push that changes more than documentation.
 
 ## Backup file format
