@@ -168,14 +168,20 @@ class BackupCodecTest {
         val decoded = BackupCodec.decode(
             """
             {"format": "expirywatch-backup", "version": 1,
-             "items": [{"id": 1, "name": "Milk", "expiryDate": "2026-03-12", "quantity": 1e12, "useWithinDays": 99999}],
+             "items": [{"id": 1, "name": "Milk", "expiryDate": "2026-03-12", "quantity": 1e12, "useWithinDays": 99999},
+                       {"id": 2, "name": "Eggs", "expiryDate": "2026-03-12", "price": 1e9, "remindDaysBefore": 400},
+                       {"id": 3, "name": "Bread", "expiryDate": "2026-03-12", "price": -1, "remindDaysBefore": -1}],
              "products": [{"barcode": "4001234567890", "name": "Milk", "quantity": -2, "useWithinDays": 0}]}
             """.trimIndent(),
         )
 
-        val item = decoded.items.single()
+        val item = decoded.items.first()
         assertEquals(1.0, item.quantity)
         assertNull(item.useWithinDaysAfterOpening)
+        decoded.items.drop(1).forEach {
+            assertNull(it.price, it.name)
+            assertNull(it.remindDaysBefore, it.name)
+        }
         val product = decoded.products.single()
         assertNull(product.quantity)
         assertNull(product.useWithinDaysAfterOpening)

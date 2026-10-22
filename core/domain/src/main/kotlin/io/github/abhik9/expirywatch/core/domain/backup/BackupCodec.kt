@@ -126,7 +126,7 @@ object BackupCodec {
                     remindersSnoozedUntil = dto.remindersSnoozedUntil?.let(LocalDate::parse),
                     customGroup = dto.groupId?.let(groupsById::get),
                     remindDaysBefore = dto.remindDaysBefore?.takeIf { it in ItemValidator.REMIND_DAYS_BEFORE_RANGE },
-                    price = dto.price?.takeIf { it.isFinite() && it >= 0 },
+                    price = dto.price?.takeIf { it.isFinite() && it in 0.0..ItemValidator.MAX_PRICE },
                 ).let { item ->
                     // An active item has no finish date; a finished one needs one for insights.
                     when {
