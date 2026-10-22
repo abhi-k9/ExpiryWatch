@@ -12,6 +12,7 @@ import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.abhik9.expirywatch.core.domain.repository.CategoryRepository
 import io.github.abhik9.expirywatch.core.domain.repository.CustomGroupRepository
+import io.github.abhik9.expirywatch.core.domain.repository.ReminderProblem
 import io.github.abhik9.expirywatch.core.domain.repository.StorageLocationRepository
 import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
 import io.github.abhik9.expirywatch.core.domain.shopping.AddItemsToShoppingListUseCase
@@ -22,6 +23,7 @@ import io.github.abhik9.expirywatch.core.domain.usecase.ItemsOverview
 import io.github.abhik9.expirywatch.core.domain.usecase.MoveItemsToGroupUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveItemsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveLabelsByUseUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.ObserveReminderProblemsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.RestoreItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeLength
 import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeRemindersUseCase
@@ -35,6 +37,7 @@ import io.github.abhik9.expirywatch.core.model.StorageLocation
 import java.time.LocalDate
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -93,6 +96,7 @@ class ItemsViewModel @AssistedInject constructor(
     private val moveItemsToGroup: MoveItemsToGroupUseCase,
     private val groupRepository: CustomGroupRepository,
     observeLabelsByUse: ObserveLabelsByUseUseCase,
+    observeReminderProblems: ObserveReminderProblemsUseCase,
 ) : ViewModel() {
     /** Held as Compose state so the search field updates synchronously while typing. */
     var searchText by mutableStateOf("")
@@ -132,8 +136,29 @@ class ItemsViewModel @AssistedInject constructor(
         .map { it.groups }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
+    private val reminderRechecks = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Problems the user waved away, not shown again unless others come up. */
+    private val dismissedReminderProblems = MutableStateFlow(emptySet<ReminderProblem>())
+
+    /** What keeps reminders from arriving, to warn about above the list; empty once dismissed. */
+    val reminderProblems: StateFlow<List<ReminderProblem>> = combine(
+        observeReminderProblems(reminderRechecks),
+        dismissedReminderProblems,
+    ) { problems, dismissed -> if (dismissed.containsAll(problems)) emptyList() else problems }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
+
     private val _events = Channel<ItemsEvent>(Channel.BUFFERED)
     val events: Flow<ItemsEvent> = _events.receiveAsFlow()
+
+    /** Reads again what the system allows, e.g. on return to the app. */
+    fun recheckReminders() {
+        reminderRechecks.tryEmit(Unit)
+    }
+
+    fun dismissReminderProblems() {
+        dismissedReminderProblems.value = reminderProblems.value.toSet()
+    }
 
     fun onSearchTextChange(text: String) {
         searchText = text

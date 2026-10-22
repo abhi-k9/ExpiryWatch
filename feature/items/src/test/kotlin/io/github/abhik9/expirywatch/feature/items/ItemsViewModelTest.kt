@@ -2,6 +2,7 @@ package io.github.abhik9.expirywatch.feature.items
 
 import androidx.compose.runtime.snapshots.Snapshot
 import app.cash.turbine.test
+import io.github.abhik9.expirywatch.core.domain.repository.ReminderProblem
 import io.github.abhik9.expirywatch.core.domain.shopping.AddItemsToShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.GetShoppingListUseCase
@@ -10,6 +11,7 @@ import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.MoveItemsToGroupUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveItemsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveLabelsByUseUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.ObserveReminderProblemsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveTodayUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.RestoreItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeLength
@@ -25,6 +27,7 @@ import io.github.abhik9.expirywatch.core.testing.TestTime
 import io.github.abhik9.expirywatch.core.testing.repository.FakeCategoryRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeCustomGroupRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeItemRepository
+import io.github.abhik9.expirywatch.core.testing.repository.FakeReminderHealthMonitor
 import io.github.abhik9.expirywatch.core.testing.repository.FakeShoppingRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeStorageLocationRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepository
@@ -57,6 +60,7 @@ class ItemsViewModelTest {
     )
     private val settings = FakeUserSettingsRepository()
     private val shopping = FakeShoppingRepository()
+    private val reminderHealth = FakeReminderHealthMonitor()
 
     private fun viewModel(initialStatus: ExpiryStatus? = null) = ItemsViewModel(
         initialStatus = initialStatus,
@@ -84,6 +88,7 @@ class ItemsViewModelTest {
             items,
             TestTime.clock,
         ),
+        observeReminderProblems = ObserveReminderProblemsUseCase(reminderHealth, settings, TestTime.clock),
     )
 
     private suspend fun ItemsViewModel.successState(): ItemsUiState.Success =
@@ -314,4 +319,26 @@ class ItemsViewModelTest {
     }
 
     private fun groupNames(): Map<Long, String?> = items.currentItems.associate { it.id to it.customGroup?.name }
+
+    @Test
+    fun warnsAboutReminderProblemsUntilDismissedOrNewOnesComeUp() = runTest {
+        val viewModel = viewModel()
+        viewModel.reminderProblems.test {
+            assertEquals(emptyList(), awaitItem())
+
+            reminderHealth.health = reminderHealth.health.copy(notificationsAllowed = false)
+            viewModel.recheckReminders()
+            assertEquals(listOf(ReminderProblem.NOTIFICATIONS_BLOCKED), awaitItem())
+
+            viewModel.dismissReminderProblems()
+            assertEquals(emptyList(), awaitItem())
+
+            reminderHealth.health = reminderHealth.health.copy(backgroundRestricted = true)
+            viewModel.recheckReminders()
+            assertEquals(
+                listOf(ReminderProblem.NOTIFICATIONS_BLOCKED, ReminderProblem.BACKGROUND_RESTRICTED),
+                awaitItem(),
+            )
+        }
+    }
 }

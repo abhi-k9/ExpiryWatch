@@ -3,6 +3,8 @@ package io.github.abhik9.expirywatch.core.testing.repository
 import io.github.abhik9.expirywatch.core.domain.backup.BackupSnapshot
 import io.github.abhik9.expirywatch.core.domain.repository.BackupRepository
 import io.github.abhik9.expirywatch.core.domain.repository.DocumentStore
+import io.github.abhik9.expirywatch.core.domain.repository.ReminderHealth
+import io.github.abhik9.expirywatch.core.domain.repository.ReminderHealthMonitor
 import io.github.abhik9.expirywatch.core.domain.repository.ReminderScheduler
 import java.io.IOException
 import java.time.LocalTime
@@ -57,4 +59,15 @@ class FakeReminderScheduler : ReminderScheduler {
         scheduledTime = null
         exact = false
     }
+}
+
+class FakeReminderHealthMonitor(
+    var health: ReminderHealth = ReminderHealth(
+        notificationsAllowed = true,
+        exactAlarmsAllowed = true,
+        backgroundRestricted = false,
+        lastShown = null,
+    ),
+) : ReminderHealthMonitor {
+    override fun current(): ReminderHealth = health
 }

@@ -49,9 +49,11 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.abhik9.expirywatch.core.designsystem.component.EmptyState
 import io.github.abhik9.expirywatch.core.designsystem.component.SectionHeader
+import io.github.abhik9.expirywatch.core.domain.repository.ReminderProblem
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemGroup
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemQuery
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemWithExpiry
@@ -75,10 +77,17 @@ internal fun ItemsRoute(
     onAddItem: () -> Unit,
     onScanItem: () -> Unit,
     onOpenShoppingList: () -> Unit,
+    onOpenSettings: () -> Unit,
     viewModel: ItemsViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val groups by viewModel.groups.collectAsStateWithLifecycle()
+    val reminderProblems by viewModel.reminderProblems.collectAsStateWithLifecycle()
+    // The user may change what the system allows while away, e.g. put the app to sleep.
+    LifecycleResumeEffect(viewModel) {
+        viewModel.recheckReminders()
+        onPauseOrDispose {}
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     // Updated on configuration changes without restarting the effect, which would drop a shown snackbar.
     val resources by rememberUpdatedState(LocalResources.current)
@@ -167,6 +176,9 @@ internal fun ItemsRoute(
         groups = groups,
         onMoveToGroup = viewModel::moveSelectedToGroup,
         onMoveToNewGroup = viewModel::moveSelectedToNewGroup,
+        reminderProblems = reminderProblems,
+        onFixReminders = onOpenSettings,
+        onDismissReminderProblems = viewModel::dismissReminderProblems,
     )
 }
 
@@ -244,6 +256,9 @@ internal fun ItemsScreen(
     groups: List<CustomGroup>,
     onMoveToGroup: (CustomGroup?) -> Unit,
     onMoveToNewGroup: (name: String, emoji: String) -> Unit,
+    reminderProblems: List<ReminderProblem>,
+    onFixReminders: () -> Unit,
+    onDismissReminderProblems: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
@@ -323,6 +338,9 @@ internal fun ItemsScreen(
                 onAddToShoppingList = onAddToShoppingList,
                 onAddItem = onAddItem,
                 onToggleSelection = onToggleSelection,
+                reminderProblems = reminderProblems,
+                onFixReminders = onFixReminders,
+                onDismissReminderProblems = onDismissReminderProblems,
             )
         }
     }
@@ -406,6 +424,9 @@ private fun ItemsContent(
     onAddToShoppingList: (List<Item>) -> Unit,
     onAddItem: () -> Unit,
     onToggleSelection: (List<Item>) -> Unit,
+    reminderProblems: List<ReminderProblem>,
+    onFixReminders: () -> Unit,
+    onDismissReminderProblems: () -> Unit,
 ) {
     val overview = state.overview
     if (overview.totalActiveCount == 0 && !state.query.hasFilters) {
@@ -429,6 +450,18 @@ private fun ItemsContent(
             bottom = contentPadding.calculateBottomPadding() + FAB_CLEARANCE,
         ),
     ) {
+        if (reminderProblems.isNotEmpty()) {
+            item(key = "reminder-problems", contentType = "reminder-problems") {
+                ReminderProblemsBanner(
+                    problems = reminderProblems,
+                    onFix = onFixReminders,
+                    onDismiss = onDismissReminderProblems,
+                    modifier = Modifier
+                        .animateItem()
+                        .padding(start = 16.dp, top = 8.dp, end = 16.dp),
+                )
+            }
+        }
         item(key = "summary", contentType = "summary") {
             StatusSummaryRow(
                 counts = overview.statusCounts,

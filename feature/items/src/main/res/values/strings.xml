@@ -105,4 +105,11 @@
     <string name="feature_items_no_results_title">No matching items</string>
     <string name="feature_items_nothing_expired">Nothing has expired</string>
     <string name="feature_items_no_results_message">Try another search or filter.</string>
+    <string name="feature_items_reminder_problem_title">Reminders may not arrive</string>
+    <string name="feature_items_reminder_problem_notifications">Notifications are off for ExpiryWatch.</string>
+    <string name="feature_items_reminder_problem_alarms">ExpiryWatch isn\'t allowed to set alarms, so reminders may come late.</string>
+    <string name="feature_items_reminder_problem_background">ExpiryWatch\'s battery use is restricted, which can hold reminders back.</string>
+    <string name="feature_items_reminder_problem_late">No reminder came for more than a day.</string>
+    <string name="feature_items_reminder_problem_fix">Fix</string>
+    <string name="feature_items_reminder_problem_dismiss">Dismiss</string>
 </resources>

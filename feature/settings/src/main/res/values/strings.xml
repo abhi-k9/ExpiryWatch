@@ -24,6 +24,10 @@
     <string name="feature_settings_exact_reminders_summary">Use an alarm to remind you at exactly the reminder time, even when the phone is idle</string>
     <string name="feature_settings_alarms_blocked">Alarms aren\'t allowed</string>
     <string name="feature_settings_alarms_blocked_summary">The reminder may come late until you allow ExpiryWatch to set alarms. Tap to open the settings.</string>
+    <string name="feature_settings_background_restricted">Background use is restricted</string>
+    <string name="feature_settings_background_restricted_summary">Reminders may not arrive while ExpiryWatch\'s battery use is restricted or it\'s in sleeping apps. Tap to open the app\'s settings and set battery use to Unrestricted.</string>
+    <string name="feature_settings_reminders_late">Reminders are going missing</string>
+    <string name="feature_settings_reminders_late_summary">No reminder came for more than a day. The system may be holding ExpiryWatch back: tap to open the app\'s settings and set battery use to Unrestricted.</string>
     <string name="feature_settings_notifications_blocked">Notifications are off</string>
     <string name="feature_settings_notifications_blocked_summary">Reminders can\'t be shown until you allow notifications for ExpiryWatch. Tap to open the settings.</string>
     <string name="feature_settings_expiring_soon">Expiring soon</string>

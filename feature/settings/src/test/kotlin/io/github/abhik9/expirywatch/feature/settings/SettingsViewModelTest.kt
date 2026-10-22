@@ -3,10 +3,12 @@ package io.github.abhik9.expirywatch.feature.settings
 import app.cash.turbine.test
 import io.github.abhik9.expirywatch.core.common.AppInfo
 import io.github.abhik9.expirywatch.core.common.diagnostics.EventLog
+import io.github.abhik9.expirywatch.core.domain.repository.ReminderProblem
 import io.github.abhik9.expirywatch.core.domain.usecase.BackupResult
 import io.github.abhik9.expirywatch.core.domain.usecase.ExportBackupUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ExportDiagnosticsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ImportBackupUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.ObserveReminderProblemsUseCase
 import io.github.abhik9.expirywatch.core.model.ThemeMode
 import io.github.abhik9.expirywatch.core.navigation.LabelKind
 import io.github.abhik9.expirywatch.core.testing.MainDispatcherRule
@@ -17,6 +19,7 @@ import io.github.abhik9.expirywatch.core.testing.repository.FakeBackupRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeCategoryRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeCustomGroupRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeDocumentStore
+import io.github.abhik9.expirywatch.core.testing.repository.FakeReminderHealthMonitor
 import io.github.abhik9.expirywatch.core.testing.repository.FakeStorageLocationRepository
 import io.github.abhik9.expirywatch.core.testing.repository.FakeUserSettingsRepository
 import io.github.abhik9.expirywatch.feature.settings.labels.Label
@@ -42,6 +45,7 @@ class SettingsViewModelTest {
     private val backups = FakeBackupRepository()
     private val documents = FakeDocumentStore()
     private val diagnostics = FakeDiagnosticsRepository(report = "the report")
+    private val reminderHealth = FakeReminderHealthMonitor()
 
     // Lazy, so the ViewModel is created after MainDispatcherRule has replaced the main dispatcher.
     private val viewModel by lazy {
@@ -53,6 +57,7 @@ class SettingsViewModelTest {
             exportDiagnostics = ExportDiagnosticsUseCase(diagnostics, documents, EventLog.NONE),
             clock = TestTime.clock,
             appInfo = AppInfo(versionName = "1.0", barcodeEngine = "ZXing", sourceCodeUrl = "https://example.com"),
+            observeReminderProblems = ObserveReminderProblemsUseCase(reminderHealth, settings, TestTime.clock),
         )
     }
 
@@ -72,6 +77,17 @@ class SettingsViewModelTest {
     @Test
     fun suggestsADatedBackupFileName() {
         assertEquals("expirywatch-backup-2026-03-10.json", viewModel.suggestedBackupFileName)
+    }
+
+    @Test
+    fun reminderProblemsAreReadAgainOnRecheck() = runTest {
+        viewModel.reminderProblems.test {
+            assertEquals(emptyList(), awaitItem())
+
+            reminderHealth.health = reminderHealth.health.copy(backgroundRestricted = true)
+            viewModel.recheckReminders()
+            assertEquals(listOf(ReminderProblem.BACKGROUND_RESTRICTED), awaitItem())
+        }
     }
 
     @Test

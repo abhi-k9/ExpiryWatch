@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.RemoveCircle
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.AddShoppingCart
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Circle
@@ -43,6 +44,8 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.Snooze
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -96,6 +99,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.abhik9.expirywatch.core.designsystem.component.EmojiAvatar
 import io.github.abhik9.expirywatch.core.designsystem.theme.ExpiryWatchTheme
+import io.github.abhik9.expirywatch.core.domain.repository.ReminderProblem
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemGroup
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemQuery
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemWithExpiry
@@ -336,6 +340,53 @@ internal fun MoveToGroupDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.feature_items_cancel)) }
         },
     )
+}
+
+/** Warns that reminders may not arrive, naming the most serious of the [problems]. */
+@Composable
+internal fun ReminderProblemsBanner(
+    problems: List<ReminderProblem>,
+    onFix: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        ),
+    ) {
+        Row(modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp)) {
+            Icon(Icons.Filled.Warning, contentDescription = null)
+            Column(modifier = Modifier.padding(start = 16.dp)) {
+                Text(
+                    stringResource(R.string.feature_items_reminder_problem_title),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    stringResource(problems.first().messageRes()),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.feature_items_reminder_problem_dismiss)) }
+            TextButton(onClick = onFix) { Text(stringResource(R.string.feature_items_reminder_problem_fix)) }
+        }
+    }
+}
+
+private fun ReminderProblem.messageRes(): Int = when (this) {
+    ReminderProblem.NOTIFICATIONS_BLOCKED -> R.string.feature_items_reminder_problem_notifications
+    ReminderProblem.EXACT_ALARMS_BLOCKED -> R.string.feature_items_reminder_problem_alarms
+    ReminderProblem.BACKGROUND_RESTRICTED -> R.string.feature_items_reminder_problem_background
+    ReminderProblem.LATE -> R.string.feature_items_reminder_problem_late
 }
 
 @Composable

@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Alarm
 import androidx.compose.material.icons.outlined.AlarmOff
+import androidx.compose.material.icons.outlined.BatteryAlert
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Code
@@ -85,6 +86,7 @@ import io.github.abhik9.expirywatch.core.common.AppInfo
 import io.github.abhik9.expirywatch.core.designsystem.component.SectionHeader
 import io.github.abhik9.expirywatch.core.designsystem.theme.supportsDynamicTheming
 import io.github.abhik9.expirywatch.core.domain.backup.BackupCodec
+import io.github.abhik9.expirywatch.core.domain.repository.ReminderProblem
 import io.github.abhik9.expirywatch.core.domain.usecase.BackupResult
 import io.github.abhik9.expirywatch.core.model.ThemeMode
 import io.github.abhik9.expirywatch.core.model.UserSettings
@@ -101,6 +103,7 @@ internal fun SettingsRoute(
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val diagnostics by viewModel.diagnostics.collectAsStateWithLifecycle()
+    val reminderProblems by viewModel.reminderProblems.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     // Updated on configuration changes without restarting the effect, which would drop a shown snackbar.
     val resources by rememberUpdatedState(LocalResources.current)
@@ -143,6 +146,8 @@ internal fun SettingsRoute(
         onRemindersEnabledChange = viewModel::setRemindersEnabled,
         onReminderTimeChange = viewModel::setReminderTime,
         onExactRemindersChange = viewModel::setExactReminders,
+        reminderProblems = reminderProblems,
+        onRecheckReminders = viewModel::recheckReminders,
         onManageLabels = onManageLabels,
         onOpenAdvanced = onOpenAdvanced,
         onExport = { exportLauncher.launch(viewModel.suggestedBackupFileName) },
@@ -183,6 +188,8 @@ internal fun SettingsScreen(
     onRemindersEnabledChange: (Boolean) -> Unit,
     onReminderTimeChange: (LocalTime) -> Unit,
     onExactRemindersChange: (Boolean) -> Unit,
+    reminderProblems: List<ReminderProblem>,
+    onRecheckReminders: () -> Unit,
     onManageLabels: (LabelKind) -> Unit,
     onOpenAdvanced: () -> Unit,
     onExport: () -> Unit,
@@ -213,6 +220,8 @@ internal fun SettingsScreen(
                 onRemindersEnabledChange = onRemindersEnabledChange,
                 onReminderTimeChange = onReminderTimeChange,
                 onExactRemindersChange = onExactRemindersChange,
+                problems = reminderProblems,
+                onRecheck = onRecheckReminders,
             )
 
             SectionHeader(stringResource(R.string.feature_settings_section_organize))
@@ -306,19 +315,18 @@ private fun RemindersSection(
     onRemindersEnabledChange: (Boolean) -> Unit,
     onReminderTimeChange: (LocalTime) -> Unit,
     onExactRemindersChange: (Boolean) -> Unit,
+    problems: List<ReminderProblem>,
+    onRecheck: () -> Unit,
 ) {
     val context = LocalContext.current
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
     // Checked again on return to the screen, since the user may change them in the system settings.
-    var canPostNotifications by remember { mutableStateOf(context.canPostNotifications()) }
-    var canScheduleExactAlarms by remember { mutableStateOf(context.canScheduleExactAlarms()) }
-    LifecycleResumeEffect(context) {
-        canPostNotifications = context.canPostNotifications()
-        canScheduleExactAlarms = context.canScheduleExactAlarms()
+    LifecycleResumeEffect(Unit) {
+        onRecheck()
         onPauseOrDispose {}
     }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        canPostNotifications = context.canPostNotifications()
+        onRecheck()
     }
 
     SectionHeader(stringResource(R.string.feature_settings_section_reminders))
@@ -329,14 +337,14 @@ private fun RemindersSection(
         checked = settings.remindersEnabled,
         onCheckedChange = { enabled ->
             onRemindersEnabledChange(enabled)
-            if (enabled && !canPostNotifications && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (enabled && !context.canPostNotifications() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         },
     )
     // If the permission was denied for good, or notifications were turned off in the system
     // settings, the app can't ask again: point to where the user can allow them.
-    if (settings.remindersEnabled && !canPostNotifications) {
+    if (ReminderProblem.NOTIFICATIONS_BLOCKED in problems) {
         SettingsRow(
             icon = Icons.Outlined.NotificationsOff,
             title = stringResource(R.string.feature_settings_notifications_blocked),
@@ -359,16 +367,33 @@ private fun RemindersSection(
         enabled = settings.remindersEnabled,
         onCheckedChange = { exact ->
             onExactRemindersChange(exact)
-            if (exact && !canScheduleExactAlarms) context.openExactAlarmSettings()
+            if (exact && !context.canScheduleExactAlarms()) context.openExactAlarmSettings()
         },
     )
     // Since Android 12, only the user can allow the app to set alarms, in the system settings.
-    if (settings.remindersEnabled && settings.exactReminders && !canScheduleExactAlarms) {
+    if (ReminderProblem.EXACT_ALARMS_BLOCKED in problems) {
         SettingsRow(
             icon = Icons.Outlined.AlarmOff,
             title = stringResource(R.string.feature_settings_alarms_blocked),
             subtitle = stringResource(R.string.feature_settings_alarms_blocked_summary),
             onClick = { context.openExactAlarmSettings() },
+        )
+    }
+    // Restricted battery use, which includes One UI's sleeping apps, holds back the alarm and the
+    // daily work; only the user can lift it, on the app's page in the system settings.
+    if (ReminderProblem.BACKGROUND_RESTRICTED in problems) {
+        SettingsRow(
+            icon = Icons.Outlined.BatteryAlert,
+            title = stringResource(R.string.feature_settings_background_restricted),
+            subtitle = stringResource(R.string.feature_settings_background_restricted_summary),
+            onClick = { context.openAppDetails() },
+        )
+    } else if (ReminderProblem.LATE in problems) {
+        SettingsRow(
+            icon = Icons.Outlined.BatteryAlert,
+            title = stringResource(R.string.feature_settings_reminders_late),
+            subtitle = stringResource(R.string.feature_settings_reminders_late_summary),
+            onClick = { context.openAppDetails() },
         )
     }
 
@@ -588,8 +613,12 @@ private fun Context.openNotificationSettings() {
         startActivity(notificationSettings)
     } catch (e: ActivityNotFoundException) {
         // Some devices don't have the per-app notification screen; the app's details page does.
-        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
+        openAppDetails()
     }
+}
+
+private fun Context.openAppDetails() {
+    startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
 }
 
 // Always allowed before Android 12; since then, the user allows it under "Alarms & reminders".
@@ -602,7 +631,7 @@ private fun Context.openExactAlarmSettings() {
     try {
         startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, packageUri))
     } catch (e: ActivityNotFoundException) {
-        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri))
+        openAppDetails()
     }
 }
 

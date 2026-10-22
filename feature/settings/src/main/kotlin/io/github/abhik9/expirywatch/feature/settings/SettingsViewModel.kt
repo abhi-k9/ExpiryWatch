@@ -8,11 +8,13 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.abhik9.expirywatch.core.common.AppInfo
 import io.github.abhik9.expirywatch.core.domain.repository.DiagnosticsRepository
+import io.github.abhik9.expirywatch.core.domain.repository.ReminderProblem
 import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
 import io.github.abhik9.expirywatch.core.domain.usecase.BackupResult
 import io.github.abhik9.expirywatch.core.domain.usecase.ExportBackupUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ExportDiagnosticsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ImportBackupUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.ObserveReminderProblemsUseCase
 import io.github.abhik9.expirywatch.core.model.ThemeMode
 import io.github.abhik9.expirywatch.core.model.UserSettings
 import java.time.Clock
@@ -21,6 +23,7 @@ import java.time.LocalTime
 import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -54,9 +57,16 @@ class SettingsViewModel @Inject constructor(
     private val exportDiagnostics: ExportDiagnosticsUseCase,
     private val clock: Clock,
     val appInfo: AppInfo,
+    observeReminderProblems: ObserveReminderProblemsUseCase,
 ) : ViewModel() {
     val settings: StateFlow<UserSettings?> = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
+
+    private val reminderRechecks = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** What keeps reminders from arriving; read again by [recheckReminders]. */
+    val reminderProblems: StateFlow<List<ReminderProblem>> = observeReminderProblems(reminderRechecks)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
     val diagnostics: StateFlow<DiagnosticsState> =
         combine(diagnosticsRepository.isRecording, diagnosticsRepository.logSize, ::DiagnosticsState).stateIn(
@@ -88,6 +98,11 @@ class SettingsViewModel @Inject constructor(
     fun setReminderTime(time: LocalTime) = launch { settingsRepository.setReminderTime(time) }
 
     fun setExactReminders(exact: Boolean) = launch { settingsRepository.setExactReminders(exact) }
+
+    /** Reads again what the system allows, e.g. on return from its settings. */
+    fun recheckReminders() {
+        reminderRechecks.tryEmit(Unit)
+    }
 
     fun exportTo(uri: String) = runBackup(BackupOperation.EXPORT) { exportBackup(uri) }
 
