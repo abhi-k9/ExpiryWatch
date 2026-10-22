@@ -109,6 +109,15 @@ internal fun ItemsRoute(
                     if (result == SnackbarResult.ActionPerformed) viewModel.undoFinish(event.item)
                 }
 
+                is ItemsEvent.ItemDeleted -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = resources.getString(R.string.feature_items_deleted, event.item.name),
+                        actionLabel = resources.getString(R.string.feature_items_undo),
+                        withDismissAction = true,
+                    )
+                    if (result == SnackbarResult.ActionPerformed) viewModel.undoDelete(event.item)
+                }
+
                 is ItemsEvent.PutOnShoppingList -> {
                     val names = event.added.names
                     val listName = event.added.list.name

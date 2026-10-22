@@ -16,6 +16,7 @@ import io.github.abhik9.expirywatch.core.domain.repository.StorageLocationReposi
 import io.github.abhik9.expirywatch.core.domain.shopping.AddItemsToShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.AddedToShoppingList
 import io.github.abhik9.expirywatch.core.domain.usecase.AdditionalDate
+import io.github.abhik9.expirywatch.core.domain.usecase.DeleteItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemValidationError
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemValidator
@@ -136,6 +137,7 @@ class EditorViewModel @AssistedInject constructor(
     private val itemRepository: ItemRepository,
     private val saveItem: SaveItemUseCase,
     private val finishItem: FinishItemUseCase,
+    private val deleteItem: DeleteItemUseCase,
     private val lookupProduct: LookupProductUseCase,
     private val addItemsToShoppingList: AddItemsToShoppingListUseCase,
     private val clock: Clock,
@@ -282,9 +284,9 @@ class EditorViewModel @AssistedInject constructor(
     }
 
     fun delete() {
-        val id = existingItem?.id ?: return
+        val item = existingItem ?: return
         viewModelScope.launch {
-            itemRepository.delete(id)
+            deleteItem(item)
             _events.send(EditorEvent.Done)
         }
     }

@@ -17,6 +17,7 @@ import io.github.abhik9.expirywatch.core.domain.repository.StorageLocationReposi
 import io.github.abhik9.expirywatch.core.domain.repository.UserSettingsRepository
 import io.github.abhik9.expirywatch.core.domain.shopping.AddItemsToShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.AddedToShoppingList
+import io.github.abhik9.expirywatch.core.domain.usecase.DeleteItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemQuery
 import io.github.abhik9.expirywatch.core.domain.usecase.ItemsOverview
@@ -24,6 +25,7 @@ import io.github.abhik9.expirywatch.core.domain.usecase.MoveItemsToGroupUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveItemsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveLabelsByUseUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveReminderProblemsUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.RecentlyDeletedItems
 import io.github.abhik9.expirywatch.core.domain.usecase.RestoreItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeLength
 import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeRemindersUseCase
@@ -42,6 +44,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -80,6 +83,9 @@ sealed interface ItemsEvent {
      * as they were, to undo it.
      */
     data class MovedToGroup(val before: List<Item>, val group: CustomGroup?) : ItemsEvent
+
+    /** [item] was deleted, e.g. in the editor, as it was before, to undo it. */
+    data class ItemDeleted(val item: Item) : ItemsEvent
 }
 
 @HiltViewModel(assistedFactory = ItemsViewModel.Factory::class)
@@ -97,6 +103,8 @@ class ItemsViewModel @AssistedInject constructor(
     private val groupRepository: CustomGroupRepository,
     observeLabelsByUse: ObserveLabelsByUseUseCase,
     observeReminderProblems: ObserveReminderProblemsUseCase,
+    private val recentlyDeleted: RecentlyDeletedItems,
+    private val deleteItem: DeleteItemUseCase,
 ) : ViewModel() {
     /** Held as Compose state so the search field updates synchronously while typing. */
     var searchText by mutableStateOf("")
@@ -150,6 +158,19 @@ class ItemsViewModel @AssistedInject constructor(
 
     private val _events = Channel<ItemsEvent>(Channel.BUFFERED)
     val events: Flow<ItemsEvent> = _events.receiveAsFlow()
+
+    init {
+        // Offers undoing a deletion in the editor, which closes right after.
+        viewModelScope.launch {
+            recentlyDeleted.deleted.filterNotNull().collect {
+                recentlyDeleted.take()?.let { item -> _events.send(ItemsEvent.ItemDeleted(item)) }
+            }
+        }
+    }
+
+    fun undoDelete(item: Item) {
+        viewModelScope.launch { deleteItem.undo(item) }
+    }
 
     /** Reads again what the system allows, e.g. on return to the app. */
     fun recheckReminders() {

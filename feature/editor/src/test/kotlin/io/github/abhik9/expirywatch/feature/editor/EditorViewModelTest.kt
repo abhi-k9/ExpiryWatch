@@ -6,9 +6,11 @@ import io.github.abhik9.expirywatch.core.domain.shopping.AddItemsToShoppingListU
 import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.GetShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ObserveKnownProductsUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.DeleteItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.LookupProductUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveLabelsByUseUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.RecentlyDeletedItems
 import io.github.abhik9.expirywatch.core.domain.usecase.SaveItemUseCase
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.ProductInfo
@@ -52,6 +54,8 @@ class EditorViewModelTest {
     private val locations = FakeStorageLocationRepository(listOf(TestData.fridge))
     private val groups = FakeCustomGroupRepository()
 
+    private val recentlyDeleted = RecentlyDeletedItems()
+
     private fun viewModel(key: EditorNavKey = EditorNavKey()) = EditorViewModel(
         key = key,
         categoryRepository = categories,
@@ -61,6 +65,7 @@ class EditorViewModelTest {
         itemRepository = items,
         saveItem = SaveItemUseCase(items, history, TestTime.clock),
         finishItem = FinishItemUseCase(items, TestTime.clock),
+        deleteItem = DeleteItemUseCase(items, recentlyDeleted),
         lookupProduct = LookupProductUseCase(history, catalog, settings, EventLog.NONE),
         addItemsToShoppingList = AddItemsToShoppingListUseCase(
             GetShoppingListUseCase(shopping, settings, "Shopping list", TestTime.clock),

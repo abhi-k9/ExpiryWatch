@@ -65,4 +65,8 @@ class FakeItemRepository(
     override suspend fun delete(id: Long) {
         items.update { it - id }
     }
+
+    override suspend fun restore(item: Item) {
+        items.update { it + (item.id to item) }
+    }
 }

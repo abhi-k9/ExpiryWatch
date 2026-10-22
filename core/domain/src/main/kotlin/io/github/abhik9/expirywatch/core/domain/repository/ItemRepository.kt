@@ -34,4 +34,7 @@ interface ItemRepository {
     suspend fun moveToGroup(ids: Collection<Long>, groupId: Long?)
 
     suspend fun delete(id: Long)
+
+    /** Puts a deleted [item] back, with its id. */
+    suspend fun restore(item: Item)
 }

@@ -7,12 +7,14 @@ import io.github.abhik9.expirywatch.core.domain.shopping.AddItemsToShoppingListU
 import io.github.abhik9.expirywatch.core.domain.shopping.AddToShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.GetShoppingListUseCase
 import io.github.abhik9.expirywatch.core.domain.shopping.ObserveKnownProductsUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.DeleteItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.FinishItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.MoveItemsToGroupUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveItemsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveLabelsByUseUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveReminderProblemsUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.ObserveTodayUseCase
+import io.github.abhik9.expirywatch.core.domain.usecase.RecentlyDeletedItems
 import io.github.abhik9.expirywatch.core.domain.usecase.RestoreItemUseCase
 import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeLength
 import io.github.abhik9.expirywatch.core.domain.usecase.SnoozeRemindersUseCase
@@ -61,6 +63,7 @@ class ItemsViewModelTest {
     private val settings = FakeUserSettingsRepository()
     private val shopping = FakeShoppingRepository()
     private val reminderHealth = FakeReminderHealthMonitor()
+    private val recentlyDeleted = RecentlyDeletedItems()
 
     private fun viewModel(initialStatus: ExpiryStatus? = null) = ItemsViewModel(
         initialStatus = initialStatus,
@@ -89,6 +92,8 @@ class ItemsViewModelTest {
             TestTime.clock,
         ),
         observeReminderProblems = ObserveReminderProblemsUseCase(reminderHealth, settings, TestTime.clock),
+        recentlyDeleted = recentlyDeleted,
+        deleteItem = DeleteItemUseCase(items, recentlyDeleted),
     )
 
     private suspend fun ItemsViewModel.successState(): ItemsUiState.Success =
@@ -339,6 +344,19 @@ class ItemsViewModelTest {
                 listOf(ReminderProblem.NOTIFICATIONS_BLOCKED, ReminderProblem.BACKGROUND_RESTRICTED),
                 awaitItem(),
             )
+        }
+    }
+
+    @Test
+    fun offersUndoingADeletionInTheEditor() = runTest {
+        val viewModel = viewModel()
+        viewModel.events.test {
+            val milk = items.observeItem(1).first()!!
+            DeleteItemUseCase(items, recentlyDeleted)(milk)
+
+            assertEquals(ItemsEvent.ItemDeleted(milk), awaitItem())
+            viewModel.undoDelete(milk)
+            assertEquals(milk, items.observeItem(1).first())
         }
     }
 }

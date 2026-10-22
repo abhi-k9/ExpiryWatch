@@ -68,4 +68,9 @@ internal class RoomItemRepository @Inject constructor(
         itemDao.delete(id)
         log.record { "items: deleted #$id" }
     }
+
+    override suspend fun restore(item: Item) {
+        itemDao.insert(item.asEntity())
+        log.record { "items: restored #${item.id}" }
+    }
 }
