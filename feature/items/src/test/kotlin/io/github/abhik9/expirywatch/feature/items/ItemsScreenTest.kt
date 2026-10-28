@@ -1,6 +1,8 @@
 package io.github.abhik9.expirywatch.feature.items
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithText
@@ -47,7 +49,7 @@ class ItemsScreenTest {
         composeRule.waitUntil(5_000) {
             composeRule.onAllNodesWithText("Apples").fetchSemanticsNodes().isEmpty()
         }
-        composeRule.onNodeWithText("Milk").assertExists()
+        composeRule.onNode(hasText("Milk") and hasSetTextAction().not()).assertExists()
 
         composeRule.onNodeWithContentDescription("Clear search").performClick()
         composeRule.waitUntil(5_000) {
