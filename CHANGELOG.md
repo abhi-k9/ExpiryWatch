@@ -3,6 +3,17 @@
 What changed in each release of ExpiryWatch, newest first. The APKs are on the
 [releases page](https://github.com/abhi-k9/ExpiryWatch/releases).
 
+## 1.9.0 (2026-10-28)
+
+- Search opens from the lower add/scan controls, with its input, clear and close controls near
+  the bottom of the screen and above the keyboard.
+- Save controls sit at the bottom of the item editor. **Save & add another** keeps the category
+  and storage location for the next item while clearing the previous product's details and dates.
+- Recent-category shortcuts beside the category field make repeated selections a single tap.
+- The editor's full category, storage location and group lists stay alphabetical. Shared pickers
+  open in scrollable bottom sheets near the current selection, with a visible selection indicator
+  and a pinned action for creating a new label.
+
 ## 1.8.1 (2026-10-22)
 
 - The diagnostics report no longer contains the automatic backup folder's path or the names of
