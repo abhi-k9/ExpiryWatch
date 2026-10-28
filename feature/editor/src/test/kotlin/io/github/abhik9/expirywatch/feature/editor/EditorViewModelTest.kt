@@ -74,6 +74,63 @@ class EditorViewModelTest {
     }
 
     @Test
+    fun savingAndAddingAnotherKeepsOnlyCategoryAndLocationAndCreatesSeparateItems() = runTest {
+        val viewModel = viewModel()
+        viewModel.updateForm {
+            it.copy(
+                name = "Milk",
+                brand = "Brand",
+                barcode = "1234",
+                categoryId = TestData.dairy.id,
+                locationId = TestData.fridge.id,
+                quantityText = "2",
+                unit = QuantityUnit.LITERS,
+                expiryDate = TestTime.today.plusDays(4),
+                notes = "First product only",
+                imageUrl = "https://example.com/milk.jpg",
+            ).withAdditionalDate(TestTime.today.plusDays(8))
+        }
+
+        viewModel.events.test {
+            viewModel.saveAndAddAnother()
+            assertEquals(EditorEvent.ReadyForNextItem("Milk"), awaitItem())
+            assertEquals(
+                EditorForm(categoryId = TestData.dairy.id, locationId = TestData.fridge.id),
+                viewModel.form,
+            )
+            assertFalse(viewModel.hasUnsavedChanges)
+            assertFalse(viewModel.isSaving)
+            assertEquals(2, items.currentItems.size)
+
+            viewModel.updateForm { it.copy(name = "Butter", expiryDate = TestTime.today.plusDays(20)) }
+            viewModel.save()
+            assertEquals(EditorEvent.Done, awaitItem())
+        }
+        assertEquals(listOf("Milk", "Milk", "Butter"), items.currentItems.map { it.name })
+        assertEquals(3, items.currentItems.map { it.id }.distinct().size)
+        assertTrue(items.currentItems.all { it.category == TestData.dairy && it.location == TestData.fridge })
+    }
+
+    @Test
+    fun addingAnotherRequiresAValidFormAndCannotResetAnExistingItem() = runTest {
+        val newItem = viewModel()
+        newItem.updateForm { it.copy(categoryId = TestData.dairy.id) }
+        newItem.saveAndAddAnother()
+        assertEquals(setOf(EditorError.NAME_REQUIRED, EditorError.EXPIRY_REQUIRED), newItem.errors)
+        assertEquals(TestData.dairy.id, newItem.form.categoryId)
+        assertTrue(items.currentItems.isEmpty())
+
+        items.upsert(TestData.item(id = 5, name = "Butter"))
+        val editing = viewModel(EditorNavKey(itemId = 5))
+        editing.events.test {
+            editing.saveAndAddAnother()
+            expectNoEvents()
+        }
+        assertEquals("Butter", editing.form.name)
+        assertEquals(1, items.currentItems.size)
+    }
+
+    @Test
     fun makesCategoriesLocationsAndGroupsWhileEditing() = runTest {
         val viewModel = viewModel()
         viewModel.updateForm { it.copy(name = "Beans", expiryDate = TestTime.today.plusDays(300)) }

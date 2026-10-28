@@ -123,6 +123,9 @@ sealed interface EditorEvent {
     /** The item was saved, deleted or finished: the editor should close. */
     data object Done : EditorEvent
 
+    /** A new item was saved and the form is ready for another one. */
+    data class ReadyForNextItem(val savedName: String) : EditorEvent
+
     /** The item's product was put on a shopping list. */
     data class PutOnShoppingList(val added: AddedToShoppingList) : EditorEvent
 }
@@ -223,7 +226,13 @@ class EditorViewModel @AssistedInject constructor(
         }
     }
 
-    fun save() {
+    fun save() = save(addAnother = false)
+
+    fun saveAndAddAnother() {
+        if (isNewItem) save(addAnother = true)
+    }
+
+    private fun save(addAnother: Boolean) {
         if (!revalidate() || isSaving) return
         val expiryDate = form.expiryDate ?: return
 
@@ -235,7 +244,21 @@ class EditorViewModel @AssistedInject constructor(
                 row.quantityText.parseQuantity()?.let { AdditionalDate(row.expiryDate, it) }
             }
             when (val result = saveItem(item, additionalDates)) {
-                is SaveItemResult.Saved -> _events.send(EditorEvent.Done)
+                is SaveItemResult.Saved -> {
+                    if (addAnother) {
+                        // A lookup for the previous product must never fill the next item's form.
+                        lookupJob?.cancel()
+                        lookup = LookupState.Idle
+                        form = EditorForm(categoryId = item.category?.id, locationId = item.location?.id)
+                        initialForm = form
+                        errors = emptySet()
+                        invalidAdditionalQuantities = emptySet()
+                        _events.send(EditorEvent.ReadyForNextItem(item.name))
+                    } else {
+                        _events.send(EditorEvent.Done)
+                    }
+                }
+
                 is SaveItemResult.Invalid -> errors = result.errors.map(::toEditorError).toSet()
             }
             isSaving = false

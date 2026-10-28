@@ -3,9 +3,12 @@ package io.github.abhik9.expirywatch.feature.items
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeRight
 import io.github.abhik9.expirywatch.core.domain.usecase.DeleteItemUseCase
@@ -19,6 +22,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 class ItemsScreenTest {
@@ -27,6 +31,32 @@ class ItemsScreenTest {
 
     private val fixture = ItemsFixture()
     private var settingsOpened = false
+
+    @Test
+    @Config(qualifiers = "w400dp-h900dp")
+    fun searchIsReachableAtTheBottomAndCanFilterClearAndClose() {
+        showItems()
+
+        val search = composeRule.onNodeWithContentDescription("Search")
+        val screen = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        assertTrue(search.fetchSemanticsNode().boundsInRoot.center.y > screen.center.y)
+        search.performClick()
+        val field = composeRule.onNodeWithText("Search items")
+        assertTrue(field.fetchSemanticsNode().boundsInRoot.center.y > screen.center.y)
+        field.performTextInput("Milk")
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodesWithText("Apples").fetchSemanticsNodes().isEmpty()
+        }
+        composeRule.onNodeWithText("Milk").assertExists()
+
+        composeRule.onNodeWithContentDescription("Clear search").performClick()
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodesWithText("Apples").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithContentDescription("Close search").performClick()
+        composeRule.onNodeWithContentDescription("Search").assertIsDisplayed()
+        composeRule.onNodeWithText("Search items").assertDoesNotExist()
+    }
 
     private fun showItems() {
         val viewModel = fixture.viewModel()

@@ -44,11 +44,13 @@ fun <T> orderByUse(labels: List<T>, uses: List<LabelUse>, id: (T) -> Long): List
     return top + labels.filterNot { it in top }
 }
 
-/** Categories, locations and groups, each ordered by [orderByUse]. */
+/** Categories, locations and groups ordered by [orderByUse], plus recent category shortcuts. */
 data class LabelsByUse(
     val categories: List<Category> = emptyList(),
     val locations: List<StorageLocation> = emptyList(),
     val groups: List<CustomGroup> = emptyList(),
+    /** Recently used categories for shortcuts beside the category field. */
+    val recentCategories: List<Category> = emptyList(),
 )
 
 /**
@@ -73,10 +75,16 @@ class ObserveLabelsByUseUseCase @Inject constructor(
             groupRepository.observeGroups(),
             items,
         ) { categories, locations, groups, all ->
+            val lastCategoryUse = all.usesOf { it.category?.id }
+                .groupBy { it.labelId }
+                .mapValues { (_, uses) -> uses.maxOf { it.at } }
             LabelsByUse(
                 categories = orderByUse(categories, all.usesOf { it.category?.id }) { it.id },
                 locations = orderByUse(locations, all.usesOf { it.location?.id }) { it.id },
                 groups = orderByUse(groups, all.usesOf { it.customGroup?.id }) { it.id },
+                recentCategories = categories.filter { it.id in lastCategoryUse }
+                    .sortedByDescending { lastCategoryUse.getValue(it.id) }
+                    .take(MOST_RECENTLY_USED_COUNT),
             )
         }
     }

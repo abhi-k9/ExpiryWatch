@@ -3,7 +3,10 @@ package io.github.abhik9.expirywatch.feature.items
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -12,7 +15,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.AddShoppingCart
 import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.NotificationsPaused
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -21,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -32,64 +35,30 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
 import io.github.abhik9.expirywatch.core.model.ItemSortOrder
 import io.github.abhik9.expirywatch.core.ui.colors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ItemsTopBar(
-    searchText: String,
-    onSearchTextChange: (String) -> Unit,
     sortOrder: ItemSortOrder,
     onSortOrderChange: (ItemSortOrder) -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
-    var searching by rememberSaveable { mutableStateOf(searchText.isNotEmpty()) }
-    val closeSearch = {
-        searching = false
-        onSearchTextChange("")
-    }
-    BackHandler(enabled = searching, onBack = closeSearch)
-
     TopAppBar(
-        title = {
-            if (searching) {
-                SearchField(searchText, onSearchTextChange)
-            } else {
-                Text(stringResource(R.string.feature_items_title))
-            }
-        },
-        navigationIcon = {
-            if (searching) {
-                IconButton(onClick = closeSearch) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.feature_items_close_search),
-                    )
-                }
-            }
-        },
-        actions = {
-            when {
-                !searching -> IconButton(onClick = { searching = true }) {
-                    Icon(Icons.Outlined.Search, contentDescription = stringResource(R.string.feature_items_search))
-                }
-
-                searchText.isNotEmpty() -> IconButton(onClick = { onSearchTextChange("") }) {
-                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.feature_items_clear_search))
-                }
-            }
-            SortMenu(sortOrder, onSortOrderChange)
-        },
+        title = { Text(stringResource(R.string.feature_items_title)) },
+        actions = { SortMenu(sortOrder, onSortOrderChange) },
         scrollBehavior = scrollBehavior,
     )
 }
@@ -145,25 +114,50 @@ internal fun SelectionTopBar(
     )
 }
 
+/** Keeps the field, clear and close controls beside the keyboard and lower screen edge. */
 @Composable
-private fun SearchField(searchText: String, onSearchTextChange: (String) -> Unit) {
+internal fun ItemsSearchBar(searchText: String, onSearchTextChange: (String) -> Unit, onClose: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
-    TextField(
-        value = searchText,
-        onValueChange = onSearchTextChange,
-        modifier = Modifier
-            .fillMaxWidth()
-            .focusRequester(focusRequester),
-        placeholder = { Text(stringResource(R.string.feature_items_search_hint)) },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = Color.Transparent,
-            unfocusedContainerColor = Color.Transparent,
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-        ),
-    )
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    Surface(tonalElevation = 3.dp) {
+        TextField(
+            value = searchText,
+            onValueChange = onSearchTextChange,
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(8.dp).focusRequester(focusRequester),
+            placeholder = { Text(stringResource(R.string.feature_items_search_hint)) },
+            leadingIcon = {
+                IconButton(onClick = onClose) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.feature_items_close_search),
+                    )
+                }
+            },
+            trailingIcon = {
+                if (searchText.isNotEmpty()) {
+                    IconButton(onClick = { onSearchTextChange("") }) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.feature_items_clear_search),
+                        )
+                    }
+                }
+            },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = {
+                focusManager.clearFocus()
+                keyboard?.hide()
+            }),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+            ),
+        )
+    }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 }
 

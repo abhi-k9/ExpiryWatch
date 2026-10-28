@@ -3,10 +3,12 @@ package io.github.abhik9.expirywatch.feature.editor
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -26,6 +28,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,6 +38,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -51,7 +55,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -80,6 +86,7 @@ internal fun EditorRoute(
 ) {
     val labels by viewModel.labels.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    var resetKey by remember { mutableStateOf(0) }
     // Updated on configuration changes without restarting the effect, which would drop a shown snackbar.
     val resources by rememberUpdatedState(LocalResources.current)
 
@@ -87,6 +94,13 @@ internal fun EditorRoute(
         viewModel.events.collect { event ->
             when (event) {
                 EditorEvent.Done -> onDone()
+
+                is EditorEvent.ReadyForNextItem -> {
+                    resetKey++
+                    snackbarHostState.showSnackbar(
+                        resources.getString(R.string.feature_editor_saved_item, event.savedName),
+                    )
+                }
 
                 is EditorEvent.PutOnShoppingList -> snackbarHostState.showSnackbar(
                     message = resources.getString(
@@ -116,6 +130,8 @@ internal fun EditorRoute(
         onBarcodeScanned = viewModel::onBarcodeScanned,
         onLookUpBarcode = viewModel::lookUpBarcode,
         onSave = viewModel::save,
+        onSaveAndAddAnother = viewModel::saveAndAddAnother,
+        resetKey = resetKey,
         onFinish = viewModel::finish,
         onAddToShoppingList = viewModel::addToShoppingList,
         onDelete = viewModel::delete,
@@ -145,6 +161,7 @@ internal fun EditorScreen(
     onBarcodeScanned: (String) -> Unit,
     onLookUpBarcode: () -> Unit,
     onSave: () -> Unit,
+    onSaveAndAddAnother: () -> Unit,
     onFinish: (ItemStatus) -> Unit,
     onAddToShoppingList: () -> Unit,
     onDelete: () -> Unit,
@@ -153,6 +170,7 @@ internal fun EditorScreen(
     onAddGroup: (name: String, emoji: String) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    resetKey: Int = 0,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     var showScanner by rememberSaveable { mutableStateOf(openScannerInitially) }
@@ -160,13 +178,46 @@ internal fun EditorScreen(
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
     var newLabel by rememberSaveable { mutableStateOf<NewLabel?>(null) }
     val barcodeFocusRequester = remember { FocusRequester() }
+    val scrollState = rememberScrollState()
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    LaunchedEffect(resetKey) {
+        if (resetKey > 0) {
+            focusManager.clearFocus()
+            keyboard?.hide()
+            scrollState.scrollTo(0)
+        }
+    }
 
     val requestClose: () -> Unit = { if (hasUnsavedChanges) showDiscardDialog = true else onClose() }
     BackHandler(enabled = hasUnsavedChanges) { showDiscardDialog = true }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.imePadding(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = {
+            if (!isLoading) {
+                Surface(tonalElevation = 3.dp) {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(
+                            horizontal = 16.dp,
+                            vertical = 8.dp,
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        if (isNewItem) {
+                            OutlinedButton(onClick = onSaveAndAddAnother, enabled = !isSaving) {
+                                Text(stringResource(R.string.feature_editor_save_add_another))
+                            }
+                        }
+                        Button(onClick = onSave, enabled = !isSaving) {
+                            Text(stringResource(R.string.feature_editor_save))
+                        }
+                    }
+                }
+            }
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -179,15 +230,6 @@ internal fun EditorScreen(
                 navigationIcon = {
                     IconButton(onClick = requestClose) {
                         Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.feature_editor_close))
-                    }
-                },
-                actions = {
-                    Button(
-                        onClick = onSave,
-                        enabled = !isLoading && !isSaving,
-                        modifier = Modifier.padding(end = 8.dp),
-                    ) {
-                        Text(stringResource(R.string.feature_editor_save))
                     }
                 },
             )
@@ -210,8 +252,7 @@ internal fun EditorScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .imePadding()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -286,7 +327,8 @@ internal fun EditorScreen(
                     label = stringResource(R.string.feature_editor_category),
                     selectedText = selectedCategory?.let { "${it.emoji} ${it.name}" },
                     noneText = stringResource(R.string.feature_editor_none),
-                    options = labels.categories.map { it.id to "${it.emoji} ${it.name}" },
+                    options = labels.categories.sortedBy { it.name.lowercase() }
+                        .map { it.id to "${it.emoji} ${it.name}" },
                     onSelect = { id -> onFormChange { it.copy(categoryId = id) } },
                     modifier = Modifier.weight(1f),
                     addText = stringResource(R.string.feature_editor_new_category),
@@ -296,18 +338,35 @@ internal fun EditorScreen(
                     label = stringResource(R.string.feature_editor_location),
                     selectedText = selectedLocation?.let { "${it.emoji} ${it.name}" },
                     noneText = stringResource(R.string.feature_editor_none),
-                    options = labels.locations.map { it.id to "${it.emoji} ${it.name}" },
+                    options = labels.locations.sortedBy { it.name.lowercase() }
+                        .map { it.id to "${it.emoji} ${it.name}" },
                     onSelect = { id -> onFormChange { it.copy(locationId = id) } },
                     modifier = Modifier.weight(1f),
                     addText = stringResource(R.string.feature_editor_new_location),
                     onAdd = { newLabel = NewLabel.LOCATION },
                 )
             }
+            if (labels.recentCategories.isNotEmpty()) {
+                Text(
+                    stringResource(R.string.feature_editor_recent_categories),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    labels.recentCategories.forEach { category ->
+                        FilterChip(
+                            selected = category.id == form.categoryId,
+                            onClick = { onFormChange { it.copy(categoryId = category.id) } },
+                            label = { Text("${category.emoji} ${category.name}") },
+                        )
+                    }
+                }
+            }
             PickerField(
                 label = stringResource(R.string.feature_editor_group),
                 selectedText = selectedGroup?.let { "${it.emoji} ${it.name}" },
                 noneText = stringResource(R.string.feature_editor_no_group),
-                options = labels.groups.map { it.id to "${it.emoji} ${it.name}" },
+                options = labels.groups.sortedBy { it.name.lowercase() }
+                    .map { it.id to "${it.emoji} ${it.name}" },
                 onSelect = { id -> onFormChange { it.copy(groupId = id) } },
                 modifier = Modifier.fillMaxWidth(),
                 addText = stringResource(R.string.feature_editor_new_group),

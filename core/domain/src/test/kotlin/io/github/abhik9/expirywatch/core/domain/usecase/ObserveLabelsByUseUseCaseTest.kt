@@ -1,5 +1,6 @@
 package io.github.abhik9.expirywatch.core.domain.usecase
 
+import io.github.abhik9.expirywatch.core.model.Category
 import io.github.abhik9.expirywatch.core.model.CustomGroup
 import io.github.abhik9.expirywatch.core.model.ItemStatus
 import io.github.abhik9.expirywatch.core.model.StorageLocation
@@ -52,6 +53,34 @@ class ObserveLabelsByUseUseCaseTest {
         val labels = listOf(1L to "Attic", 2L to "Cellar", 3L to "Fridge")
 
         assertEquals(labels, orderByUse(labels, emptyList()) { it.first })
+    }
+
+    @Test
+    fun categoryShortcutsAreRecentDistinctAndExcludeUnusedOrRemovedCategories() = runTest {
+        val categories = (1L..5L).map { Category(id = it, name = "Category $it", emoji = "📦") }
+        val items = FakeItemRepository(
+            listOf(
+                TestData.item(id = 1, category = categories[0]).copy(updatedAt = at(1)),
+                TestData.item(id = 2, category = categories[0]).copy(updatedAt = at(2)),
+                TestData.item(id = 3, category = categories[1]).copy(updatedAt = at(3)),
+                TestData.item(id = 4, category = categories[2]).copy(updatedAt = at(5)),
+                TestData.item(id = 5, category = categories[2]).copy(updatedAt = at(6)),
+                TestData.item(id = 6, category = categories[3]).copy(updatedAt = at(4)),
+                TestData.item(id = 7, category = Category(id = 99, name = "Removed", emoji = "📦"))
+                    .copy(updatedAt = at(7)),
+            ),
+        )
+        val useCase = ObserveLabelsByUseUseCase(
+            FakeCategoryRepository(categories),
+            FakeStorageLocationRepository(),
+            FakeCustomGroupRepository(),
+            items,
+            TestTime.clock,
+        )
+
+        assertEquals(listOf(3L, 4L, 2L), useCase().first().recentCategories.map { it.id })
+        items.setItems(emptyList())
+        assertEquals(emptyList(), useCase().first().recentCategories)
     }
 
     @Test

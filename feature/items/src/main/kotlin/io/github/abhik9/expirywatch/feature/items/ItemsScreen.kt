@@ -1,6 +1,7 @@
 package io.github.abhik9.expirywatch.feature.items
 
 import android.content.res.Resources
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.AddShoppingCart
 import androidx.compose.material.icons.outlined.QrCodeScanner
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,7 +45,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -280,8 +285,19 @@ internal fun ItemsScreen(
     var snoozeStep by rememberSaveable { mutableStateOf<SnoozeStep?>(null) }
     var groupStep by rememberSaveable { mutableStateOf<GroupStep?>(null) }
 
+    var searching by rememberSaveable { mutableStateOf(searchText.isNotEmpty()) }
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val closeSearch: () -> Unit = {
+        searching = false
+        onSearchTextChange("")
+        focusManager.clearFocus()
+        keyboard?.hide()
+    }
+    BackHandler(enabled = searching && !selecting, onBack = closeSearch)
+
     Scaffold(
-        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier.imePadding().nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             if (selecting) {
                 SelectionTopBar(
@@ -295,25 +311,36 @@ internal fun ItemsScreen(
                 )
             } else {
                 ItemsTopBar(
-                    searchText = searchText,
-                    onSearchTextChange = onSearchTextChange,
                     sortOrder = sortOrder,
                     onSortOrderChange = onSortOrderChange,
                     scrollBehavior = scrollBehavior,
                 )
             }
         },
+        bottomBar = {
+            if (searching && !selecting) {
+                ItemsSearchBar(searchText, onSearchTextChange, onClose = closeSearch)
+            }
+        },
         floatingActionButton = {
-            if (!selecting) {
+            if (!selecting && !searching) {
                 Column(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    SmallFloatingActionButton(onClick = onScanItem) {
-                        Icon(
-                            Icons.Outlined.QrCodeScanner,
-                            contentDescription = stringResource(R.string.feature_items_scan),
-                        )
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        SmallFloatingActionButton(onClick = { searching = true }) {
+                            Icon(
+                                Icons.Outlined.Search,
+                                contentDescription = stringResource(R.string.feature_items_search),
+                            )
+                        }
+                        SmallFloatingActionButton(onClick = onScanItem) {
+                            Icon(
+                                Icons.Outlined.QrCodeScanner,
+                                contentDescription = stringResource(R.string.feature_items_scan),
+                            )
+                        }
                     }
                     ExtendedFloatingActionButton(
                         onClick = onAddItem,
